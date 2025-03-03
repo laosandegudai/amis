@@ -26,6 +26,7 @@ export const EditorNode = types
     parentId: '',
     parentRegion: '',
     isCommonConfig: false,
+    isFormConfig: false,
 
     id: '',
     type: '',
@@ -75,6 +76,54 @@ export const EditorNode = types
     return {
       get info() {
         return info;
+      },
+
+      getNodeById(id: string, regionOrType?: string) {
+        // 找不到，再从 root.children 递归找
+        let pool = self.children.concat();
+        let resolved: any = undefined;
+
+        while (pool.length) {
+          const item = pool.shift();
+          if (
+            item.id === id &&
+            (!regionOrType ||
+              item.region === regionOrType ||
+              item.type === regionOrType)
+          ) {
+            resolved = item;
+            break;
+          }
+
+          // 将当前节点的子节点全部放置到 pool中
+          if (item.children.length) {
+            pool.push.apply(pool, item.uniqueChildren);
+          }
+        }
+
+        return resolved;
+      },
+
+      getNodeByComponentId(id: string) {
+        let pool = self.children.concat();
+        let resolved: any = undefined;
+
+        while (pool.length) {
+          const item = pool.shift();
+          const schema = item.schema;
+
+          if (schema && schema.id === id) {
+            resolved = item;
+            break;
+          }
+
+          // 将当前节点的子节点全部放置到 pool中
+          if (item.children.length) {
+            pool.push.apply(pool, item.uniqueChildren);
+          }
+        }
+
+        return resolved;
       },
 
       setInfo(value: RendererInfo) {
@@ -222,20 +271,23 @@ export const EditorNode = types
       },
 
       get uniqueChildren() {
-        let children = self.children.filter(
-          (child, index, list) =>
-            list.findIndex(a =>
-              child.isRegion
-                ? a.id === child.id && a.region === child.region
-                : a.id === child.id
-            ) === index
-        );
+        let children: Array<any> = [];
+        let map: Record<string, any> = {};
+        self.children.forEach(child => {
+          const key = child.isRegion ? `${child.region}-${child.id}` : child.id;
+          if (map[key]) {
+            return;
+          }
+
+          map[key] = true;
+          children.push(child);
+        });
 
         if (Array.isArray(this.schema)) {
-          const arr = this.schema;
+          const arr = this.schema.map(item => item?.$$id).filter(item => item);
           children = children.sort((a, b) => {
-            const idxa = findIndex(arr, item => item?.$$id === a.id);
-            const idxb = findIndex(arr, item => item?.$$id === b.id);
+            const idxa = arr.indexOf(a.id);
+            const idxb = arr.indexOf(b.id);
             return idxa - idxb;
           });
         }
@@ -466,12 +518,16 @@ export const EditorNode = types
       const arr = targets.concat();
       const first = arr.shift()!;
       const firstRect = first.getBoundingClientRect();
+      // const firstMarginTop = parseInt(window.getComputedStyle(first).marginTop);
+      // const firstMarginBottom = parseInt(
+      //   window.getComputedStyle(first).marginBottom
+      // );
 
       const rect = {
         left: firstRect.left,
         top: firstRect.top,
         width: firstRect.width,
-        height: firstRect.height,
+        height: firstRect.height, // + firstMarginTop + firstMarginBottom,
         right: firstRect.right,
         bottom: firstRect.bottom
       };
@@ -531,7 +587,6 @@ export const EditorNode = types
       if (!height) {
         return;
       }
-
       self.x = position.left + 0;
       self.y = position.top + 0;
       self.w = targetRect.width;
@@ -586,16 +641,22 @@ export const EditorNode = types
       self.isCommonConfig = !!value;
     }
 
+    function updateIsFormConfig(value: boolean) {
+      self.isFormConfig = !!value;
+    }
+
     return {
       getClosestParentByType,
       getParentNodeByCB,
       updateIsCommonConfig,
+      updateIsFormConfig,
       addChild(props: {
         id: string;
         type: string;
         label: string;
         path: string;
         isCommonConfig?: boolean;
+        isFormConfig?: boolean;
         info?: RendererInfo;
         region?: string;
         getData?: () => any;
@@ -619,6 +680,11 @@ export const EditorNode = types
 
       removeChild(child: any) {
         const idx = self.children.findIndex(item => item === child);
+        const node = self.children[idx];
+        if (!node) {
+          return;
+        }
+
         self.children.splice(idx, 1);
       },
 
@@ -629,7 +695,12 @@ export const EditorNode = types
         self.folded = !self.folded;
       },
 
-      patch(store: any, force = false) {
+      patch(
+        store: any,
+        force = false,
+        setPatchInfo?: (id: string, value: any) => void,
+        ids?: Map<string, string>
+      ) {
         // 避免重复 patch
         if (self.patched && !force) {
           return;
@@ -647,6 +718,11 @@ export const EditorNode = types
         let patched = schema;
 
         if (!patched?.id) {
+          patched = {...patched, id: 'u:' + guid()};
+        }
+
+        // id重复了，重新生成一个
+        if (ids?.has(patched.id) && ids?.get(patched.id) !== self.schemaPath) {
           patched = {...patched, id: 'u:' + guid()};
         }
 
@@ -673,9 +749,11 @@ export const EditorNode = types
             },
             component?.props
           ) || patched;
-        patched = JSONPipeIn(patched);
+
         if (patched !== schema) {
-          root.changeValueById(info.id, patched, undefined, true, true);
+          setPatchInfo
+            ? setPatchInfo(info.id, patched)
+            : root.changeValueById(info.id, patched, undefined, true, true);
         }
       },
 
@@ -717,6 +795,23 @@ export const EditorNode = types
         return component;
       },
 
+      getTarget(): null | HTMLElement | Array<HTMLElement> {
+        const doc = (getRoot(self) as any).getDoc();
+
+        if (self.isRegion) {
+          const target = doc.querySelector(
+            `[data-region="${self.region}"][data-region-host="${self.id}"]`
+          ) as HTMLElement;
+          return target;
+        } else {
+          const target = [].slice.call(
+            doc.querySelectorAll(`[data-editor-id="${self.id}"]`)
+          );
+
+          return self.info?.renderer.name === 'button' ? target?.[0] : target;
+        }
+      },
+
       /**
        * 计算高亮区域信息。
        * @param layer
@@ -726,25 +821,13 @@ export const EditorNode = types
         if (!root.calculateStarted) {
           return;
         }
-        const doc = (getRoot(self) as any).getDoc();
-
-        if (self.isRegion) {
-          const target = doc.querySelector(
-            `[data-region="${self.region}"][data-region-host="${self.id}"]`
-          ) as HTMLElement;
-          calculateHighlightBox(target);
-        } else {
-          const target = [].slice.call(
-            doc.querySelectorAll(`[data-editor-id="${self.id}"]`)
-          );
-
-          // 按钮一般不会出现多份，所以先写死只展示一块。
-          calculateHighlightBox(
-            self.info?.renderer.name === 'button' ? target?.[0] : target
-          );
-
-          self.childRegions.forEach(child => child.calculateHighlightBox(root));
+        const target = this.getTarget();
+        if (!target) {
+          return;
         }
+
+        calculateHighlightBox(target);
+        self.childRegions.forEach(child => child.calculateHighlightBox(root));
       },
 
       resetHighlightBox(root: any) {

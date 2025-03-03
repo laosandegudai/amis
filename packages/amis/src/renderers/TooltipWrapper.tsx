@@ -121,6 +121,11 @@ export interface TooltipWrapperSchema extends BaseSchema {
   className?: string;
 
   /**
+   * 箭头CSS类名
+   */
+  tooltipArrowClassName?: string;
+
+  /**
    * 文字提示浮层CSS类名
    */
   tooltipClassName?: string;
@@ -212,8 +217,18 @@ export default class TooltipWrapper extends React.Component<
           {
             'TooltipWrapper--inline': inline
           },
-          setThemeClassName('baseControlClassName', id, themeCss),
-          setThemeClassName('wrapperCustomStyle', id, wrapperCustomStyle)
+          setThemeClassName({
+            ...this.props,
+            name: 'baseControlClassName',
+            id,
+            themeCss
+          }),
+          setThemeClassName({
+            ...this.props,
+            name: 'wrapperCustomStyle',
+            id,
+            themeCss: wrapperCustomStyle
+          })
         )}
         style={buildStyle(style, data)}
       >
@@ -227,6 +242,7 @@ export default class TooltipWrapper extends React.Component<
       classPrefix: ns,
       classnames: cx,
       tooltipClassName,
+      tooltipArrowClassName,
       tooltipTheme,
       container,
       placement,
@@ -257,6 +273,7 @@ export default class TooltipWrapper extends React.Component<
       placement,
       trigger,
       rootClose,
+      tooltipArrowClassName,
       container:
         container !== undefined
           ? container
@@ -264,7 +281,12 @@ export default class TooltipWrapper extends React.Component<
       tooltipTheme,
       tooltipClassName: cx(
         tooltipClassName,
-        setThemeClassName('tooltipControlClassName', id, themeCss)
+        setThemeClassName({
+          ...this.props,
+          name: 'tooltipControlClassName',
+          id,
+          themeCss
+        })
       ),
       mouseEnterDelay,
       mouseLeaveDelay,
@@ -285,6 +307,7 @@ export default class TooltipWrapper extends React.Component<
           {this.renderBody()}
         </TooltipWrapperComp>
         <CustomStyle
+          {...this.props}
           config={{
             wrapperCustomStyle,
             id,

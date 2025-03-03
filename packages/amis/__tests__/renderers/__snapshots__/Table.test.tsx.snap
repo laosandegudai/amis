@@ -4,11 +4,10 @@ exports[`Renderer:table 1`] = `
 <div>
   <div
     class="cxd-Table"
-    style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; position: relative;"
+    style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px;"
   >
     <div
       class="cxd-Table-fixedTop"
-      style="top: 0px;"
     >
       <div
         class="cxd-Table-heading"
@@ -45,7 +44,7 @@ exports[`Renderer:table 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       Engine
@@ -65,7 +64,7 @@ exports[`Renderer:table 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       Version
@@ -324,45 +323,6 @@ exports[`Renderer:table 1`] = `
         </table>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -371,11 +331,10 @@ exports[`Renderer:table align 1`] = `
 <div>
   <div
     class="cxd-Table"
-    style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; position: relative;"
+    style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px;"
   >
     <div
       class="cxd-Table-fixedTop"
-      style="top: 0px;"
     >
       <div
         class="cxd-Table-heading"
@@ -412,7 +371,7 @@ exports[`Renderer:table align 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       Engine
@@ -459,7 +418,7 @@ exports[`Renderer:table align 1`] = `
                 style="text-align: right;"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     4
@@ -486,7 +445,7 @@ exports[`Renderer:table align 1`] = `
                 style="text-align: right;"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     4
@@ -513,7 +472,7 @@ exports[`Renderer:table align 1`] = `
                 style="text-align: right;"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     4
@@ -540,7 +499,7 @@ exports[`Renderer:table align 1`] = `
                 style="text-align: right;"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     3
@@ -567,7 +526,7 @@ exports[`Renderer:table align 1`] = `
                 style="text-align: right;"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     4
@@ -594,7 +553,7 @@ exports[`Renderer:table align 1`] = `
                 style="text-align: right;"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     4
@@ -621,7 +580,7 @@ exports[`Renderer:table align 1`] = `
                 style="text-align: right;"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     5
@@ -648,7 +607,7 @@ exports[`Renderer:table align 1`] = `
                 style="text-align: right;"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     5
@@ -675,7 +634,7 @@ exports[`Renderer:table align 1`] = `
                 style="text-align: right;"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     5
@@ -702,7 +661,7 @@ exports[`Renderer:table align 1`] = `
                 style="text-align: right;"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     5
@@ -713,45 +672,6 @@ exports[`Renderer:table align 1`] = `
           </tbody>
         </table>
       </div>
-    </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
     </div>
   </div>
 </div>
@@ -777,11 +697,10 @@ exports[`Renderer:table children 1`] = `
           >
             <div
               class="cxd-Table m-b-none"
-              style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-7-width: 0px; --Table-column-8-width: 0px; position: relative;"
+              style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-7-width: 0px; --Table-column-8-width: 0px;"
             >
               <div
                 class="cxd-Table-fixedTop"
-                style="top: 0px;"
               />
               <div
                 class="cxd-Table-contentWrap"
@@ -832,7 +751,7 @@ exports[`Renderer:table children 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Engine
@@ -852,7 +771,7 @@ exports[`Renderer:table children 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Grade
@@ -872,7 +791,7 @@ exports[`Renderer:table children 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Version
@@ -892,7 +811,7 @@ exports[`Renderer:table children 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Browser
@@ -912,7 +831,7 @@ exports[`Renderer:table children 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 ID
@@ -932,7 +851,7 @@ exports[`Renderer:table children 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Platform
@@ -1306,45 +1225,6 @@ exports[`Renderer:table children 1`] = `
                   </table>
                 </div>
               </div>
-              <div
-                class="resize-sensor"
-                style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-  
-                <div
-                  class="resize-sensor-expand"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-shrink"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-appear"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -1358,11 +1238,10 @@ exports[`Renderer:table classNameExpr 1`] = `
 <div>
   <div
     class="cxd-Table"
-    style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; position: relative;"
+    style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px;"
   >
     <div
       class="cxd-Table-fixedTop"
-      style="top: 0px;"
     >
       <div
         class="cxd-Table-heading"
@@ -1399,7 +1278,7 @@ exports[`Renderer:table classNameExpr 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       Engine
@@ -1419,7 +1298,7 @@ exports[`Renderer:table classNameExpr 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       Version
@@ -1678,45 +1557,6 @@ exports[`Renderer:table classNameExpr 1`] = `
         </table>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -1725,11 +1565,10 @@ exports[`Renderer:table column head style className 1`] = `
 <div>
   <div
     class="cxd-Table className"
-    style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; position: relative;"
+    style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px;"
   >
     <div
       class="cxd-Table-fixedTop"
-      style="top: 0px;"
     >
       <div
         class="cxd-Table-heading"
@@ -1766,7 +1605,7 @@ exports[`Renderer:table column head style className 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       Engine
@@ -1787,7 +1626,7 @@ exports[`Renderer:table column head style className 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       Platform
@@ -2056,45 +1895,6 @@ exports[`Renderer:table column head style className 1`] = `
         </table>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -2119,11 +1919,10 @@ exports[`Renderer:table combine Renderer:table combineNum only 1`] = `
           >
             <div
               class="cxd-Table"
-              style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-7-width: 0px; position: relative;"
+              style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-7-width: 0px;"
             >
               <div
                 class="cxd-Table-fixedTop"
-                style="top: 0px;"
               />
               <div
                 class="cxd-Table-contentWrap"
@@ -2163,7 +1962,7 @@ exports[`Renderer:table combine Renderer:table combineNum only 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Rendering engine
@@ -2183,7 +1982,7 @@ exports[`Renderer:table combine Renderer:table combineNum only 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Browser
@@ -2203,7 +2002,7 @@ exports[`Renderer:table combine Renderer:table combineNum only 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Platform(s)
@@ -2223,7 +2022,7 @@ exports[`Renderer:table combine Renderer:table combineNum only 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Engine version
@@ -2243,7 +2042,7 @@ exports[`Renderer:table combine Renderer:table combineNum only 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 CSS grade
@@ -2626,45 +2425,6 @@ exports[`Renderer:table combine Renderer:table combineNum only 1`] = `
                     </tbody>
                   </table>
                 </div>
-              </div>
-              <div
-                class="resize-sensor"
-                style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-  
-                <div
-                  class="resize-sensor-expand"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-shrink"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-appear"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                />
               </div>
             </div>
           </div>
@@ -2695,11 +2455,10 @@ exports[`Renderer:table combine Renderer:table combineNum with fromIndex 1`] = `
           >
             <div
               class="cxd-Table"
-              style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-7-width: 0px; position: relative;"
+              style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-7-width: 0px;"
             >
               <div
                 class="cxd-Table-fixedTop"
-                style="top: 0px;"
               />
               <div
                 class="cxd-Table-contentWrap"
@@ -2739,7 +2498,7 @@ exports[`Renderer:table combine Renderer:table combineNum with fromIndex 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Rendering engine
@@ -2759,7 +2518,7 @@ exports[`Renderer:table combine Renderer:table combineNum with fromIndex 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Browser
@@ -2779,7 +2538,7 @@ exports[`Renderer:table combine Renderer:table combineNum with fromIndex 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Platform(s)
@@ -2799,7 +2558,7 @@ exports[`Renderer:table combine Renderer:table combineNum with fromIndex 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Engine version
@@ -2819,7 +2578,7 @@ exports[`Renderer:table combine Renderer:table combineNum with fromIndex 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 CSS grade
@@ -3273,45 +3032,6 @@ exports[`Renderer:table combine Renderer:table combineNum with fromIndex 1`] = `
                   </table>
                 </div>
               </div>
-              <div
-                class="resize-sensor"
-                style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-  
-                <div
-                  class="resize-sensor-expand"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-shrink"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-appear"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -3341,11 +3061,10 @@ exports[`Renderer:table groupName-default 1`] = `
           >
             <div
               class="cxd-Table m-b-none"
-              style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-8-width: 0px; position: relative;"
+              style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-8-width: 0px;"
             >
               <div
                 class="cxd-Table-fixedTop"
-                style="top: 0px;"
               >
                 <div
                   class="cxd-Table-toolbar cxd-Table-headToolbar"
@@ -3411,7 +3130,7 @@ exports[`Renderer:table groupName-default 1`] = `
                           rowspan="1"
                         >
                           <span
-                            class="cxd-TplField"
+                            class="cxd-TplField fr-view"
                           >
                             <span>
                               分组1
@@ -3425,7 +3144,7 @@ exports[`Renderer:table groupName-default 1`] = `
                           rowspan="1"
                         >
                           <span
-                            class="cxd-TplField"
+                            class="cxd-TplField fr-view"
                           >
                             <span>
                               分组2
@@ -3444,7 +3163,7 @@ exports[`Renderer:table groupName-default 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Engine
@@ -3464,7 +3183,7 @@ exports[`Renderer:table groupName-default 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Grade
@@ -3484,7 +3203,7 @@ exports[`Renderer:table groupName-default 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Version
@@ -3504,7 +3223,7 @@ exports[`Renderer:table groupName-default 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Browser
@@ -3524,7 +3243,7 @@ exports[`Renderer:table groupName-default 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Platform
@@ -4052,45 +3771,6 @@ exports[`Renderer:table groupName-default 1`] = `
                     </tbody>
                   </table>
                 </div>
-              </div>
-              <div
-                class="resize-sensor"
-                style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-  
-                <div
-                  class="resize-sensor-expand"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-shrink"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-appear"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                />
               </div>
             </div>
           </div>
@@ -4121,11 +3801,10 @@ exports[`Renderer:table groupName-middleNoGroupName 1`] = `
           >
             <div
               class="cxd-Table m-b-none"
-              style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-8-width: 0px; position: relative;"
+              style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-8-width: 0px;"
             >
               <div
                 class="cxd-Table-fixedTop"
-                style="top: 0px;"
               >
                 <div
                   class="cxd-Table-toolbar cxd-Table-headToolbar"
@@ -4191,7 +3870,7 @@ exports[`Renderer:table groupName-middleNoGroupName 1`] = `
                           rowspan="1"
                         >
                           <span
-                            class="cxd-TplField"
+                            class="cxd-TplField fr-view"
                           >
                             <span>
                               分组1
@@ -4208,7 +3887,7 @@ exports[`Renderer:table groupName-middleNoGroupName 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Grade
@@ -4230,7 +3909,7 @@ exports[`Renderer:table groupName-middleNoGroupName 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Version
@@ -4249,7 +3928,7 @@ exports[`Renderer:table groupName-middleNoGroupName 1`] = `
                           rowspan="1"
                         >
                           <span
-                            class="cxd-TplField"
+                            class="cxd-TplField fr-view"
                           >
                             <span>
                               分组2
@@ -4268,7 +3947,7 @@ exports[`Renderer:table groupName-middleNoGroupName 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Engine
@@ -4288,7 +3967,7 @@ exports[`Renderer:table groupName-middleNoGroupName 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Browser
@@ -4308,7 +3987,7 @@ exports[`Renderer:table groupName-middleNoGroupName 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Platform
@@ -4836,45 +4515,6 @@ exports[`Renderer:table groupName-middleNoGroupName 1`] = `
                     </tbody>
                   </table>
                 </div>
-              </div>
-              <div
-                class="resize-sensor"
-                style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-  
-                <div
-                  class="resize-sensor-expand"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-shrink"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-appear"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                />
               </div>
             </div>
           </div>
@@ -4905,11 +4545,10 @@ exports[`Renderer:table groupName-startNoGroupName 1`] = `
           >
             <div
               class="cxd-Table m-b-none"
-              style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-8-width: 0px; position: relative;"
+              style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-8-width: 0px;"
             >
               <div
                 class="cxd-Table-fixedTop"
-                style="top: 0px;"
               >
                 <div
                   class="cxd-Table-toolbar cxd-Table-headToolbar"
@@ -4978,7 +4617,7 @@ exports[`Renderer:table groupName-startNoGroupName 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Engine
@@ -5000,7 +4639,7 @@ exports[`Renderer:table groupName-startNoGroupName 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Grade
@@ -5022,7 +4661,7 @@ exports[`Renderer:table groupName-startNoGroupName 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Version
@@ -5041,7 +4680,7 @@ exports[`Renderer:table groupName-startNoGroupName 1`] = `
                           rowspan="1"
                         >
                           <span
-                            class="cxd-TplField"
+                            class="cxd-TplField fr-view"
                           >
                             <span>
                               分组2
@@ -5060,7 +4699,7 @@ exports[`Renderer:table groupName-startNoGroupName 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Browser
@@ -5080,7 +4719,7 @@ exports[`Renderer:table groupName-startNoGroupName 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Platform
@@ -5608,45 +5247,6 @@ exports[`Renderer:table groupName-startNoGroupName 1`] = `
                     </tbody>
                   </table>
                 </div>
-              </div>
-              <div
-                class="resize-sensor"
-                style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-  
-                <div
-                  class="resize-sensor-expand"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-shrink"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-appear"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                />
               </div>
             </div>
           </div>
@@ -5677,11 +5277,10 @@ exports[`Renderer:table groupName-withTpl 1`] = `
           >
             <div
               class="cxd-Table m-b-none"
-              style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-8-width: 0px; position: relative;"
+              style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-8-width: 0px;"
             >
               <div
                 class="cxd-Table-fixedTop"
-                style="top: 0px;"
               >
                 <div
                   class="cxd-Table-toolbar cxd-Table-headToolbar"
@@ -5747,7 +5346,7 @@ exports[`Renderer:table groupName-withTpl 1`] = `
                           rowspan="1"
                         >
                           <span
-                            class="cxd-TplField"
+                            class="cxd-TplField fr-view"
                           >
                             <span>
                               分组1
@@ -5761,7 +5360,7 @@ exports[`Renderer:table groupName-withTpl 1`] = `
                           rowspan="1"
                         >
                           <span
-                            class="cxd-TplField"
+                            class="cxd-TplField fr-view"
                           >
                             <span>
                               分组2
@@ -5780,7 +5379,7 @@ exports[`Renderer:table groupName-withTpl 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Engine
@@ -5800,7 +5399,7 @@ exports[`Renderer:table groupName-withTpl 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Grade
@@ -5820,7 +5419,7 @@ exports[`Renderer:table groupName-withTpl 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Version
@@ -5840,7 +5439,7 @@ exports[`Renderer:table groupName-withTpl 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Browser
@@ -5860,7 +5459,7 @@ exports[`Renderer:table groupName-withTpl 1`] = `
                             class="cxd-TableCell--title"
                           >
                             <span
-                              class="cxd-TplField"
+                              class="cxd-TplField fr-view"
                             >
                               <span>
                                 Platform
@@ -6389,45 +5988,6 @@ exports[`Renderer:table groupName-withTpl 1`] = `
                   </table>
                 </div>
               </div>
-              <div
-                class="resize-sensor"
-                style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-  
-                <div
-                  class="resize-sensor-expand"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-shrink"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                >
-                  
-    
-                  <div
-                    style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                  />
-                  
-  
-                </div>
-                
-  
-                <div
-                  class="resize-sensor-appear"
-                  style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -6441,11 +6001,10 @@ exports[`Renderer:table isHead fixed 1`] = `
 <div>
   <div
     class="cxd-Table"
-    style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; position: relative;"
+    style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px;"
   >
     <div
       class="cxd-Table-fixedTop"
-      style="top: 0px;"
     >
       <div
         class="cxd-Table-heading"
@@ -6482,7 +6041,7 @@ exports[`Renderer:table isHead fixed 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       Engine
@@ -6503,7 +6062,7 @@ exports[`Renderer:table isHead fixed 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       Platform
@@ -6772,45 +6331,6 @@ exports[`Renderer:table isHead fixed 1`] = `
         </table>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -6819,7 +6339,7 @@ exports[`Renderer:table list 1`] = `
 <div>
   <div
     class="cxd-Table"
-    style="--Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-7-width: 0px; --Table-column-8-width: 0px; --Table-column-9-width: 0px; --Table-column-10-width: 0px; --Table-column-11-width: 0px; position: relative;"
+    style="--Table-thead-height: 0px; --Table-column-3-width: 0px; --Table-column-4-width: 0px; --Table-column-5-width: 0px; --Table-column-6-width: 0px; --Table-column-7-width: 0px; --Table-column-8-width: 0px; --Table-column-9-width: 0px; --Table-column-10-width: 0px; --Table-column-11-width: 0px;"
   >
     <div
       class="cxd-Table-toolbar cxd-Table-headToolbar"
@@ -6899,7 +6419,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       ID
@@ -6919,7 +6439,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       文本
@@ -6939,7 +6459,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       图片
@@ -6959,7 +6479,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       日期
@@ -6979,7 +6499,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       进度
@@ -6999,7 +6519,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       状态
@@ -7019,7 +6539,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       开关
@@ -7039,7 +6559,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       映射
@@ -7059,7 +6579,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-TableCell--title"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       List
@@ -7102,6 +6622,7 @@ exports[`Renderer:table list 1`] = `
               >
                 <div
                   class="cxd-ImageField cxd-ImageField--thumb"
+                  style="transform: scale(1);"
                 >
                   <div
                     class="cxd-Image cxd-Image--thumb"
@@ -7110,8 +6631,13 @@ exports[`Renderer:table list 1`] = `
                       class="cxd-Image-thumbWrap"
                     >
                       <div
-                        class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                        class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
                       >
+                        <div
+                          class="mask"
+                        >
+                          <span />
+                        </div>
                         <img
                           class="cxd-Image-image"
                           src="https://ss0.bdstatic.com/70cFvHSh_Q1YnxGkpoWK1HF6hhy/it/u=3893101144,2877209892&fm=23&gp=0.jpg"
@@ -7153,7 +6679,7 @@ exports[`Renderer:table list 1`] = `
                     class="cxd-Progress-line-text"
                   >
                     <span
-                      class="cxd-TplField"
+                      class="cxd-TplField fr-view"
                     >
                       <span>
                         22%
@@ -7178,10 +6704,11 @@ exports[`Renderer:table list 1`] = `
                 class=""
               >
                 <div
-                  class="cxd-SwitchControl cxd-Form-control"
+                  class="cxd-SwitchControl cxd-Form-control is-thin"
                 >
                   <label
                     class="cxd-Switch is-checked"
+                    data-role="switch"
                   >
                     <input
                       checked=""
@@ -7207,7 +6734,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-MappingField"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       <span
@@ -7227,7 +6754,6 @@ exports[`Renderer:table list 1`] = `
                 >
                   <div
                     class="cxd-List-fixedTop"
-                    style="top: 0px;"
                   />
                   <div
                     class="cxd-List-items"
@@ -7344,6 +6870,7 @@ exports[`Renderer:table list 1`] = `
               >
                 <div
                   class="cxd-ImageField cxd-ImageField--thumb"
+                  style="transform: scale(1);"
                 >
                   <div
                     class="cxd-Image cxd-Image--thumb"
@@ -7352,8 +6879,13 @@ exports[`Renderer:table list 1`] = `
                       class="cxd-Image-thumbWrap"
                     >
                       <div
-                        class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                        class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
                       >
+                        <div
+                          class="mask"
+                        >
+                          <span />
+                        </div>
                         <img
                           class="cxd-Image-image"
                           src="https://ss0.bdstatic.com/70cFvHSh_Q1YnxGkpoWK1HF6hhy/it/u=3893101144,2877209892&fm=23&gp=0.jpg"
@@ -7395,7 +6927,7 @@ exports[`Renderer:table list 1`] = `
                     class="cxd-Progress-line-text"
                   >
                     <span
-                      class="cxd-TplField"
+                      class="cxd-TplField fr-view"
                     >
                       <span>
                         85%
@@ -7420,10 +6952,11 @@ exports[`Renderer:table list 1`] = `
                 class=""
               >
                 <div
-                  class="cxd-SwitchControl cxd-Form-control"
+                  class="cxd-SwitchControl cxd-Form-control is-thin"
                 >
                   <label
                     class="cxd-Switch is-checked"
+                    data-role="switch"
                   >
                     <input
                       checked=""
@@ -7449,7 +6982,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-MappingField"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       <span
@@ -7469,7 +7002,6 @@ exports[`Renderer:table list 1`] = `
                 >
                   <div
                     class="cxd-List-fixedTop"
-                    style="top: 0px;"
                   />
                   <div
                     class="cxd-List-items"
@@ -7706,6 +7238,7 @@ exports[`Renderer:table list 1`] = `
               >
                 <div
                   class="cxd-ImageField cxd-ImageField--thumb"
+                  style="transform: scale(1);"
                 >
                   <div
                     class="cxd-Image cxd-Image--thumb"
@@ -7714,8 +7247,13 @@ exports[`Renderer:table list 1`] = `
                       class="cxd-Image-thumbWrap"
                     >
                       <div
-                        class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                        class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
                       >
+                        <div
+                          class="mask"
+                        >
+                          <span />
+                        </div>
                         <img
                           class="cxd-Image-image"
                           src="https://ss0.bdstatic.com/70cFvHSh_Q1YnxGkpoWK1HF6hhy/it/u=3893101144,2877209892&fm=23&gp=0.jpg"
@@ -7757,7 +7295,7 @@ exports[`Renderer:table list 1`] = `
                     class="cxd-Progress-line-text"
                   >
                     <span
-                      class="cxd-TplField"
+                      class="cxd-TplField fr-view"
                     >
                       <span>
                         72%
@@ -7782,10 +7320,11 @@ exports[`Renderer:table list 1`] = `
                 class=""
               >
                 <div
-                  class="cxd-SwitchControl cxd-Form-control"
+                  class="cxd-SwitchControl cxd-Form-control is-thin"
                 >
                   <label
                     class="cxd-Switch"
+                    data-role="switch"
                   >
                     <input
                       theme="cxd"
@@ -7810,7 +7349,7 @@ exports[`Renderer:table list 1`] = `
                   class="cxd-MappingField"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       <span
@@ -7830,7 +7369,6 @@ exports[`Renderer:table list 1`] = `
                 >
                   <div
                     class="cxd-List-fixedTop"
-                    style="top: 0px;"
                   />
                   <div
                     class="cxd-List-items"
@@ -8002,45 +7540,6 @@ exports[`Renderer:table list 1`] = `
           </tbody>
         </table>
       </div>
-    </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
     </div>
   </div>
 </div>

@@ -21,7 +21,8 @@ import {
   isVisible,
   qsstringify,
   createObject,
-  extendObject
+  extendObject,
+  TestIdBuilder
 } from 'amis-core';
 import {
   BaseSchema,
@@ -36,6 +37,7 @@ import {IIRendererStore} from 'amis-core';
 import type {ListenerAction} from 'amis-core';
 import type {ScopedComponentType} from 'amis-core';
 import isPlainObject from 'lodash/isPlainObject';
+import {isAlive} from 'mobx-state-tree';
 
 export const eventTypes = [
   /* 初始化时执行，默认 */
@@ -151,6 +153,7 @@ export interface ServiceProps
     Omit<ServiceSchema, 'type' | 'className'> {
   store: IServiceStore;
   messages: SchemaMessage;
+  testIdBuilder?: TestIdBuilder;
 }
 export default class Service extends React.Component<ServiceProps> {
   timer: ReturnType<typeof setTimeout>;
@@ -272,7 +275,12 @@ export default class Service extends React.Component<ServiceProps> {
     }
   }
 
-  doAction(action: ListenerAction, args: any) {
+  doAction(
+    action: ListenerAction,
+    data: any,
+    throwErrors: boolean = false,
+    args?: any
+  ) {
     if (action?.actionType === 'rebuild') {
       const {
         schemaApi,
@@ -502,7 +510,7 @@ export default class Service extends React.Component<ServiceProps> {
             return;
           }
         }
-        store.updateData(returndata, undefined, false);
+        store.updateData(returndata, undefined, false, wsApi.concatDataFields);
         store.setHasRemoteData();
 
         this.runDataProvider('onWsFetched');
@@ -522,6 +530,9 @@ export default class Service extends React.Component<ServiceProps> {
     // 保存 ajax 请求的时候返回时数据部分。
     const data = result?.hasOwnProperty('ok') ? result.data ?? {} : result;
     const {onBulkChange, dispatchEvent, store, formStore} = this.props;
+    if (!isAlive(store)) {
+      return;
+    }
 
     dispatchEvent?.(
       'fetchInited',
@@ -536,7 +547,9 @@ export default class Service extends React.Component<ServiceProps> {
     );
 
     if (!isEmpty(data) && onBulkChange && formStore) {
-      onBulkChange(data);
+      onBulkChange(data, false, {
+        type: 'api'
+      });
     }
 
     result?.ok && this.initInterval(data);
@@ -577,13 +590,13 @@ export default class Service extends React.Component<ServiceProps> {
     return value;
   }
 
-  reload(
+  async reload(
     subpath?: string,
     query?: any,
     ctx?: RendererData,
     silent?: boolean,
     replace?: boolean
-  ) {
+  ): Promise<any> {
     if (query) {
       return this.receive(query, undefined, replace);
     }
@@ -602,44 +615,40 @@ export default class Service extends React.Component<ServiceProps> {
     clearTimeout(this.timer);
 
     if (isEffectiveApi(schemaApi, store.data)) {
-      store
-        .fetchSchema(schemaApi, store.data, {
-          successMessage: fetchSuccess,
-          errorMessage: fetchFailed
-        })
-        .then(res => {
-          this.runDataProvider('onApiFetched');
-          this.afterSchemaFetch(res);
-        });
+      const res = await store.fetchSchema(schemaApi, store.data, {
+        successMessage: fetchSuccess,
+        errorMessage: fetchFailed
+      });
+      await this.runDataProvider('onApiFetched');
+      this.afterSchemaFetch(res);
     }
 
     if (isEffectiveApi(api, store.data)) {
-      store
-        .fetchData(api, store.data, {
-          silent,
-          successMessage: fetchSuccess,
-          errorMessage: fetchFailed
-        })
-        .then(res => {
-          this.runDataProvider('onSchemaApiFetched');
-          this.afterDataFetch(res);
-        });
+      const res = await store.fetchData(api, store.data, {
+        silent,
+        successMessage: fetchSuccess,
+        errorMessage: fetchFailed
+      });
+      await this.runDataProvider('onSchemaApiFetched');
+      this.afterDataFetch(res);
     }
 
     if (dataProvider) {
-      this.runDataProvider('inited');
+      await this.runDataProvider('inited');
     }
+
+    return store.data;
   }
 
   silentReload(target?: string, query?: any) {
     this.reload(target, query, undefined, true);
   }
 
-  receive(values: object, subPath?: string, replace?: boolean) {
+  async receive(values: object, subPath?: string, replace?: boolean) {
     const {store} = this.props;
 
     store.updateData(values, undefined, replace);
-    this.reload();
+    return this.reload();
   }
 
   handleQuery(query: any) {
@@ -685,7 +694,7 @@ export default class Service extends React.Component<ServiceProps> {
     targets: Array<any>
   ) {
     const {store} = this.props;
-    store.closeDialog(true);
+    store.closeDialog(true, values);
   }
 
   @autobind
@@ -698,11 +707,14 @@ export default class Service extends React.Component<ServiceProps> {
     return new Promise(resolve => {
       const {store} = this.props;
 
-      store.setCurrentAction({
-        type: 'button',
-        actionType: 'dialog',
-        dialog: dialog
-      });
+      store.setCurrentAction(
+        {
+          type: 'button',
+          actionType: 'dialog',
+          dialog: dialog
+        },
+        this.props.resolveDefinitions
+      );
       store.openDialog(
         ctx,
         undefined,
@@ -724,7 +736,7 @@ export default class Service extends React.Component<ServiceProps> {
     const {onAction, store, env, api, translate: __} = this.props;
 
     if (api && action.actionType === 'ajax') {
-      store.setCurrentAction(action);
+      store.setCurrentAction(action, this.props.resolveDefinitions);
       store
         .saveRemote(action.api as string, data, {
           successMessage: __(action.messages && action.messages.success),
@@ -739,7 +751,7 @@ export default class Service extends React.Component<ServiceProps> {
 
           const redirect =
             action.redirect && filter(action.redirect, store.data);
-          redirect && env.jumpTo(redirect, action);
+          redirect && env.jumpTo(redirect, action, store.data);
           action.reload &&
             this.reloadTarget(
               filterTarget(action.reload, store.data),
@@ -793,15 +805,23 @@ export default class Service extends React.Component<ServiceProps> {
       style,
       store,
       render,
+      env,
       classPrefix: ns,
       classnames: cx,
       loadingConfig,
-      showErrorMsg
+      showErrorMsg,
+      testIdBuilder
     } = this.props;
 
     return (
-      <div className={cx(`${ns}Service`, className)} style={style}>
-        {store.error && showErrorMsg !== false ? (
+      <div
+        className={cx(`${ns}Service`, className)}
+        style={style}
+        {...testIdBuilder?.getTestId()}
+      >
+        {!env.forceSilenceInsideError &&
+        store.error &&
+        showErrorMsg !== false ? (
           <Alert
             level="danger"
             showCloseButton
@@ -858,7 +878,7 @@ export class ServiceRenderer extends Service {
     scoped.registerComponent(this as ScopedComponentType);
   }
 
-  reload(
+  async reload(
     subpath?: string,
     query?: any,
     ctx?: any,
@@ -876,7 +896,7 @@ export class ServiceRenderer extends Service {
     return super.reload(subpath, query, ctx, silent, replace);
   }
 
-  receive(values: any, subPath?: string, replace?: boolean) {
+  async receive(values: any, subPath?: string, replace?: boolean) {
     const scoped = this.context as IScopedContext;
     if (subPath) {
       return scoped.send(subPath, values);

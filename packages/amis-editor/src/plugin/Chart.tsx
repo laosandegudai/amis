@@ -12,7 +12,10 @@ import {
   RendererPluginEvent,
   tipedLabel
 } from 'amis-editor-core';
-import {getEventControlConfig} from '../renderer/event-control/helper';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../renderer/event-control/helper';
 
 const ChartConfigEditor = ({value, onChange}: any) => {
   return (
@@ -181,12 +184,14 @@ export class ChartPlugin extends BasePlugin {
     {
       actionType: 'reload',
       actionLabel: '重新加载',
-      description: '触发组件数据刷新并重新渲染'
+      description: '触发组件数据刷新并重新渲染',
+      ...getActionCommonProps('reload')
     },
     {
       actionType: 'setValue',
       actionLabel: '变量赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
     // 特性动作太多了，这里先不加了，可以通过写代码配置
   ];
@@ -248,8 +253,8 @@ export class ChartPlugin extends BasePlugin {
                   getSchemaTpl('switch', {
                     label: '初始是否拉取',
                     name: 'initFetch',
-                    // visibleOn: 'chartDataType === "dataApi" && data.api',
-                    visibleOn: 'data.api.url',
+                    // visibleOn: 'chartDataType === "dataApi" && this.api',
+                    visibleOn: 'this.api.url',
                     pipeIn: defaultValue(true)
                   }),
                   {
@@ -260,8 +265,9 @@ export class ChartPlugin extends BasePlugin {
                     ),
                     type: 'input-number',
                     step: 500,
-                    // visibleOn: 'chartDataType === "dataApi" && data.api',
-                    visibleOn: 'data.api.url',
+                    min: 1000,
+                    // visibleOn: 'chartDataType === "dataApi" && this.api',
+                    visibleOn: 'this.api.url',
                     unitOptions: ['ms']
                   },
                   getSchemaTpl('expressionFormulaControl', {

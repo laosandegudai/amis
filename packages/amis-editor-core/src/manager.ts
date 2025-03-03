@@ -9,7 +9,14 @@ import debounce from 'lodash/debounce';
 import findIndex from 'lodash/findIndex';
 import omit from 'lodash/omit';
 import {openContextMenus, toast, alert, DataScope, DataSchema} from 'amis';
-import {getRenderers, RenderOptions, mapTree, isEmpty} from 'amis-core';
+import {
+  getRenderers,
+  RenderOptions,
+  JSONTraverse,
+  wrapFetcher,
+  GlobalVariableItem,
+  setVariable
+} from 'amis-core';
 import {
   PluginInterface,
   BasicPanelItem,
@@ -37,7 +44,10 @@ import {
   RendererPluginEvent,
   PluginEvents,
   PluginActions,
-  BasePlugin
+  BasePlugin,
+  GlobalVariablesEventContext,
+  GlobalVariableEventContext,
+  InlineEditableElement
 } from './plugin';
 import {
   EditorStoreType,
@@ -56,7 +66,10 @@ import {
   isLayoutPlugin,
   JSONPipeOut,
   scrollToActive,
-  JSONPipeIn
+  JSONPipeIn,
+  generateNodeId,
+  JSONGetNodesById,
+  diff
 } from './util';
 import {hackIn, makeSchemaFormRender, makeWrapper} from './component/factory';
 import {env} from './env';
@@ -67,7 +80,9 @@ import {VariableManager} from './variable';
 
 import type {IScopedContext} from 'amis';
 import type {SchemaObject, SchemaCollection} from 'amis';
-import type {RendererConfig} from 'amis-core';
+import type {Api, Payload, RendererConfig, RendererEnv} from 'amis-core';
+import {loadAsyncRenderer} from 'amis-core';
+import {startInlineEdit} from './inlineEdit';
 
 export interface EditorManagerConfig
   extends Omit<EditorProps, 'value' | 'onChange'> {}
@@ -212,17 +227,26 @@ export class EditorManager {
 
   /** 变量管理 */
   readonly variableManager;
+  fetch?: (api: Api, data?: any, options?: object) => Promise<Payload>;
 
   constructor(
     readonly config: EditorManagerConfig,
-    readonly store: EditorStoreType
+    readonly store: EditorStoreType,
+    readonly parent?: EditorManager
   ) {
     // 传给 amis 渲染器的默认 env
     this.env = {
-      ...env, // 默认的 env 中带 jumpTo
+      ...(env as any), // 默认的 env 中带 jumpTo
       ...omit(config.amisEnv, 'replaceText'), // 用户也可以设置自定义环境配置，用于覆盖默认的 env
-      theme: config.theme
+      theme: config.theme!
     };
+
+    // 内部统一使用 wrapFetcher 包装 fetcher
+    if (this.env.fetcher) {
+      this.env.fetcher = wrapFetcher(this.env.fetcher as any, this.env.tracker);
+      this.fetch = this.env.fetcher as any;
+    }
+
     this.env.beforeDispatchEvent = this.beforeDispatchEvent.bind(
       this,
       this.env.beforeDispatchEvent
@@ -382,6 +406,39 @@ export class EditorManager {
               )
               ?.classList.remove('is-region-active');
           }
+        }
+      ),
+
+      // 同步全局变量数据结构，以便支持fx 可视化操作
+      reaction(
+        () => store.globalVariables,
+        variables => {
+          const id = 'global-variables-schema';
+          const scope = this.dataSchema.root;
+          const globalSchema: any = {
+            type: 'object',
+            title: '全局变量',
+            properties: {}
+          };
+
+          variables.forEach(variable => {
+            globalSchema.properties[variable.key] = {
+              type: 'string',
+              title: variable.label || variable.key,
+              description: variable.description,
+              ...variable.valueSchema
+            };
+          });
+
+          const jsonschema: any = {
+            $id: id,
+            type: 'object',
+            properties: {
+              global: globalSchema
+            }
+          };
+          scope.removeSchema(jsonschema.$id);
+          scope.addSchema(jsonschema);
         }
       )
     );
@@ -580,8 +637,8 @@ export class EditorManager {
     let id = curRendererId || this.store.activeId;
     let panels: Array<BasicPanelItem> = [];
 
-    if (!id && this.store?.schema) {
-      id = this.store?.schema.$$id; // 默认使用根节点id
+    if (!id && this.store?.filteredSchema) {
+      id = this.store?.filteredSchema.$$id; // 默认使用根节点id
     }
 
     if (id || this.store.selections.length) {
@@ -873,7 +930,11 @@ export class EditorManager {
    * @param rendererIdOrSchema
    * 备注：可以根据渲染器ID添加新元素，也可以根据现有schema片段添加新元素
    */
-  async addElem(rendererIdOrSchema: string | any) {
+  async addElem(
+    rendererIdOrSchema: string | any,
+    reGenerateId?: boolean,
+    activeChild: boolean = true
+  ) {
     if (!rendererIdOrSchema) {
       return;
     }
@@ -915,20 +976,28 @@ export class EditorManager {
 
     const curElemSchema = schemaData || subRenderer?.scaffold;
     const isSpecialLayout = this.isSpecialLayout(curElemSchema);
-    if (
-      (node.type === 'wrapper' || node.type === 'container') &&
-      node.schema?.body?.length === 0 &&
-      curElemSchema?.type === 'flex' &&
-      !node.schema?.isFreeContainer &&
-      !isSpecialLayout
-    ) {
-      // 布局能力提升: 点击插入新元素，当wrapper为空插入布局容器时，自动改为置换，避免过多层级
-      this.replaceChild(curActiveId, curElemSchema);
-      setTimeout(() => {
-        this.updateConfigPanel();
-      }, 0);
-      return;
-    }
+
+    // 不直接替换容器
+    // if (
+    //   (node.type === 'wrapper' || node.type === 'container') &&
+    //   node.schema?.body?.length === 0 &&
+    //   curElemSchema?.type === 'flex' &&
+    //   !node.schema?.isFreeContainer &&
+    //   !isSpecialLayout
+    // ) {
+    //   // 布局能力提升: 点击插入新元素，当wrapper为空插入布局容器时，自动改为置换，避免过多层级
+    //   this.replaceChild(
+    //     curActiveId,
+    //     curElemSchema,
+    //     subRenderer,
+    //     store.insertRegion,
+    //     reGenerateId
+    //   );
+    //   setTimeout(() => {
+    //     this.updateConfigPanel();
+    //   }, 0);
+    //   return;
+    // }
 
     const parentNode = node.parent as EditorNodeType; // 父级节点
 
@@ -1009,9 +1078,11 @@ export class EditorManager {
       regionNodeRegion,
       value,
       nextId,
-      subRenderer
+      subRenderer || node.info,
+      undefined, // 不是拖拽，不需要传递拖拽信息
+      reGenerateId
     );
-    if (child) {
+    if (child && activeChild) {
       // mobx 修改数据是异步的
       setTimeout(() => {
         store.setActiveId(child.$$id);
@@ -1049,7 +1120,8 @@ export class EditorManager {
   async appendSiblingSchema(
     rendererSchema: Object,
     beforeInsert?: boolean,
-    disabledAutoSelectInsertElem?: boolean
+    disabledAutoSelectInsertElem?: boolean,
+    reGenerateId?: boolean
   ) {
     if (!rendererSchema) {
       return;
@@ -1107,7 +1179,14 @@ export class EditorManager {
         regionNodeId,
         regionNodeRegion,
         rendererSchema,
-        nextId
+        nextId,
+        node.info,
+        {
+          id: store.dragId,
+          type: store.dragType,
+          data: store.dragSchema
+        },
+        reGenerateId
       );
       if (child && !disabledAutoSelectInsertElem) {
         // mobx 修改数据是异步的
@@ -1297,10 +1376,15 @@ export class EditorManager {
    * @param diff
    */
   @autobind
-  panelChangeValue(value: any, diff?: any) {
+  panelChangeValue(
+    value: any,
+    diff?: any,
+    changeFilter?: (schema: any, value: any, id: string, diff?: any) => any,
+    id = this.store.activeId
+  ) {
     const store = this.store;
     const context: ChangeEventContext = {
-      ...this.buildEventContext(store.activeId),
+      ...this.buildEventContext(id),
       value,
       diff
     };
@@ -1310,9 +1394,12 @@ export class EditorManager {
       return;
     }
 
-    store.changeValue(value, diff);
+    store.changeValue(value, diff, changeFilter, id);
 
-    this.trigger('after-update', context);
+    this.trigger('after-update', {
+      ...context,
+      schema: context.node.schema // schema 是新的，因为修改完了
+    });
   }
 
   /**
@@ -1320,6 +1407,21 @@ export class EditorManager {
    * @param config
    */
   openSubEditor(config: SubEditorContext) {
+    if (
+      ['dialog', 'drawer', 'confirmDialog'].includes(config.value.type) &&
+      this.parent
+    ) {
+      let parent: EditorManager | undefined = this.parent;
+      const id = config.value.$$originId || config.value.$$id;
+      while (parent) {
+        if (parent.store.schema.$$id === id) {
+          toast.warning('所选弹窗已经被打开，不能多次打开');
+          return;
+        }
+
+        parent = parent.parent;
+      }
+    }
     this.store.openSubEditor(config);
   }
 
@@ -1361,7 +1463,7 @@ export class EditorManager {
         y: info.y
       },
       menus,
-      () => this.store.setContextId('')
+      ctx => ctx.state.isOpened && this.store.setContextId('')
     );
   }
 
@@ -1377,6 +1479,39 @@ export class EditorManager {
   }
 
   closeContextMenu() {}
+
+  /**
+   * 自由容器内元素置于顶层
+   */
+  moveTop() {
+    const store = this.store;
+    if (!store.activeId) {
+      return;
+    }
+
+    const node = store.getNodeById(store.activeId)!;
+    const regionNode = node.parent;
+    this.move(regionNode.id, regionNode.region, node.id);
+  }
+
+  /**
+   * 自由容器内元素置于底层
+   */
+  moveBottom() {
+    const store = this.store;
+    if (!store.activeId) {
+      return;
+    }
+    const node = store.getNodeById(store.activeId)!;
+    const regionNode = node.parent;
+
+    this.move(
+      regionNode.id,
+      regionNode.region,
+      node.id,
+      regionNode.children[0].id
+    );
+  }
 
   /**
    * 将当前选中的节点上移
@@ -1397,12 +1532,13 @@ export class EditorManager {
       sourceId: node.id,
       direction: 'up',
       beforeId: node.prevSibling?.id,
-      region: regionNode.region
+      region: regionNode.region,
+      regionNode: regionNode
     };
 
     const event = this.trigger('before-move', context);
     if (!event.prevented) {
-      store.moveUp(node.id);
+      store.moveUp(context);
       // this.buildToolbars();
       this.trigger('after-move', context);
       this.trigger('after-update', context);
@@ -1428,12 +1564,13 @@ export class EditorManager {
       sourceId: node.id,
       direction: 'down',
       beforeId: node.nextSibling?.nextSibling?.id,
-      region: regionNode.region
+      region: regionNode.region,
+      regionNode: regionNode
     };
 
     const event = this.trigger('before-move', context);
     if (!event.prevented) {
-      store.moveDown(node.id);
+      store.moveDown(context);
       // this.buildToolbars();
       this.trigger('after-move', context);
       this.trigger('after-update', context);
@@ -1458,8 +1595,7 @@ export class EditorManager {
     if (!event.prevented) {
       Array.isArray(context.data) && context.data.length
         ? this.store.delMulti(context.data)
-        : this.store.del(id);
-
+        : this.store.del(context);
       this.trigger('after-delete', context);
     }
   }
@@ -1502,7 +1638,71 @@ export class EditorManager {
       return;
     }
     const json = reGenerateID(parse(this.clipboardData));
-    region ? this.addChild(id, region, json) : this.replaceChild(id, json);
+    if (region) {
+      this.addChild(id, region, json);
+      return;
+    }
+    if (this.replaceChild(id, json)) {
+      setTimeout(() => {
+        this.store.highlightNodes.forEach(node => {
+          node.calculateHighlightBox();
+        });
+        this.updateConfigPanel(json.type);
+      });
+    }
+  }
+
+  /**
+   * 重新生成当前节点的重复的id
+   */
+  reGenerateNodeDuplicateID(types: Array<string> = []) {
+    const node = this.store.getNodeById(this.store.activeId);
+    if (!node) {
+      return;
+    }
+    let schema = node.schema;
+    let changed = false;
+
+    // 支持按照类型过滤某类型组件
+    let tags = node.info?.plugin?.tags || [];
+    if (!Array.isArray(tags)) {
+      tags = [tags];
+    }
+    if (types.length && !tags.some(tag => types.includes(tag))) {
+      return;
+    }
+
+    // 记录组件新旧ID映射关系方便当前组件内事件动作替换
+    let idRefs: {[propKey: string]: string} = {};
+
+    // 如果有多个重复组件，则重新生成ID
+    JSONTraverse(schema, (value: any, key: string, host: any) => {
+      const isNodeIdFormat =
+        typeof value === 'string' && value.indexOf('u:') === 0;
+      if (key === 'id' && isNodeIdFormat && host) {
+        let sameNodes = JSONGetNodesById(this.store.schema, value, 'id');
+        if (sameNodes && sameNodes.length > 1) {
+          let newId = generateNodeId();
+          idRefs[value] = newId;
+          host[key] = newId;
+          changed = true;
+        }
+      }
+      return value;
+    });
+
+    if (changed) {
+      // 替换当前组件内事件动作里面可能的ID
+      JSONTraverse(schema, (value: any, key: string, host: any) => {
+        const isNodeIdFormat =
+          typeof value === 'string' && value.indexOf('u:') === 0;
+        if (key === 'componentId' && isNodeIdFormat && idRefs[value]) {
+          host.componentId = idRefs[value];
+        }
+        return value;
+      });
+      this.replaceChild(node.id, schema);
+    }
   }
 
   /**
@@ -1536,19 +1736,21 @@ export class EditorManager {
     region: string,
     json: any,
     beforeId?: string,
-    subRenderer?: SubRendererInfo,
+    subRenderer?: SubRendererInfo | RendererInfo,
     dragInfo?: {
       id: string;
       type: string;
       data: any;
-    }
+      position?: string;
+    },
+    reGenerateId?: boolean
   ): any | null {
     const store = this.store;
     let index: number = -1;
     const commonContext = this.buildEventContext(id);
 
     // 填充id，有些脚手架生成了复杂的布局等，自动填充一下id
-    let curChildJson = JSONPipeIn(json, true);
+    let curChildJson = JSONPipeIn(json, reGenerateId ?? true);
 
     if (beforeId) {
       const arr = commonContext.schema[region];
@@ -1588,7 +1790,8 @@ export class EditorManager {
     id: string,
     region: string,
     sourceId: string,
-    beforeId?: string
+    beforeId?: string,
+    dragInfo?: any
   ): boolean {
     const store = this.store;
 
@@ -1596,7 +1799,8 @@ export class EditorManager {
       ...this.buildEventContext(id),
       beforeId,
       region: region,
-      sourceId
+      sourceId,
+      dragInfo
     };
 
     const event = this.trigger('before-move', context);
@@ -1618,11 +1822,12 @@ export class EditorManager {
   replaceChild(
     id: string,
     json: any,
-    subRenderer?: SubRendererInfo,
-    region?: string
+    subRenderer?: SubRendererInfo | RendererInfo,
+    region?: string,
+    reGenerateId?: boolean
   ): boolean {
     // 转成普通json并添加node id
-    let curJson = JSONPipeIn(json, true);
+    let curJson = JSONPipeIn(json, reGenerateId ?? true);
 
     const context: ReplaceEventContext = {
       ...this.buildEventContext(id),
@@ -1718,8 +1923,11 @@ export class EditorManager {
     this.dnd.startDrag(id, e.nativeEvent);
   }
 
-  async scaffold(form: any, value: any): Promise<SchemaObject> {
+  async scaffold(form: ScaffoldForm, value: any): Promise<SchemaObject> {
     const scaffoldFormData = form.pipeIn ? await form.pipeIn(value) : value;
+    if (form.getSchema) {
+      form = Object.assign({}, form, await form.getSchema(scaffoldFormData));
+    }
 
     return new Promise(resolve => {
       this.store.openScaffoldForm({
@@ -1738,7 +1946,7 @@ export class EditorManager {
   // 根据元素ID实时拿取上下文数据
   async reScaffoldV2(id: string) {
     const commonContext = this.buildEventContext(id);
-    const scaffoldForm = commonContext.info?.scaffoldForm;
+    const scaffoldForm = commonContext.info?.scaffoldForm!;
     const curSchema = commonContext.schema;
     const replaceWith = await this.scaffold(scaffoldForm, curSchema);
     this.replaceChild(id, replaceWith);
@@ -1751,11 +1959,16 @@ export class EditorManager {
   });
 
   patching = false;
+  patchingInvalid = false;
   patchSchema(force = false) {
     if (this.patching) {
+      this.patchingInvalid = true;
       return;
     }
     this.patching = true;
+    this.patchingInvalid = false;
+    const batch: Array<{id: string; value: any}> = [];
+    const ids = new Map();
     let patchList = (list: Array<EditorNodeType>) => {
       // 深度优先
       list.forEach((node: EditorNodeType) => {
@@ -1764,24 +1977,36 @@ export class EditorManager {
         }
 
         if (isAlive(node) && !node.isRegion) {
-          node.patch(this.store, force);
+          const schema = node.schema;
+          node.patch(
+            this.store,
+            force,
+            (id, value) => batch.unshift({id, value}),
+            ids
+          );
+          node.schemaPath && ids.set(schema.id, node.schemaPath);
         }
       });
     };
 
     patchList(this.store.root.children);
+    this.store.batchChangeValue(batch);
     this.patching = false;
+    this.patchingInvalid && this.patchSchema(force);
   }
 
   /**
    * 把设置了特殊 region 的，hack 一下。
    */
-  hackRenderers(renderers = getRenderers()) {
+  async hackRenderers(renderers = getRenderers()) {
     const toHackList: Array<{
       renderer: RendererConfig;
       regions?: Array<RegionConfig>;
       overrides?: any;
     }> = [];
+
+    await Promise.all(renderers.map(renderer => loadAsyncRenderer(renderer)));
+
     renderers.forEach(renderer => {
       const plugins = this.plugins.filter(
         plugin =>
@@ -1824,6 +2049,8 @@ export class EditorManager {
     toHackList.forEach(({regions, renderer, overrides}) =>
       this.hackIn(renderer, regions, overrides)
     );
+
+    this.store.markReady();
   }
 
   /**
@@ -1991,24 +2218,32 @@ export class EditorManager {
       if (!nearestScope && scopeNode && !scopeNode.isSecondFactor) {
         nearestScope = scope;
       }
+      if (scopeNode) {
+        const tmpSchema = await scopeNode?.info?.plugin?.buildDataSchemas?.(
+          scopeNode,
+          region,
+          trigger
+        );
 
-      const jsonschema = await scopeNode?.info?.plugin?.buildDataSchemas?.(
-        scopeNode,
-        region,
-        trigger
-      );
-      if (jsonschema) {
-        scope.removeSchema(jsonschema.$id);
-        scope.addSchema(jsonschema);
-      }
+        if (tmpSchema) {
+          const jsonschema = {
+            ...tmpSchema,
+            ...(tmpSchema?.$id
+              ? {}
+              : {$id: `${scopeNode!.id}-${scopeNode!.type}`})
+          };
+          scope.removeSchema(jsonschema.$id);
+          scope.addSchema(jsonschema);
+        }
 
-      // 记录each列表等组件顺序
-      if (scopeNode?.info?.isListComponent) {
-        listScope.unshift(scope);
+        // 记录each列表等组件顺序
+        if (scopeNode?.info?.isListComponent) {
+          listScope.unshift(scope);
 
-        // 如果当前节点是list类型节点，当前scope从父节点上取
-        if (nodeId === id) {
-          nearestScope = scope.parent;
+          // 如果当前节点是list类型节点，当前scope从父节点上取
+          if (nodeId === id) {
+            nearestScope = scope.parent;
+          }
         }
       }
 
@@ -2020,14 +2255,20 @@ export class EditorManager {
       for (let scope of listScope) {
         const [id, type] = scope.id.split('-');
         const node = this.store.getNodeById(id, type);
-        const jsonschema = await node?.info?.plugin?.buildDataSchemas?.(
-          node,
-          region,
-          trigger
-        );
-        if (jsonschema) {
-          scope.removeSchema(jsonschema.$id);
-          scope.addSchema(jsonschema);
+        if (node) {
+          const tmpSchema = await node?.info?.plugin?.buildDataSchemas?.(
+            node,
+            region,
+            trigger
+          );
+          if (tmpSchema) {
+            const jsonschema = {
+              ...tmpSchema,
+              ...(tmpSchema?.$id ? {} : {$id: `${node!.id}-${node!.type}`})
+            };
+            scope.removeSchema(jsonschema.$id);
+            scope.addSchema(jsonschema);
+          }
         }
       }
     }
@@ -2095,7 +2336,8 @@ export class EditorManager {
     }
 
     while (scope) {
-      const [id, type] = scope.id.split('-');
+      const [id] = scope.id.split('-');
+      const type = scope.id.substring(id.length + 1); // replace(`${id}-`, '');
       const scopeNode = this.store.getNodeById(id, type);
 
       if (scopeNode && !scopeNode.info?.isListComponent) {
@@ -2107,6 +2349,108 @@ export class EditorManager {
 
       scope = scope.parent;
     }
+  }
+
+  startInlineEdit(
+    node: EditorNodeType,
+    elem: HTMLElement,
+    config: InlineEditableElement,
+    event?: MouseEvent
+  ) {
+    const store = this.store;
+    store.setActiveId(node.id);
+    store.setActiveElement(config.match);
+
+    startInlineEdit({
+      node,
+      event,
+      elem,
+      config,
+      richTextToken: this.config.richTextToken,
+      richTextOptions: this.config.richTextOptions,
+      onCancel: () => {
+        store.setActiveElement('');
+      },
+      onConfirm: (value: string) => {
+        store.setActiveElement('');
+
+        if (config.key) {
+          const originValue = store.getValueOf(node.id);
+          const newValue = {...originValue};
+          setVariable(newValue, config.key, value);
+
+          const diffValue = diff(originValue, newValue);
+          // 没有变化时不触发onChange
+          if (!diffValue) {
+            return;
+          }
+          this.panelChangeValue(newValue, diffValue, undefined, node.id);
+        }
+      }
+    });
+  }
+
+  /**
+   * 初始化全局变量
+   */
+  async initGlobalVariables() {
+    let variables: Array<GlobalVariableItem & {id: string | number}> = [];
+    const context: GlobalVariablesEventContext = {
+      data: variables
+    };
+
+    // 从插件中获取全局变量
+    const event = this.trigger('global-variable-init', context);
+    if (event.pending) {
+      await event.pending;
+    }
+    this.store.setGlobalVariables(event.data);
+  }
+
+  /**
+   * 获取全局变量详情
+   */
+  async getGlobalVariableDetail(variable: Partial<GlobalVariableItem>) {
+    const context: GlobalVariableEventContext = {
+      data: variable!
+    };
+
+    const event = this.trigger('global-variable-detail', context);
+    if (event.pending) {
+      await event.pending;
+    }
+    return event.data;
+  }
+
+  /**
+   * 保存全局变量，包括新增保存和编辑保存
+   */
+  async saveGlobalVariable(variable: Partial<GlobalVariableItem>) {
+    const context: GlobalVariableEventContext = {
+      data: variable!
+    };
+
+    const event = this.trigger('global-variable-save', context);
+    if (event.pending) {
+      await event.pending;
+    }
+    return event.data;
+  }
+
+  /**
+   * 删除全局变量
+   */
+  async deleteGlobalVariable(variable: Partial<GlobalVariableItem>) {
+    const context: GlobalVariableEventContext = {
+      data: variable!
+    };
+
+    const event = this.trigger('global-variable-delete', context);
+    if (event.pending) {
+      await event.pending;
+    }
+
+    return event.data;
   }
 
   beforeDispatchEvent(
@@ -2138,6 +2482,7 @@ export class EditorManager {
     this.trigger('dispose', {
       data: this
     });
+    delete (this as any).parent;
     this.toDispose.forEach(fn => fn());
     this.toDispose = [];
     this.plugins.forEach(p => p.dispose?.());

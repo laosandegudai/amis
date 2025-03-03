@@ -3,20 +3,154 @@ import {
   EditorNodeType,
   getI18nEnabled,
   RendererPluginAction,
-  RendererPluginEvent
+  RendererPluginEvent,
+  registerEditorPlugin,
+  defaultValue,
+  getSchemaTpl,
+  BaseEventContext,
+  BasePlugin,
+  tipedLabel,
+  diff
 } from 'amis-editor-core';
-import {defaultValue, getSchemaTpl} from 'amis-editor-core';
-import {registerEditorPlugin} from 'amis-editor-core';
-import {BaseEventContext, BasePlugin} from 'amis-editor-core';
-import cloneDeep from 'lodash/cloneDeep';
+import type {Schema} from 'amis';
 import {
+  buildLinkActionDesc,
   getArgsWrapper,
   getEventControlConfig
 } from '../../renderer/event-control/helper';
-import {tipedLabel} from 'amis-editor-core';
 import {ValidatorTag} from '../../validator';
-import {resolveOptionType} from '../../util';
-import type {Schema} from 'amis';
+import {
+  resolveOptionType,
+  schemaArrayFormat,
+  schemaToArray,
+  TREE_BASE_EVENTS
+} from '../../util';
+import {getActionCommonProps} from '../../renderer/event-control/helper';
+
+// 树组件公共动作
+export const TreeCommonAction: RendererPluginAction[] = [
+  {
+    actionType: 'add',
+    actionLabel: '新增',
+    description: '新增数据项',
+    innerArgs: ['item', 'parentValue'],
+    descDetail: (info: any, context: any, props: any) => {
+      return (
+        <div className="action-desc">
+          新增
+          {buildLinkActionDesc(props.manager, info)}
+          数据项
+        </div>
+      );
+    },
+    schema: getArgsWrapper({
+      type: 'container',
+      body: [
+        {
+          type: 'input-kv',
+          label: '数据项',
+          name: 'item',
+          mode: 'horizontal',
+          inputClassName: 'ml-2',
+          size: 'lg',
+          required: true,
+          draggable: false,
+          valueType: 'ae-formulaControl',
+          keyPlaceholder: 'Option中属性的Key',
+          value: {
+            label: '',
+            value: ''
+          }
+        },
+        getSchemaTpl('formulaControl', {
+          label: '父级数据项的值',
+          name: 'parentValue',
+          mode: 'horizontal',
+          inputClassName: 'ml-2',
+          size: 'lg',
+          variables: '${variables}',
+          inputMode: 'input-group',
+          placeholder: '请输入父级数据项 valueField 的值'
+        })
+      ]
+    })
+  },
+  {
+    actionType: 'edit',
+    actionLabel: '编辑',
+    description: '编辑数据项',
+    innerArgs: ['item', 'originValue'],
+    descDetail: (info: any, context: any, props: any) => {
+      return (
+        <div className="action-desc">
+          编辑
+          {buildLinkActionDesc(props.manager, info)}
+          数据项
+        </div>
+      );
+    },
+    schema: getArgsWrapper({
+      type: 'container',
+      body: [
+        {
+          type: 'input-kv',
+          label: '数据项',
+          name: 'item',
+          mode: 'horizontal',
+          inputClassName: 'ml-2',
+          size: 'lg',
+          required: true,
+          draggable: false,
+          valueType: 'ae-formulaControl',
+          keyPlaceholder: 'Option中属性的Key',
+          value: {
+            label: '',
+            value: ''
+          }
+        },
+        getSchemaTpl('formulaControl', {
+          label: '数据编辑项的值',
+          name: 'originValue',
+          mode: 'horizontal',
+          inputClassName: 'ml-2',
+          required: true,
+          size: 'lg',
+          variables: '${variables}',
+          inputMode: 'input-group',
+          placeholder: '请输入数据项编辑前 valueField 的值'
+        })
+      ]
+    })
+  },
+  {
+    actionType: 'delete',
+    actionLabel: '删除',
+    description: '删除数据项',
+    innerArgs: ['value'],
+    descDetail: (info: any, context: any, props: any) => {
+      return (
+        <div className="action-desc">
+          删除
+          {buildLinkActionDesc(props.manager, info)}
+          数据项
+        </div>
+      );
+    },
+    schema: getArgsWrapper([
+      getSchemaTpl('formulaControl', {
+        label: '数据删除项的值',
+        name: 'value',
+        mode: 'horizontal',
+        inputClassName: 'ml-2',
+        required: true,
+        size: 'lg',
+        variables: '${variables}',
+        inputMode: 'input-group',
+        placeholder: '请输入删除项 valueField 的值'
+      })
+    ])
+  }
+];
 
 export class TreeControlPlugin extends BasePlugin {
   static id = 'TreeControlPlugin';
@@ -25,17 +159,18 @@ export class TreeControlPlugin extends BasePlugin {
   $schema = '/schemas/TreeControlSchema.json';
 
   // 组件名称
-  name = '树选择框';
+  name = '树组件';
   isBaseComponent = true;
   icon = 'fa fa-list-alt';
   pluginIcon = 'input-tree-plugin';
   description = '树型结构选择，支持 [内嵌模式] 与 [浮层模式] 的外观切换';
-  searchKeywords = 'tree、树下拉、树下拉框、tree-select';
+  searchKeywords =
+    'tree、树下拉、树下拉框、tree-select、树形选择框、树形选择器';
   docLink = '/amis/zh-CN/components/form/input-tree';
   tags = ['表单项'];
   scaffold = {
     type: 'input-tree',
-    label: '树选择框',
+    label: '树组件',
     name: 'tree',
     options: [
       {
@@ -67,7 +202,7 @@ export class TreeControlPlugin extends BasePlugin {
     body: [
       {
         ...this.scaffold,
-        label: '树选择框 - 内嵌模式',
+        label: '树组件 - 内嵌模式',
         mode: 'normal'
       }
     ]
@@ -77,131 +212,11 @@ export class TreeControlPlugin extends BasePlugin {
 
   panelTitle = '树选择';
 
+  regions = [{key: 'toolbar', label: '工具栏', preferTag: '工具栏内容'}];
+
   // 事件定义
-  events: RendererPluginEvent[] = [
-    {
-      eventName: 'change',
-      eventLabel: '值变化',
-      description: '选中值变化时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'string',
-                  title: '变化的节点值'
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      eventName: 'add',
-      eventLabel: '新增选项',
-      description: '新增节点提交时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'object',
-                  title: '新增的节点信息'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项集合'
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      eventName: 'edit',
-      eventLabel: '编辑选项',
-      description: '编辑选项',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'object',
-                  title: '编辑的节点信息'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项集合'
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      eventName: 'delete',
-      eventLabel: '删除选项',
-      description: '删除选项',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'object',
-                  title: '删除的节点信息'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项集合'
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      eventName: 'loadFinished',
-      eventLabel: '懒加载完成',
-      description: '懒加载接口远程请求成功时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'object',
-                  title: 'deferApi 懒加载远程请求成功后返回的数据'
-                }
-              }
-            }
-          }
-        }
-      ]
-    }
-  ];
+  events: (schema: any) => RendererPluginEvent[] = (schema: any) =>
+    TREE_BASE_EVENTS(schema);
 
   // 动作定义
   actions: RendererPluginAction[] = [
@@ -210,11 +225,12 @@ export class TreeControlPlugin extends BasePlugin {
       actionLabel: '展开',
       description: '展开指定层级',
       innerArgs: ['openLevel'],
-      descDetail: (info: any) => {
+      descDetail: (info: any, context: any, props: any) => {
         return (
-          <div>
-            <span className="variable-right">{info?.__rendererLabel}</span>
-            展开到第
+          <div className="action-desc">
+            展开
+            {buildLinkActionDesc(props.manager, info)}
+            到第
             <span className="variable-left variable-right">
               {info?.args?.openLevel}
             </span>
@@ -235,27 +251,102 @@ export class TreeControlPlugin extends BasePlugin {
     {
       actionType: 'collapse',
       actionLabel: '收起',
-      description: '收起树节点'
+      description: '收起树节点',
+      descDetail: (info: any, context: any, props: any) => {
+        return (
+          <div className="action-desc">
+            收起
+            {buildLinkActionDesc(props.manager, info)}
+            {info?.args?.closeLevel ? (
+              <>
+                到第
+                <span className="variable-left variable-right">
+                  {info?.args?.closeLevel}
+                </span>
+                层
+              </>
+            ) : (
+              ''
+            )}
+          </div>
+        );
+      },
+      innerArgs: ['closeLevel'],
+      schema: getArgsWrapper(
+        getSchemaTpl('formulaControl', {
+          name: 'closeLevel',
+          label: '收起层级',
+          variables: '${variables}',
+          size: 'lg',
+          mode: 'horizontal',
+          horizontal: {
+            left: 'normal'
+          }
+        })
+      )
     },
+    /** 新增、编辑、删除 */
+    ...TreeCommonAction,
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除数据'
+      description: '清除数据',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '重置数据'
+      description: '重置数据',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'reload',
       actionLabel: '重新加载',
-      description: '触发组件数据刷新并重新渲染'
+      description: '触发组件数据刷新并重新渲染',
+      ...getActionCommonProps('reload')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
+    },
+    // 检索
+    {
+      actionType: 'search',
+      actionLabel: '搜索',
+      description: '搜索当前数据源内的选项',
+      descDetail: (info: any, context: any, props: any) => {
+        return (
+          <div className="action-desc">
+            搜索
+            {buildLinkActionDesc(props.manager, info)}
+            {info?.args?.keyword ? (
+              <>
+                <span className="variable-left variable-right">
+                  {info?.args?.keyword}
+                </span>
+                的选项
+              </>
+            ) : (
+              ''
+            )}
+          </div>
+        );
+      },
+      innerArgs: ['keyword'],
+      schema: getArgsWrapper(
+        getSchemaTpl('formulaControl', {
+          name: 'keyword',
+          label: '关键词',
+          variables: '${variables}',
+          size: 'lg',
+          mode: 'horizontal',
+          horizontal: {
+            left: 'normal'
+          }
+        })
+      )
     }
   ];
 
@@ -316,35 +407,6 @@ export class TreeControlPlugin extends BasePlugin {
                 name: 'type',
                 label: '模式',
                 pipeIn: defaultValue('input-tree'),
-                onChange: (
-                  value: any,
-                  oldValue: any,
-                  model: any,
-                  form: any
-                ) => {
-                  const activeEvent = cloneDeep(
-                    form.getValueByName('onEvent') || {}
-                  );
-
-                  let eventList = this.events;
-                  if (value === 'tree-select') {
-                    const treeSelectPlugin = this.manager.plugins.find(
-                      item => item.rendererName === 'tree-select'
-                    );
-
-                    eventList = treeSelectPlugin?.events || [];
-                  }
-
-                  for (let key in activeEvent) {
-                    const hasEventKey = eventList.find(
-                      event => event.eventName === key
-                    );
-                    if (!hasEventKey) {
-                      delete activeEvent[key];
-                    }
-                  }
-                  form.setValueByName('onEvent', activeEvent);
-                },
                 options: [
                   {
                     label: '内嵌',
@@ -362,25 +424,33 @@ export class TreeControlPlugin extends BasePlugin {
                   justify: true,
                   left: 8
                 },
+                value: false,
                 inputClassName: 'is-inline ',
-                visibleOn: 'data.type === "tree-select"'
+                visibleOn: 'this.type === "tree-select"'
               }),
               getSchemaTpl('switch', {
                 label: '可检索',
-                name: 'searchable',
-                visibleOn: 'data.type === "tree-select"'
+                name: 'searchable'
+              }),
+              getSchemaTpl('apiControl', {
+                name: 'searchApi',
+                label: '选项搜索接口',
+                labelClassName: 'none',
+                visibleOn: 'this.type === "input-tree" && this.searchable'
               }),
               getSchemaTpl('multiple', {
                 body: [
                   {
                     type: 'input-number',
                     label: tipedLabel('节点最小数', '表单校验最少选中的节点数'),
-                    name: 'minLength'
+                    name: 'minLength',
+                    min: 0
                   },
                   {
                     type: 'input-number',
                     label: tipedLabel('节点最大数', '表单校验最多选中的节点数'),
-                    name: 'maxLength'
+                    name: 'maxLength',
+                    min: 0
                   }
                 ]
               }),
@@ -390,7 +460,7 @@ export class TreeControlPlugin extends BasePlugin {
                   '当选中父节点时级联选择子节点'
                 ),
                 name: 'autoCheckChildren',
-                hiddenOn: '!data.multiple',
+                hiddenOn: '!this.multiple',
                 value: true
               }),
               getSchemaTpl('switch', {
@@ -399,7 +469,15 @@ export class TreeControlPlugin extends BasePlugin {
                   '子节点可反选，值包含父子节点'
                 ),
                 name: 'cascade',
-                hiddenOn: '!data.multiple || !data.autoCheckChildren'
+                hiddenOn: '!this.multiple || !this.autoCheckChildren'
+              }),
+              getSchemaTpl('switch', {
+                label: tipedLabel(
+                  '子节点反选取消父节点',
+                  '取消任意子节点选中状态的同时取消父节点选中状态'
+                ),
+                name: 'autoCancelParent',
+                hiddenOn: '!this.multiple || !this.cascade'
               }),
               getSchemaTpl('switch', {
                 label: tipedLabel(
@@ -408,7 +486,7 @@ export class TreeControlPlugin extends BasePlugin {
                 ),
                 name: 'withChildren',
                 hiddenOn:
-                  '!data.multiple || !data.autoCheckChildren && data.cascade'
+                  '!this.multiple || !this.autoCheckChildren && this.cascade'
               }),
               getSchemaTpl('switch', {
                 label: tipedLabel(
@@ -416,7 +494,7 @@ export class TreeControlPlugin extends BasePlugin {
                   'ui 行为级联选中子节点，子节点可反选，值只包含子节点的值'
                 ),
                 name: 'onlyChildren',
-                hiddenOn: '!data.multiple || !data.autoCheckChildren'
+                hiddenOn: '!this.multiple || !this.autoCheckChildren'
               }),
               getSchemaTpl('valueFormula', {
                 rendererSchema: (schema: Schema) => ({
@@ -443,6 +521,12 @@ export class TreeControlPlugin extends BasePlugin {
               getSchemaTpl('optionsMenuTpl', {
                 manager: this.manager
               }),
+              getSchemaTpl('apiControl', {
+                name: 'deferApi',
+                label: '懒加载接口',
+                labelClassName: 'none'
+              }),
+              getSchemaTpl('deferField'),
               getSchemaTpl(
                 'loadingConfig',
                 {
@@ -450,6 +534,25 @@ export class TreeControlPlugin extends BasePlugin {
                 },
                 {context}
               ),
+              {
+                type: 'checkboxes',
+                name: 'nodeBehavior',
+                label: '节点行为',
+                value: ['check'],
+                joinValues: false,
+                extractValue: true,
+                inline: true,
+                options: [
+                  {
+                    label: '选中',
+                    value: 'check'
+                  },
+                  {
+                    label: '展开',
+                    value: 'unfold'
+                  }
+                ]
+              },
               getSchemaTpl('switch', {
                 label: '只可选择叶子节点',
                 name: 'onlyLeaf'
@@ -469,7 +572,7 @@ export class TreeControlPlugin extends BasePlugin {
                     label: '根节点文案',
                     value: '添加一级节点',
                     name: 'rootCreateTip',
-                    hiddenOn: '!data.rootCreatable'
+                    hiddenOn: '!this.rootCreatable'
                   },
                   {
                     type: 'input-text',
@@ -502,7 +605,61 @@ export class TreeControlPlugin extends BasePlugin {
                     name: 'removeTip'
                   }
                 ]
-              })
+              }),
+              {
+                type: 'select',
+                label: '操作栏位置',
+                value: '',
+                name: 'themeCss.actionControlClassName.marginLeft',
+                options: [
+                  {
+                    label: '左侧',
+                    value: ''
+                  },
+                  {
+                    label: '右侧',
+                    value: 'auto'
+                  }
+                ]
+              },
+              {
+                type: 'ae-switch-more',
+                mode: 'normal',
+                label: '自定义操作',
+                bulk: false,
+                name: 'itemActions',
+                formType: 'extend',
+                defaultData: {
+                  type: 'container',
+                  body: [{type: 'button', label: '按钮'}]
+                },
+                form: {
+                  body: [
+                    {
+                      type: 'button',
+                      level: 'primary',
+                      size: 'sm',
+                      block: true,
+                      onClick: this.editDetail.bind(this, context.id),
+                      label: '配置自定义操作模板'
+                    }
+                  ]
+                },
+                pipeIn: (value: any) => {
+                  return value !== undefined;
+                },
+                pipeOut: (value: any) => {
+                  if (value === true) {
+                    return {
+                      type: 'button',
+                      icon: 'fa fa-plus',
+                      level: 'link',
+                      size: 'xs'
+                    };
+                  }
+                  return value ? value : undefined;
+                }
+              }
             ]
           },
           {
@@ -511,8 +668,7 @@ export class TreeControlPlugin extends BasePlugin {
               getSchemaTpl('valueFormula', {
                 name: 'highlightTxt',
                 label: '高亮节点字符',
-                type: 'input-text',
-                visibleOn: 'data.type === "input-tree"'
+                visibleOn: 'this.type === "input-tree"'
               }),
               {
                 type: 'ae-Switch-More',
@@ -524,6 +680,7 @@ export class TreeControlPlugin extends BasePlugin {
                 ),
                 value: false,
                 formType: 'extend',
+                autoFocus: false,
                 form: {
                   body: [
                     {
@@ -544,6 +701,7 @@ export class TreeControlPlugin extends BasePlugin {
                 trueValue: false,
                 falseValue: true,
                 formType: 'extend',
+                autoFocus: false,
                 form: {
                   body: [
                     {
@@ -554,7 +712,7 @@ export class TreeControlPlugin extends BasePlugin {
                     }
                   ]
                 },
-                visibleOn: 'data.type === "input-tree"'
+                visibleOn: 'this.type === "input-tree"'
               },
               getSchemaTpl('switch', {
                 label: tipedLabel(
@@ -562,7 +720,7 @@ export class TreeControlPlugin extends BasePlugin {
                   '隐藏选择框中已选中节点的祖先节点的文本信息'
                 ),
                 name: 'hideNodePathLabel',
-                visibleOn: 'data.type==="tree-select"'
+                visibleOn: 'this.type==="tree-select"'
               }),
               getSchemaTpl('switch', {
                 label: '显示节点图标',
@@ -575,24 +733,11 @@ export class TreeControlPlugin extends BasePlugin {
                   '单选情况下，也可显示树节点勾选框'
                 ),
                 name: 'showRadio',
-                hiddenOn: 'data.multiple'
+                hiddenOn: 'this.multiple'
               }),
               getSchemaTpl('switch', {
                 label: tipedLabel('显示层级展开线', '显示树层级展开线'),
                 name: 'showOutline'
-              }),
-              getSchemaTpl('switch', {
-                name: 'withChildren',
-                label: '数值是否携带子节点',
-                visibleOn: 'data.cascade !== true && data.multiple',
-                disabledOn: 'data.onlyChildren'
-              }),
-
-              getSchemaTpl('switch', {
-                name: 'onlyChildren',
-                label: '数值是否只包含子节点',
-                visibleOn: 'data.cascade !== true && data.multiple',
-                disabledOn: 'data.withChildren'
               }),
               {
                 type: 'ae-Switch-More',
@@ -606,6 +751,7 @@ export class TreeControlPlugin extends BasePlugin {
                 trueValue: false,
                 falseValue: true,
                 formType: 'extend',
+                autoFocus: false,
                 form: {
                   body: [
                     {
@@ -613,7 +759,7 @@ export class TreeControlPlugin extends BasePlugin {
                       label: '设置层级',
                       name: 'unfoldedLevel',
                       value: 1,
-                      hiddenOn: 'data.initiallyOpen'
+                      min: 0
                     }
                   ]
                 }
@@ -623,8 +769,7 @@ export class TreeControlPlugin extends BasePlugin {
             ]
           },
           getSchemaTpl('status', {
-            isFormItem: true,
-            readonly: true
+            isFormItem: true
           }),
           getSchemaTpl('validation', {tag: ValidatorTag.Tree})
         ])
@@ -632,13 +777,32 @@ export class TreeControlPlugin extends BasePlugin {
       {
         title: '外观',
         body: getSchemaTpl('collapseGroup', [
-          getSchemaTpl('style:formItem', {renderer}),
-          getSchemaTpl('style:classNames', {
-            schema: [
-              getSchemaTpl('className', {
-                label: '外层容器',
-                name: 'treeContainerClassName'
-              })
+          getSchemaTpl('theme:formItem', {
+            schema: {
+              type: 'input-number',
+              label: '高度',
+              name: 'wrapperCustomStyle.root.height',
+              clearable: true,
+              unitOptions: ['px', '%', 'em', 'vh', 'vw']
+            }
+          }),
+          getSchemaTpl('theme:form-label'),
+          getSchemaTpl('theme:form-description'),
+          getSchemaTpl('theme:base', {
+            classname: 'toolbarControlClassName',
+            title: '工具栏样式',
+            visibleOn: 'this.searchable'
+          }),
+          getSchemaTpl('theme:singleCssCode', {
+            selectors: [
+              {
+                label: '树基本样式',
+                selector: '.cxd-TreeControl'
+              },
+              {
+                label: '树工具栏样式',
+                selector: '.cxd-Tabs-toolbar'
+              }
             ]
           })
         ])
@@ -657,7 +821,7 @@ export class TreeControlPlugin extends BasePlugin {
   };
 
   buildDataSchemas(node: EditorNodeType, region: EditorNodeType) {
-    const type = resolveOptionType(node.schema?.options);
+    const type = resolveOptionType(node.schema);
     // todo:异步数据case
     let dataSchema: any = {
       type,
@@ -704,6 +868,76 @@ export class TreeControlPlugin extends BasePlugin {
     }
 
     return dataSchema;
+  }
+
+  getSubEditorVariable(schema: any): Array<{label: string; children: any}> {
+    let labelField = schema?.labelField || 'label';
+    let valueField = schema?.valueField || 'value';
+
+    return [
+      {
+        label: '当前节点',
+        children: [
+          {
+            label: '节点索引',
+            value: 'index'
+          },
+          {
+            label: '节点名称',
+            value: labelField
+          },
+          {
+            label: '节点值',
+            value: valueField
+          },
+          {
+            label: '节点状态',
+            value: 'checked'
+          }
+        ]
+      }
+    ];
+  }
+
+  getDisplayField(data: any) {
+    if (
+      data.source ||
+      (data.map &&
+        Array.isArray(data.map) &&
+        data.map[0] &&
+        Object.keys(data.map[0]).length > 1)
+    ) {
+      return data.labelField ?? 'label';
+    }
+    return 'item';
+  }
+
+  editDetail(id: string) {
+    const manager = this.manager;
+    const store = manager.store;
+    const node = store.getNodeById(id);
+    const value = store.getValueOf(id);
+    const defaultItemSchema = {
+      type: 'button',
+      icon: 'fa fa-plus',
+      level: 'link',
+      size: 'xs'
+    };
+
+    node &&
+      value &&
+      this.manager.openSubEditor({
+        title: '配置自定义操作模板',
+        value: schemaToArray(value.itemActions ?? defaultItemSchema),
+        slot: {
+          type: 'container',
+          body: '$$'
+        },
+        onChange: (newValue: any) => {
+          newValue = {...value, itemActions: schemaArrayFormat(newValue)};
+          manager.panelChangeValue(newValue, diff(value, newValue));
+        }
+      });
   }
 }
 

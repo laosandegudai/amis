@@ -6,7 +6,7 @@
 
 import React from 'react';
 import {findDOMNode} from 'react-dom';
-import moment, {unitOfTime} from 'moment';
+import moment, {locale, unitOfTime} from 'moment';
 import omit from 'lodash/omit';
 import kebabCase from 'lodash/kebabCase';
 import {
@@ -32,7 +32,13 @@ import Button from './Button';
 
 import type {Moment} from 'moment';
 import type {PlainObject, ThemeProps, LocaleProps} from 'amis-core';
-import type {ViewMode} from './calendar/Calendar';
+import type {
+  ViewMode,
+  ChangeEventViewMode,
+  MutableUnitOfTime,
+  ChangeEventViewStatus
+} from './calendar/Calendar';
+import type {TestIdBuilder} from 'amis-core';
 
 export interface DateRangePickerProps extends ThemeProps, LocaleProps {
   className?: string;
@@ -51,6 +57,7 @@ export interface DateRangePickerProps extends ThemeProps, LocaleProps {
   ranges?: string | Array<ShortCuts>;
   shortcuts?: string | Array<ShortCuts>;
   clearable?: boolean;
+  inputForbid?: boolean; // 禁用输入
   minDate?: moment.Moment;
   maxDate?: moment.Moment;
   minDateRaw?: string;
@@ -68,6 +75,7 @@ export interface DateRangePickerProps extends ThemeProps, LocaleProps {
   timeFormat?: string;
   resetValue?: any;
   popOverContainer?: any;
+  popOverContainerSelector?: string;
   dateFormat?: string;
   embed?: boolean;
   viewMode?: ViewMode;
@@ -81,6 +89,7 @@ export interface DateRangePickerProps extends ThemeProps, LocaleProps {
   animation?: boolean;
   /** 日期处理函数，通常用于自定义处理绑定日期的值 */
   transform?: string;
+  testIdBuilder?: TestIdBuilder;
 }
 
 export interface DateRangePickerState {
@@ -520,7 +529,9 @@ export class DateRangePicker extends React.Component<
     value: any,
     format: string,
     joinValues: boolean,
-    delimiter: string
+    delimiter: string,
+    data: any,
+    utc?: boolean
   ) {
     if (!value) {
       return {
@@ -533,8 +544,8 @@ export class DateRangePicker extends React.Component<
       value = value.split(delimiter);
     }
 
-    const startDate = moment(value?.[0], format);
-    const endDate = moment(value?.[1], format);
+    const startDate = filterDate(value?.[0], data, format, utc);
+    const endDate = filterDate(value?.[1], data, format, utc);
 
     /**
      * 不合法的value输入都丢弃
@@ -599,13 +610,17 @@ export class DateRangePicker extends React.Component<
       inputFormat,
       displayFormat,
       dateFormat,
-      timeFormat
+      timeFormat,
+      data,
+      utc
     } = this.props;
     const {startDate, endDate} = DateRangePicker.unFormatValue(
       value,
       valueFormat || (format as string),
       joinValues,
-      delimiter
+      delimiter,
+      data,
+      utc
     );
 
     let curDateFormat = dateFormat ?? '';
@@ -679,7 +694,9 @@ export class DateRangePicker extends React.Component<
       displayFormat,
       dateFormat,
       timeFormat,
-      delimiter
+      delimiter,
+      data,
+      utc
     } = props;
     if (
       prevProps.displayFormat != displayFormat ||
@@ -714,7 +731,9 @@ export class DateRangePicker extends React.Component<
         value,
         valueFormat || (format as string),
         joinValues,
-        delimiter
+        delimiter,
+        data,
+        utc
       );
       this.setState({
         startDate,
@@ -804,13 +823,17 @@ export class DateRangePicker extends React.Component<
         joinValues,
         delimiter,
         inputFormat,
-        displayFormat
+        displayFormat,
+        data,
+        utc
       } = this.props;
       const {startDate, endDate} = DateRangePicker.unFormatValue(
         value,
         valueFormat || (format as string),
         joinValues,
-        delimiter
+        delimiter,
+        data,
+        utc
       );
       this.setState({
         startDate,
@@ -890,23 +913,65 @@ export class DateRangePicker extends React.Component<
       type: 'start' | 'end';
       originValue?: moment.Moment;
       timeFormat?: string;
-      subControlViewMode?: 'time';
+      subControlViewMode?: ChangeEventViewMode;
+      /** 自动初始化绑定值，用于首次选择且当前未绑定值，默认使用当前时间 */
+      autoInitDefaultValue?: boolean;
     } = {type: 'start'}
   ): moment.Moment {
-    const {type, originValue, timeFormat, subControlViewMode} = options || {
+    const {
+      type,
+      originValue,
+      timeFormat,
+      subControlViewMode,
+      autoInitDefaultValue
+    } = options || {
       type: 'start'
     };
     let value = date.clone();
     const {transform, data} = this.props;
-    const transformFn =
-      transform && typeof transform === 'string'
-        ? str2function(transform, 'value', 'config', 'props', 'data', 'moment')
-        : transform;
+    const {startDate, endDate} = this.state;
+
+    /** 此时为点选后的值初始化设置，不应该被内部转化逻辑和transformFn限制 */
+    if (autoInitDefaultValue === true) {
+      const now = moment();
+
+      /** 如果已经设置了结束时间且当前时间已经超出了结束时间，则开始时间不能超过结束时间 */
+      if (!startDate && endDate && type === 'start' && now.isAfter(endDate)) {
+        value = endDate.clone();
+        return value;
+      }
+
+      const timePart: Record<MutableUnitOfTime, number> = {
+        date: value.get('date'),
+        hour: value.get('hour'),
+        minute: value.get('minute'),
+        second: value.get('second'),
+        millisecond: value.get('millisecond')
+      };
+
+      Object.keys(timePart).forEach((unit: MutableUnitOfTime) => {
+        /** 首次选择时间，日期使用当前时间; 将未设置过的时间字段设置为当前值 */
+        if (
+          (unit === 'date' && subControlViewMode === 'time') ||
+          (unit !== 'date' && timePart[unit] === 0)
+        ) {
+          timePart[unit] = now.get(unit);
+        }
+      });
+
+      value.set(timePart);
+      return value;
+    }
 
     /** 日期时间选择器组件支持用户选择时间，如果用户手动选择了时间，则不需要走默认处理 */
     if (subControlViewMode && subControlViewMode === 'time') {
       return value;
     }
+
+    const transformFn =
+      transform && typeof transform === 'string'
+        ? str2function(transform, 'value', 'config', 'props', 'data', 'moment')
+        : transform;
 
     // 没有初始值
     if (!originValue) {
@@ -936,8 +1001,16 @@ export class DateRangePicker extends React.Component<
     return value;
   }
 
-  handleDateChange(newValue: moment.Moment) {
-    let {editState} = this.state;
+  handleDateChange(
+    newValue: moment.Moment,
+    viewMode?: ChangeEventViewMode,
+    status?: ChangeEventViewStatus
+  ) {
+    const {embed} = this.props;
+    const editState = embed
+      ? this.state.editState || status
+      : this.state.editState;
+
     if (editState === 'start') {
       this.handleStartDateChange(newValue);
     } else if (editState === 'end') {
@@ -951,19 +1024,30 @@ export class DateRangePicker extends React.Component<
    */
   handleStartDateChange(
     newValue: moment.Moment,
-    subControlViewMode?: Extract<ViewMode, 'time'>
+    subControlViewMode?: ChangeEventViewMode
   ) {
-    const {minDate, inputFormat, displayFormat, type} = this.props;
-    let {startDate, endDateOpenedFirst, curTimeFormat: timeFormat} = this.state;
+    const {
+      minDate,
+      inputFormat,
+      displayFormat,
+      type,
+      value: defaultValue
+    } = this.props;
+    let {
+      startDate,
+      oldStartDate,
+      endDateOpenedFirst,
+      curTimeFormat: timeFormat
+    } = this.state;
     if (minDate && newValue.isBefore(minDate)) {
       newValue = minDate;
     }
-
     const date = this.filterDate(newValue, {
       type: 'start',
       originValue: startDate || minDate,
       timeFormat,
-      subControlViewMode
+      subControlViewMode,
+      autoInitDefaultValue: !!timeFormat && newValue && !startDate
     });
     const newState = {
       startDate: date,
@@ -979,6 +1063,7 @@ export class DateRangePicker extends React.Component<
     ) {
       newState.editState = 'end';
     }
+
     this.setState(newState);
   }
 
@@ -988,12 +1073,19 @@ export class DateRangePicker extends React.Component<
    */
   handelEndDateChange(
     newValue: moment.Moment,
-    subControlViewMode?: Extract<ViewMode, 'time'>
+    subControlViewMode?: ChangeEventViewMode
   ) {
-    const {embed, inputFormat, displayFormat, type} = this.props;
+    const {
+      embed,
+      inputFormat,
+      displayFormat,
+      type,
+      value: defaultValue
+    } = this.props;
     let {
       startDate,
       endDate,
+      oldEndDate,
       endDateOpenedFirst,
       curTimeFormat: timeFormat
     } = this.state;
@@ -1003,8 +1095,10 @@ export class DateRangePicker extends React.Component<
       type: 'end',
       originValue: endDate,
       timeFormat,
-      subControlViewMode
+      subControlViewMode,
+      autoInitDefaultValue: !!timeFormat && newValue && !endDate
     });
+
     this.setState(
       {
         endDate: date,
@@ -1051,7 +1145,7 @@ export class DateRangePicker extends React.Component<
 
   // 根据 duration 修复结束时间
   getEndDateByDuration(newValue: moment.Moment) {
-    const {minDuration, maxDuration, type} = this.props;
+    const {minDuration, maxDuration, type, maxDate} = this.props;
     let {startDate, endDate, editState} = this.state;
     if (!startDate) {
       return newValue;
@@ -1072,6 +1166,10 @@ export class DateRangePicker extends React.Component<
 
     if (maxDuration && newValue.isAfter(startDate.clone().add(maxDuration))) {
       newValue = startDate.clone().add(maxDuration);
+    }
+
+    if (maxDate && newValue && newValue.isAfter(maxDate, 'second')) {
+      newValue = maxDate;
     }
 
     return newValue;
@@ -1241,14 +1339,21 @@ export class DateRangePicker extends React.Component<
     if (!shortcuts) {
       return null;
     }
-    const {classPrefix: ns, format, valueFormat, data} = this.props;
+    const {
+      classPrefix: ns,
+      format,
+      valueFormat,
+      data,
+      translate: __,
+      testIdBuilder
+    } = this.props;
     let shortcutArr: Array<string | ShortCuts>;
     if (typeof shortcuts === 'string') {
       shortcutArr = shortcuts.split(',');
     } else {
       shortcutArr = shortcuts;
     }
-    const __ = this.props.translate;
+    const TIDBuilder = testIdBuilder?.getChild('shortcut');
 
     return (
       <ul className={`${ns}DateRangePicker-rangers`}>
@@ -1320,7 +1425,9 @@ export class DateRangePicker extends React.Component<
                 onClick={() => this.selectShortcut(shortcut)}
                 key={index}
               >
-                <a>{__(shortcut.label)}</a>
+                <a {...TIDBuilder?.getChild(shortcut.key).getTestId()}>
+                  {__(shortcut.label)}
+                </a>
               </li>
             );
           } else {
@@ -1347,27 +1454,29 @@ export class DateRangePicker extends React.Component<
   }
 
   // 重置
-  reset() {
+  reset(resetValue?: any) {
     const {
-      resetValue,
       onChange,
       format,
       valueFormat,
       joinValues,
       delimiter,
       inputFormat,
-      displayFormat
+      displayFormat,
+      data,
+      utc
     } = this.props;
-    if (!resetValue) {
-      return;
-    }
+
+    const tmpResetValue = resetValue ?? this.props.resetValue;
     const {startDate, endDate} = DateRangePicker.unFormatValue(
-      resetValue,
+      tmpResetValue,
       valueFormat || (format as string),
       joinValues,
-      delimiter
+      delimiter,
+      data,
+      utc
     );
-    onChange(resetValue);
+    onChange?.(tmpResetValue);
     this.setState({
       startInputValue: startDate?.format(displayFormat || inputFormat),
       endInputValue: endDate?.format(displayFormat || inputFormat)
@@ -1448,6 +1557,7 @@ export class DateRangePicker extends React.Component<
 
   renderDay(props: any, currentDate: moment.Moment) {
     let {startDate, endDate} = this.state;
+    const {testIdBuilder} = this.props;
 
     if (
       startDate &&
@@ -1457,12 +1567,17 @@ export class DateRangePicker extends React.Component<
       props.className += ' rdtBetween';
     }
 
+    // 如果已经选择了开始时间和结束时间，那么中间的时间都不应该高亮
+    if (startDate && endDate && props.className.includes('rdtActive')) {
+      props.className = props.className.replace('rdtActive', '');
+    }
+
     if (startDate && currentDate.isSame(startDate, 'day')) {
-      props.className += ' rdtActive rdtStartDay';
+      props.className += ' rdtActive rdtStart';
     }
 
     if (endDate && currentDate.isSame(endDate, 'day')) {
-      props.className += ' rdtActive rdtEndDay';
+      props.className += ' rdtActive rdtEnd';
     }
 
     const {className, ...others} = this.getDisabledElementProps(
@@ -1473,7 +1588,9 @@ export class DateRangePicker extends React.Component<
 
     return (
       <td {...omit(props, ['todayActiveStyle'])} {...others}>
-        <span>{currentDate.date()}</span>
+        <span {...testIdBuilder?.getChild(props.key)?.getTestId()}>
+          {currentDate.date()}
+        </span>
       </td>
     );
   }
@@ -1482,7 +1599,7 @@ export class DateRangePicker extends React.Component<
     const currentDate = props.viewDate.year(year).month(month);
     const {startDate, endDate} = this.state;
 
-    const {translate: __} = this.props;
+    const {translate: __, testIdBuilder} = this.props;
     const monthStr = currentDate.format(__('MMM'));
     const strLength = 3;
     // Because some months are up to 5 characters long, we want to
@@ -1497,6 +1614,19 @@ export class DateRangePicker extends React.Component<
       props.className += ' rdtBetween';
     }
 
+    // 如果已经选择了开始时间和结束时间，那么中间的时间都不应该高亮
+    if (startDate && endDate && props.className.includes('rdtActive')) {
+      props.className = props.className.replace('rdtActive', '');
+    }
+
+    if (startDate && currentDate.isSame(startDate, 'month')) {
+      props.className += ' rdtActive rdtStart';
+    }
+
+    if (endDate && currentDate.isSame(endDate, 'month')) {
+      props.className += ' rdtActive rdtEnd';
+    }
+
     const {className, ...others} = this.getDisabledElementProps(
       currentDate,
       'month'
@@ -1505,7 +1635,9 @@ export class DateRangePicker extends React.Component<
 
     return (
       <td {...omit(props, 'viewDate')} {...others}>
-        <span>{monthStrFixedLength}</span>
+        <span {...testIdBuilder?.getChild(props.key).getTestId()}>
+          {monthStrFixedLength}
+        </span>
       </td>
     );
   }
@@ -1513,6 +1645,7 @@ export class DateRangePicker extends React.Component<
   renderQuarter(props: any, quarter: number, year: number) {
     const currentDate = moment().year(year).quarter(quarter);
     const {startDate, endDate} = this.state;
+    const {testIdBuilder} = this.props;
 
     if (
       startDate &&
@@ -1520,6 +1653,19 @@ export class DateRangePicker extends React.Component<
       currentDate.isBetween(startDate, endDate, 'quarter', '[]')
     ) {
       props.className += ' rdtBetween';
+    }
+
+    // 如果已经选择了开始时间和结束时间，那么中间的时间都不应该高亮
+    if (startDate && endDate && props.className.includes('rdtActive')) {
+      props.className = props.className.replace('rdtActive', '');
+    }
+
+    if (startDate && currentDate.isSame(startDate, 'quarter')) {
+      props.className += ' rdtActive rdtStart';
+    }
+
+    if (endDate && currentDate.isSame(endDate, 'quarter')) {
+      props.className += ' rdtActive rdtEnd';
     }
 
     const {className, ...others} = this.getDisabledElementProps(
@@ -1530,13 +1676,16 @@ export class DateRangePicker extends React.Component<
 
     return (
       <td {...props} {...others}>
-        <span>Q{quarter}</span>
+        <span {...testIdBuilder?.getChild(props.key).getTestId()}>
+          Q{quarter}
+        </span>
       </td>
     );
   }
   renderYear(props: any, year: number) {
     const currentDate = moment().year(year);
     const {startDate, endDate} = this.state;
+    const {testIdBuilder} = this.props;
 
     if (
       startDate &&
@@ -1544,6 +1693,19 @@ export class DateRangePicker extends React.Component<
       currentDate.isBetween(startDate, endDate, 'year', '[]')
     ) {
       props.className += ' rdtBetween';
+    }
+
+    // 如果已经选择了开始时间和结束时间，那么中间的时间都不应该高亮
+    if (startDate && endDate && props.className.includes('rdtActive')) {
+      props.className = props.className.replace('rdtActive', '');
+    }
+
+    if (startDate && currentDate.isSame(startDate, 'year')) {
+      props.className += ' rdtActive rdtStart';
+    }
+
+    if (endDate && currentDate.isSame(endDate, 'year')) {
+      props.className += ' rdtActive rdtEnd';
     }
 
     const {className, ...others} = this.getDisabledElementProps(
@@ -1554,7 +1716,7 @@ export class DateRangePicker extends React.Component<
 
     return (
       <td {...props} {...others}>
-        <span>{year}</span>
+        <span {...testIdBuilder?.getChild(props.key).getTestId()}>{year}</span>
       </td>
     );
   }
@@ -1572,7 +1734,8 @@ export class DateRangePicker extends React.Component<
       type,
       viewMode = 'days',
       label,
-      mobileUI
+      mobileUI,
+      testIdBuilder
     } = this.props;
     const __ = this.props.translate;
     const {startDate, endDate, editState, curDateFormat, curTimeFormat} =
@@ -1659,6 +1822,8 @@ export class DateRangePicker extends React.Component<
               locale={locale}
               timeRangeHeader="开始时间"
               embed={embed}
+              status="start"
+              testIdBuilder={testIdBuilder?.getChild('calendar-start')}
             />
           )}
           {(!isTimeRange ||
@@ -1691,6 +1856,8 @@ export class DateRangePicker extends React.Component<
               locale={locale}
               timeRangeHeader="结束时间"
               embed={embed}
+              status="end"
+              testIdBuilder={testIdBuilder?.getChild('calendar-end')}
             />
           )}
         </div>
@@ -1799,6 +1966,21 @@ export class DateRangePicker extends React.Component<
     );
   }
 
+  getDefaultDate() {
+    let {value, data, valueFormat, format, delimiter} = this.props;
+    if (value) {
+      let startDate = filterDate(
+        Array.isArray(value)
+          ? value[0] || value[1]
+          : String(value).split(delimiter)?.[0],
+        data,
+        valueFormat || (format as string)
+      );
+      return startDate;
+    }
+    return undefined;
+  }
+
   render() {
     const {
       className,
@@ -1809,11 +1991,13 @@ export class DateRangePicker extends React.Component<
       startPlaceholder,
       endPlaceholder,
       popOverContainer,
+      popOverContainerSelector,
       inputFormat,
       displayFormat,
       joinValues,
       delimiter,
       clearable,
+      inputForbid,
       disabled,
       embed,
       overlayPlacement,
@@ -1829,7 +2013,9 @@ export class DateRangePicker extends React.Component<
       ranges,
       shortcuts,
       label,
-      animation
+      animation,
+      testIdBuilder,
+      locale
     } = this.props;
     const useCalendarMobile =
       mobileUI && ['days', 'months', 'quarters'].indexOf(viewMode) > -1;
@@ -1845,8 +2031,10 @@ export class DateRangePicker extends React.Component<
     const __ = this.props.translate;
     const calendarMobile = (
       <CalendarMobile
+        popOverContainer={popOverContainer}
         timeFormat={curTimeFormat}
         displayForamt={displayFormat || inputFormat}
+        defaultDate={this.getDefaultDate()}
         startDate={startDate}
         endDate={endDate}
         minDate={minDate}
@@ -1860,6 +2048,7 @@ export class DateRangePicker extends React.Component<
         confirm={this.confirm}
         onChange={this.handleMobileChange}
         footerExtra={this.renderShortcuts(ranges || shortcuts)}
+        locale={locale}
         showViewMode={
           viewMode === 'quarters' || viewMode === 'months' ? 'years' : 'months'
         }
@@ -1923,7 +2112,8 @@ export class DateRangePicker extends React.Component<
           autoComplete="off"
           value={this.state.startInputValue || ''}
           disabled={disabled}
-          readOnly={mobileUI}
+          readOnly={mobileUI || inputForbid}
+          testIdBuilder={testIdBuilder?.getChild('start')}
         />
         <span
           className={cx('DateRangePicker-input-separator')}
@@ -1943,7 +2133,8 @@ export class DateRangePicker extends React.Component<
           autoComplete="off"
           value={this.state.endInputValue || ''}
           disabled={disabled}
-          readOnly={mobileUI}
+          readOnly={mobileUI || inputForbid}
+          testIdBuilder={testIdBuilder?.getChild('end')}
         />
 
         {/* 指示游标 */}
@@ -1987,6 +2178,7 @@ export class DateRangePicker extends React.Component<
               target={() => this.dom.current}
               onHide={this.close}
               container={popOverContainer || (() => findDOMNode(this))}
+              containerSelector={popOverContainerSelector}
               rootClose={false}
               placement={overlayPlacement}
               show

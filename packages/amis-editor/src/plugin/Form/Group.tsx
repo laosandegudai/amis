@@ -9,6 +9,7 @@ import {
 } from 'amis-editor-core';
 import {defaultValue, getSchemaTpl} from 'amis-editor-core';
 import {JSONPipeIn, JSONUpdate, makeHorizontalDeeper} from 'amis-editor-core';
+import {generateId} from '../../util';
 
 export class GroupControlPlugin extends BasePlugin {
   static id = 'GroupControlPlugin';
@@ -31,12 +32,14 @@ export class GroupControlPlugin extends BasePlugin {
       {
         type: 'input-text',
         label: '文本',
+        id: generateId(),
         name: 'var1'
       },
 
       {
         type: 'input-text',
         label: '文本',
+        id: generateId(),
         name: 'var2'
       }
     ],
@@ -112,7 +115,7 @@ export class GroupControlPlugin extends BasePlugin {
           getSchemaTpl('horizontalMode'),
           getSchemaTpl('horizontal', {
             visibleOn:
-              '(data.$$formMode == "horizontal" || data.mode == "horizontal") && data.label !== false && data.horizontal',
+              '(this.$$formMode == "horizontal" || this.mode == "horizontal") && this.label !== false && this.horizontal',
             pipeIn: (value: any, data: any) => {
               value =
                 value ||
@@ -144,7 +147,7 @@ export class GroupControlPlugin extends BasePlugin {
             removable: false,
             addable: false,
             multiLine: true,
-            visibleOn: 'data.$$formMode != "inline"',
+            visibleOn: 'this.$$formMode != "inline"',
             items: [
               {
                 type: 'button-group-select',

@@ -1,5 +1,5 @@
 import {Button} from 'amis';
-import {registerEditorPlugin} from 'amis-editor-core';
+import {EditorNodeType, registerEditorPlugin} from 'amis-editor-core';
 import {
   BaseEventContext,
   BasePlugin,
@@ -13,6 +13,7 @@ import {
 import {defaultValue, getSchemaTpl, valuePipeOut} from 'amis-editor-core';
 import React from 'react';
 import {diff, JSONPipeOut} from 'amis-editor-core';
+import {generateId} from '../../util';
 
 export class ArrayControlPlugin extends BasePlugin {
   static id = 'ArrayControlPlugin';
@@ -36,6 +37,7 @@ export class ArrayControlPlugin extends BasePlugin {
     name: 'array',
     items: {
       type: 'input-text',
+      id: generateId(),
       placeholder: '请输入'
     }
   };
@@ -89,7 +91,7 @@ export class ArrayControlPlugin extends BasePlugin {
         label: '新增按钮文字',
         name: 'addButtonText',
         type: 'input-text',
-        visibleOn: 'data.addable',
+        visibleOn: 'this.addable',
         pipeIn: defaultValue('新增')
       },
 
@@ -108,17 +110,17 @@ export class ArrayControlPlugin extends BasePlugin {
         pipeIn: defaultValue(true)
       }),
 
-      getSchemaTpl('api', {
+      getSchemaTpl('apiControl', {
         name: 'deleteApi',
         label: '删除前的请求',
-        visibleOn: 'data.removable'
+        visibleOn: 'this.removable'
       }),
 
       {
         label: '删除确认提示',
         name: 'deleteConfirmText',
         type: 'input-text',
-        visibleOn: 'data.deleteApi',
+        visibleOn: 'this.deleteApi',
         pipeIn: defaultValue('确认要删除')
       },
 
@@ -129,7 +131,7 @@ export class ArrayControlPlugin extends BasePlugin {
 
       {
         name: 'draggableTip',
-        visibleOn: 'data.draggable',
+        visibleOn: 'this.draggable',
         type: 'input-text',
         label: '可拖拽排序提示文字',
         pipeIn: defaultValue('可通过拖动每行中的【交换】按钮进行顺序调整')
@@ -147,12 +149,14 @@ export class ArrayControlPlugin extends BasePlugin {
     ];
   };
 
-  filterProps(props: any) {
+  filterProps(props: any, node: EditorNodeType) {
     props = JSONPipeOut(props);
 
     // 至少显示一个成员，否则啥都不显示。
-    if (!props.value) {
-      props.value = [''];
+    if (!node.state.value && !props.value) {
+      node.updateState({
+        value: ['']
+      });
     }
 
     return props;

@@ -1,11 +1,21 @@
 import React from 'react';
-import {EditorNodeType, getSchemaTpl, tipedLabel} from 'amis-editor-core';
-import {registerEditorPlugin} from 'amis-editor-core';
-import {BasePlugin, BaseEventContext} from 'amis-editor-core';
-
-import {RendererPluginAction, RendererPluginEvent} from 'amis-editor-core';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
-import {resolveOptionType} from '../../util';
+import {
+  EditorManager,
+  EditorNodeType,
+  getSchemaTpl,
+  tipedLabel,
+  BasePlugin,
+  BaseEventContext,
+  registerEditorPlugin,
+  RendererPluginAction,
+  RendererPluginEvent
+} from 'amis-editor-core';
+import {
+  getEventControlConfig,
+  getActionCommonProps,
+  buildLinkActionDesc
+} from '../../renderer/event-control/helper';
+import {resolveOptionEventDataSchame, resolveOptionType} from '../../util';
 
 export class TabsTransferPlugin extends BasePlugin {
   static id = 'TabsTransferPlugin';
@@ -142,27 +152,25 @@ export class TabsTransferPlugin extends BasePlugin {
       eventName: 'change',
       eventLabel: '值变化',
       description: '选中值变化时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'string',
-                  title: '选中的值'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项列表'
+      dataSchema: (manager: EditorManager) => {
+        const {value, items} = resolveOptionEventDataSchame(manager, true);
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value,
+                  items
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     },
     {
       eventName: 'tab-change',
@@ -193,22 +201,25 @@ export class TabsTransferPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清空选中内容'
+      description: '清空选中内容',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '重置选择的内容'
+      description: '重置选择的内容',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'changeTabKey',
       actionLabel: '修改选中tab',
       description: '修改当前选中tab，来选择其他选项',
-      descDetail: (info: any) => {
+      descDetail: (info: any, context: any, props: any) => {
         return (
-          <div>
-            <span className="variable-right">{info?.__rendererLabel}</span>
-            修改选中tab
+          <div className="action-desc">
+            修改
+            {buildLinkActionDesc(props.manager, info)}
+            选中tab
           </div>
         );
       }
@@ -216,7 +227,8 @@ export class TabsTransferPlugin extends BasePlugin {
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -391,7 +403,7 @@ export class TabsTransferPlugin extends BasePlugin {
   };
 
   buildDataSchemas(node: EditorNodeType, region: EditorNodeType) {
-    const type = resolveOptionType(node.schema?.options);
+    const type = resolveOptionType(node.schema);
     // todo:异步数据case
     let dataSchema: any = {
       type,

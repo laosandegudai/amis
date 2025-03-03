@@ -14,6 +14,8 @@ _site
 node_modules
 /dist
 /lib
+**/esm
+**/lib
 /sdk
 /public
 /gh-pages
@@ -22,10 +24,10 @@ node_modules
 /toolkit/amis-renderer
 /toolkit/output
 /coverage
-/schema.json
 /npm
 /mock/cfc/cfc.zip
 .rollup.cache
+/theme-npm
 
 dist
 tsconfig.tsbuildinfo
@@ -38,3 +40,4 @@ revision.json
 
 
 !/.vscode/iconConfig.json
+publish.sh

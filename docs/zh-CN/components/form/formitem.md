@@ -1272,7 +1272,7 @@ amis 会有默认的报错信息，如果你想自定义校验信息，配置`va
 | `isPhoneNumber`          | 是否为合法的手机号码                                                                                                                     | `(value: any) => boolean`                                                                                       |         |
 | `isTelNumber`            | 是否为合法的电话号码                                                                                                                     | `(value: any) => boolean`                                                                                       |         |
 | `isZipcode`              | 是否为邮编号码                                                                                                                           | `(value: any) => boolean`                                                                                       |         |
-| `isId`                   | 是否为身份证号码，没做校验                                                                                                               | `(value: any) => boolean`                                                                                       |
+| `isId`                   | 是否为身份证号码，支持 18 位和 15 位验证，单个验证请使用 `isId18` / `isId15`                                                             | `(value: any) => boolean`                                                                                       |
 | `matchRegexp:/foo/`      | 必须命中某个正则。                                                                                                                       | `(value: any, regexp: string \| RegExp) => boolean`                                                             |         |
 | `matchRegexp${n}:/foo/`  | 必须命中某个正则。 设置正则表达式时属性名需以 `matchRegexp` 开头，`n`支持`1-9`，且 `validations` 及 `validationsErrors` 中属性名需匹配。 | `(value: any, regexp: string \| RegExp) => boolean`                                                             |         |
 | `isDateTimeSame`         | 日期和目标日期相同，支持指定粒度，默认到毫秒 `millisecond`                                                                               | `(value: any, targetDate: any, granularity?: string) => boolean`                                                | `2.2.0` |
@@ -1674,6 +1674,8 @@ fillMapping 配置 支持变量取值和表达式；
 数据替换并去重：combo：'${UNIQ(ARRAYMAP(items, item => {platform: item.platform, version: item.version}))}'
 数据替换：combo: ${items}
 
+`autoFill.defaultSelection` 可以用来配置默认选中
+
 ```schema:scope="body"
 {
   "type": "form",
@@ -1685,6 +1687,7 @@ fillMapping 配置 支持变量取值和表达式；
       "autoFill": {
         "showSuggestion": true,
         "api": "/api/mock2/form/autoUpdate?items=1",
+        "defaultSelection": "${combo}",
         "multiple": true,
         "fillMapping": {
           "combo": "${UNIQ(CONCAT(combo, ARRAYMAP(items, item => {platform: item.platform, version: item.version})))}",
@@ -1740,6 +1743,31 @@ fillMapping 配置 支持变量取值和表达式；
 }
 ```
 
+## 及时获取其他表单项的值
+
+默认为了提高性能，给表单项下发的数据不是最新，只有自己的值变化才是最新的，如果想及时的获取其他表单项的值，比如描述中想获取其他表单项值来展示不同的描述。需要配置 `strictMode` 为 false。
+
+```schema:scope="body"
+{
+  "type": "form",
+  "body": [
+    {
+      "type": "select",
+      "label": "类型",
+      "options": "A,B,C",
+      "name": "type"
+    },
+    {
+        type: 'textarea',
+        name: 'version',
+        strictMode: false,
+        disabled: true,
+        description: 'Type is ${type}'
+    }
+  ]
+}
+```
+
 ## 属性表
 
 | 属性名                  | 类型                                               | 默认值    | 说明                                                                                                |
@@ -1756,6 +1784,7 @@ fillMapping 配置 支持变量取值和表达式；
 | description             | [模板](../../../docs/concepts/template)            |           | 表单项描述                                                                                          |
 | placeholder             | `string`                                           |           | 表单项描述                                                                                          |
 | inline                  | `boolean`                                          |           | 是否为 内联 模式                                                                                    |
+| strictMode              | `boolean`                                          |           | 通过配置 false 可以及时获取所有表单里面的数据，否则可能会有不同步                                   |
 | submitOnChange          | `boolean`                                          |           | 是否该表单项值发生变化时就提交当前表单。                                                            |
 | disabled                | `boolean`                                          |           | 当前表单项是否是禁用状态                                                                            |
 | disabledOn              | [表达式](../../../docs/concepts/expression)        |           | 当前表单项是否禁用的条件                                                                            |

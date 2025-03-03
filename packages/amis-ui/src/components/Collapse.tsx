@@ -45,7 +45,7 @@ export interface CollapseProps extends ThemeProps {
   headingClassName?: string;
   collapseHeader?: React.ReactElement | null;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'base';
-  onCollapse?: (item: any, collapsed: boolean) => void;
+  onCollapse?: (collapsed: boolean) => void;
   wrapperComponent?: any;
   headingComponent?: any;
   translate?: TranslateFn;
@@ -110,7 +110,7 @@ export class Collapse extends React.Component<CollapseProps, CollapseState> {
       return;
     }
     const newCollapsed = !this.state.collapsed;
-    props.onCollapse?.(props, newCollapsed);
+    props.onCollapse?.(newCollapsed);
     this.setState({
       collapsed: newCollapsed
     });
@@ -131,7 +131,7 @@ export class Collapse extends React.Component<CollapseProps, CollapseState> {
         collapsed: targetState
       },
       () => {
-        this.props.onCollapse?.(this.props, targetState);
+        this.props.onCollapse?.(targetState);
       }
     );
   }
@@ -203,42 +203,40 @@ export class Collapse extends React.Component<CollapseProps, CollapseState> {
       : collapseHeader || header;
 
     let dom = [
-      finalHeader ? (
-        <HeadingComponent
-          key="header"
-          onClick={this.toggleCollapsed}
-          className={cx(
-            `Collapse-header`,
-            {'is-mobile': mobileUI},
-            headingClassName
-          )}
-        >
-          {showArrow && collapsable ? (
-            expandIcon ? (
-              React.cloneElement(expandIcon, {
-                ...expandIcon.props,
-                className: cx(
-                  'Collapse-icon-tranform',
-                  expandIcon.props?.className
-                )
-              })
-            ) : (
-              <span className={cx('Collapse-arrow-wrap')}>
-                <Icon
-                  icon="right-arrow-bold"
-                  className={cx('Collapse-arrow', 'icon')}
-                  classNameProp={cx('Collapse-arrow')}
-                  iconContent="Collapse-arrow"
-                />
-              </span>
-            )
+      <HeadingComponent
+        key="header"
+        onClick={this.toggleCollapsed}
+        className={cx(
+          `Collapse-header`,
+          {'is-mobile': mobileUI},
+          headingClassName,
+          {noTitle: !finalHeader}
+        )}
+      >
+        {showArrow && collapsable ? (
+          expandIcon ? (
+            React.cloneElement(expandIcon, {
+              ...expandIcon.props,
+              className: cx(
+                'Collapse-icon-tranform',
+                expandIcon.props?.className
+              )
+            })
           ) : (
-            ''
-          )}
-          {finalHeader}
-        </HeadingComponent>
-      ) : null,
-
+            <span className={cx('Collapse-arrow-wrap')}>
+              <Icon
+                icon="right-arrow-bold"
+                className={cx('Collapse-arrow', 'icon')}
+                classNameProp={cx('Collapse-arrow')}
+                iconContent="Collapse-arrow"
+              />
+            </span>
+          )
+        ) : (
+          ''
+        )}
+        {finalHeader}
+      </HeadingComponent>,
       <Transition
         key="body"
         mountOnEnter={mountOnEnter}

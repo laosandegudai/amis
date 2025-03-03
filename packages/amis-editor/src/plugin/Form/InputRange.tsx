@@ -1,15 +1,24 @@
+import {isObject} from 'amis';
+import type {IFormStore, IFormItemStore} from 'amis-core';
 import {
+  BasePlugin,
+  defaultValue,
+  getSchemaTpl,
+  tipedLabel,
+  registerEditorPlugin
+} from 'amis-editor-core';
+import type {
   EditorNodeType,
   RendererPluginAction,
-  RendererPluginEvent
+  RendererPluginEvent,
+  BaseEventContext,
+  EditorManager
 } from 'amis-editor-core';
-import {defaultValue, getSchemaTpl, tipedLabel} from 'amis-editor-core';
-import {registerEditorPlugin} from 'amis-editor-core';
-import {BasePlugin, BaseEventContext} from 'amis-editor-core';
 import {ValidatorTag} from '../../validator';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
-
-import type {IFormStore, IFormItemStore} from 'amis-core';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../../renderer/event-control/helper';
 
 export class RangeControlPlugin extends BasePlugin {
   static id = 'RangeControlPlugin';
@@ -49,67 +58,97 @@ export class RangeControlPlugin extends BasePlugin {
       eventName: 'change',
       eventLabel: '值变化',
       description: '滑块值变化时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'number',
-                  title: '当前滑块值'
+      dataSchema: (manager: EditorManager) => {
+        const node = manager.store.getNodeById(manager.store.activeId);
+        const schemas = manager.dataSchema.current.schemas;
+        const dataSchema = schemas.find(
+          item => item.properties?.[node!.schema.name]
+        );
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value: {
+                    type: 'number',
+                    ...((dataSchema?.properties?.[node!.schema.name] as any) ??
+                      {}),
+                    title: '当前滑块值'
+                  }
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     },
     {
       eventName: 'focus',
       eventLabel: '获取焦点',
       description: '当设置 showInput 为 true 时，输入框获取焦点时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'number',
-                  title: '当前数值'
+      dataSchema: (manager: EditorManager) => {
+        const node = manager.store.getNodeById(manager.store.activeId);
+        const schemas = manager.dataSchema.current.schemas;
+        const dataSchema = schemas.find(
+          item => item.properties?.[node!.schema.name]
+        );
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value: {
+                    type: 'number',
+                    ...((dataSchema?.properties?.[node!.schema.name] as any) ??
+                      {}),
+                    title: '当前数值'
+                  }
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     },
     {
       eventName: 'blur',
       eventLabel: '失去焦点',
       description: '当设置 showInput 为 true 时，输入框失去焦点时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'number',
-                  title: '当前数值'
+      dataSchema: (manager: EditorManager) => {
+        const node = manager.store.getNodeById(manager.store.activeId);
+        const schemas = manager.dataSchema.current.schemas;
+        const dataSchema = schemas.find(
+          item => item.properties?.[node!.schema.name]
+        );
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value: {
+                    type: 'number',
+                    ...((dataSchema?.properties?.[node!.schema.name] as any) ??
+                      {}),
+                    title: '当前数值'
+                  }
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     }
   ];
 
@@ -118,23 +157,39 @@ export class RangeControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除输入框'
+      description: '清除输入框',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '将值重置为resetValue，若没有配置resetValue，则清空'
+      description: '将值重置为初始值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
   panelTitle = '滑块';
 
   panelJustify = true;
+
+  filterProps(props: Record<string, any>, node: EditorNodeType) {
+    if (
+      props.marks &&
+      isObject(props.marks) &&
+      props.marks.hasOwnProperty('$$id')
+    ) {
+      delete props.marks.$$id;
+    }
+
+    return props;
+  }
+
   panelBodyCreator = (context: BaseEventContext) => {
     return getSchemaTpl('tabs', [
       {
@@ -155,7 +210,7 @@ export class RangeControlPlugin extends BasePlugin {
               {
                 type: 'container',
                 className: 'ae-sub-content',
-                visibleOn: 'data.multiple',
+                visibleOn: 'this.multiple',
                 body: [
                   getSchemaTpl('joinValues', {
                     onChange: (
@@ -183,7 +238,8 @@ export class RangeControlPlugin extends BasePlugin {
                 type: 'ae-input-range-value',
                 name: 'value',
                 label: '默认值',
-                visibleOn: 'data.multiple'
+                visibleOn: 'this.multiple',
+                precision: '${precision}'
               },
 
               getSchemaTpl('valueFormula', {
@@ -193,8 +249,9 @@ export class RangeControlPlugin extends BasePlugin {
                   type: 'input-number'
                 },
                 valueType: 'number', // 期望数值类型
-                visibleOn: '!data.multiple',
-                pipeIn: defaultValue(0)
+                visibleOn: '!this.multiple',
+                pipeIn: defaultValue(0),
+                precision: '${precision}'
               }),
 
               getSchemaTpl('valueFormula', {
@@ -206,7 +263,8 @@ export class RangeControlPlugin extends BasePlugin {
                 pipeIn: defaultValue(0),
                 needDeleteProps: ['min'], // 避免自我限制
                 label: '最小值',
-                valueType: 'number'
+                valueType: 'number',
+                precision: '${precision}'
               }),
               getSchemaTpl('valueFormula', {
                 name: 'max',
@@ -217,16 +275,28 @@ export class RangeControlPlugin extends BasePlugin {
                 pipeIn: defaultValue(100),
                 needDeleteProps: ['max'], // 避免自我限制
                 label: '最大值',
-                valueType: 'number'
+                valueType: 'number',
+                precision: '${precision}'
               }),
               {
                 label: '步长',
                 name: 'step',
                 type: 'input-number',
                 value: 1,
+                precision: '${precision}',
                 pipeOut: (value?: number) => {
                   return value || 1;
                 }
+              },
+              {
+                type: 'input-number',
+                name: 'precision',
+                label: tipedLabel(
+                  '小数位数',
+                  '根据四舍五入精确保留设置的小数位数'
+                ),
+                min: 1,
+                max: 100
               },
 
               getSchemaTpl('unit'),
@@ -247,7 +317,7 @@ export class RangeControlPlugin extends BasePlugin {
               {
                 type: 'container',
                 className: 'ae-ExtendMore mb-2',
-                visibleOn: 'data.tooltipVisible === undefined',
+                visibleOn: 'this.tooltipVisible === undefined',
                 body: [
                   {
                     type: 'select',
@@ -275,7 +345,7 @@ export class RangeControlPlugin extends BasePlugin {
                 name: 'clearable',
                 label: '可重置',
                 value: false,
-                visibleOn: '!!data.showInput'
+                visibleOn: '!!this.showInput'
               }),
               getSchemaTpl('autoFillApi')
             ]
@@ -321,7 +391,7 @@ export class RangeControlPlugin extends BasePlugin {
   };
 
   buildDataSchemas(node: EditorNodeType, region: EditorNodeType) {
-    if (node.schema?.multiple) {
+    if (node.schema?.multiple && node.schema?.joinValues === false) {
       return {
         type: 'object',
         title: node.schema?.label || node.schema?.name,

@@ -16,6 +16,7 @@ import {
 import {defaultValue, getSchemaTpl} from 'amis-editor-core';
 import flatten from 'lodash/flatten';
 import {VRenderer} from 'amis-editor-core';
+import {generateId} from '../util';
 
 export class CardPlugin extends BasePlugin {
   static id = 'CardPlugin';
@@ -44,6 +45,7 @@ export class CardPlugin extends BasePlugin {
         type: 'button',
         label: '按钮',
         actionType: 'dialog',
+        id: generateId(),
         dialog: {
           title: '标题',
           body: '内容'
@@ -80,25 +82,6 @@ export class CardPlugin extends BasePlugin {
           title: '常规',
           body: flatten([
             getSchemaTpl('layout:originPosition', {value: 'left-top'}),
-            {
-              children: (
-                <Button
-                  size="sm"
-                  className="m-b-sm"
-                  level="info"
-                  block
-                  onClick={() =>
-                    // this.manager.showInsertPanel('actions', context.id)
-                    this.manager.showRendererPanel(
-                      '按钮',
-                      '请从左侧组件面板中点击添加按钮元素'
-                    )
-                  }
-                >
-                  新增按钮
-                </Button>
-              )
-            },
             {
               children: (
                 <div>

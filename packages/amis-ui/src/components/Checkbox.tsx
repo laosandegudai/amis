@@ -4,8 +4,9 @@
  */
 
 import React from 'react';
-import {ThemeProps, themeable} from 'amis-core';
+import {TestIdBuilder, ThemeProps, themeable} from 'amis-core';
 import {autobind} from 'amis-core';
+import Icon from './icons';
 
 const preventEvent = (e: any) => e.stopPropagation();
 
@@ -28,6 +29,8 @@ interface CheckboxProps extends ThemeProps {
   partial?: boolean;
   optionType?: 'default' | 'button';
   children?: React.ReactNode | Array<React.ReactNode>;
+  testIdBuilder?: TestIdBuilder;
+  dataName?: string;
 }
 
 export class Checkbox extends React.Component<CheckboxProps, any> {
@@ -39,7 +42,7 @@ export class Checkbox extends React.Component<CheckboxProps, any> {
     falseValue: false,
     type: 'checkbox'
   };
-
+  labelRef: React.RefObject<HTMLLabelElement> = React.createRef();
   @autobind
   handleCheck(e: React.ChangeEvent<any>) {
     const {trueValue, falseValue, onChange} = this.props;
@@ -52,6 +55,13 @@ export class Checkbox extends React.Component<CheckboxProps, any> {
       e.currentTarget.checked ? trueValue : falseValue,
       (e.nativeEvent as MouseEvent).shiftKey
     );
+  }
+
+  @autobind
+  setClassName(className: string) {
+    this.setState({
+      className
+    });
   }
 
   render() {
@@ -71,9 +81,11 @@ export class Checkbox extends React.Component<CheckboxProps, any> {
       type,
       name,
       labelClassName,
-      optionType,
-      mobileUI
+      optionType = 'default',
+      mobileUI,
+      testIdBuilder
     } = this.props;
+    const {className: stateClassName} = this.state || {};
     const _checked =
       typeof checked !== 'undefined'
         ? checked
@@ -83,19 +95,29 @@ export class Checkbox extends React.Component<CheckboxProps, any> {
 
     return (
       <label
-        className={cx(`Checkbox Checkbox--${type}`, className, {
-          'Checkbox--full': !partial,
-          // 'Checkbox--partial': partial
-          [`Checkbox--${size}`]: size,
-          'Checkbox--button': optionType === 'button',
-          'Checkbox--button--checked': optionType === 'button' && _checked,
-          'Checkbox--button--disabled--unchecked':
-            optionType === 'button' && disabled && !_checked,
-          'Checkbox--button--disabled--checked':
-            optionType === 'button' && disabled && _checked,
-          'is-mobile': mobileUI
-        })}
+        className={cx(
+          'Checkbox',
+          `Checkbox--${type}--${optionType}`,
+          className,
+          stateClassName,
+          {
+            'Checkbox--partial': partial,
+            [`Checkbox--${size}`]: size,
+            'is-mobile': mobileUI,
+            'disabled': disabled,
+            'checked': _checked,
+            [`Checkbox--${type}--${optionType}--checked`]:
+              !disabled && _checked,
+            [`Checkbox--${type}--${optionType}--disabled--unchecked`]:
+              disabled && !_checked,
+            [`Checkbox--${type}--${optionType}--disabled--checked`]:
+              disabled && _checked
+          }
+        )}
         data-role="checkbox"
+        {...testIdBuilder?.getTestId()}
+        data-amis-name={this.props.dataName}
+        ref={this.labelRef}
       >
         <input
           type={type}
@@ -114,8 +136,15 @@ export class Checkbox extends React.Component<CheckboxProps, any> {
           readOnly={readOnly}
           name={name}
         />
-        <i />
-        <span className={cx(labelClassName)}>{children || label}</span>
+        <i {...testIdBuilder?.getChild('input').getTestId()}>
+          <Icon iconContent={`${type}-icon`} className="icon" />
+        </i>
+        <span
+          className={cx(labelClassName)}
+          {...testIdBuilder?.getChild('label').getTestId()}
+        >
+          {children || label}
+        </span>
         {description ? (
           <div className={cx('Checkbox-desc')}>{description}</div>
         ) : null}

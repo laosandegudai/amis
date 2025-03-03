@@ -3,6 +3,7 @@ import {normalizeApi, normalizeApiResponseData} from '../utils/api';
 import {ServerError} from '../utils/errors';
 import {createObject, isEmpty} from '../utils/helper';
 import {RendererEvent} from '../utils/renderer-event';
+import {evalExpressionWithConditionBuilderAsync} from '../utils/tpl';
 import {
   RendererAction,
   ListenerAction,
@@ -39,7 +40,7 @@ export class AjaxAction implements RendererAction {
     renderer: ListenerContext,
     event: RendererEvent<any>
   ) {
-    if (!renderer.props.env?.fetcher) {
+    if (!event.context.env?.fetcher) {
       throw new Error('env.fetcher is required!');
     }
 
@@ -57,6 +58,19 @@ export class AjaxAction implements RendererAction {
     const silent = action?.options?.silent || (action?.api as ApiObject).silent;
     const messages = (action?.api as ApiObject)?.messages;
     let api = normalizeApi(action.api);
+
+    if (api.sendOn !== undefined) {
+      // 发送请求前，判断是否需要发送
+      const sendOn = await evalExpressionWithConditionBuilderAsync(
+        api.sendOn,
+        action.data ?? {},
+        false
+      );
+
+      if (!sendOn) {
+        return;
+      }
+    }
 
     // 如果没配置data数据映射，则给一个空对象，避免将当前数据域作为接口请求参数
     if ((api as any)?.data == undefined) {
@@ -135,9 +149,7 @@ export class AjaxAction implements RendererAction {
           env.notify('error', e.message);
         }
       }
-
-      // 不阻塞后面执行
-      // throw e;
+      throw e;
     }
   }
 }

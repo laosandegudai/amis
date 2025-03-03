@@ -80,7 +80,7 @@ export default class SwitchContainer extends React.Component<
 
   componentDidUpdate(preProps: SwitchContainerProps) {
     const items = this.props.items || [];
-    if (this.state.activeIndex >= 0 && !items[this.state.activeIndex]) {
+    if (this.state.activeIndex > 0 && !items[this.state.activeIndex]) {
       this.setState({
         activeIndex: 0
       });
@@ -151,13 +151,24 @@ export default class SwitchContainer extends React.Component<
         className={cx(
           'SwitchContainer',
           className,
-          setThemeClassName('baseControlClassName', id, themeCss),
-          setThemeClassName('wrapperCustomStyle', id, wrapperCustomStyle)
+          setThemeClassName({
+            ...this.props,
+            name: 'baseControlClassName',
+            id,
+            themeCss
+          }),
+          setThemeClassName({
+            ...this.props,
+            name: 'wrapperCustomStyle',
+            id,
+            themeCss: wrapperCustomStyle
+          })
         )}
         onClick={this.handleClick}
         onMouseEnter={this.handleMouseEnter}
         onMouseLeave={this.handleMouseLeave}
         style={buildStyle(style, data)}
+        data-role="container"
       >
         {activeItem && this.renderBody(activeItem)}
 

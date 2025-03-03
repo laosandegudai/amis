@@ -13,10 +13,12 @@ import {EditorDNDManager} from './dnd';
 import React from 'react';
 import {DiffChange} from './util';
 import find from 'lodash/find';
-import type {RendererConfig, Schema} from 'amis-core';
+import {RAW_TYPE_MAP} from './util';
+import type {GlobalVariableItem, RendererConfig, Schema} from 'amis-core';
 import type {MenuDivider, MenuItem} from 'amis-ui/lib/components/ContextMenu';
 import type {BaseSchema, SchemaCollection} from 'amis';
 import type {AsyncLayerOptions} from './component/AsyncLayer';
+import type {SchemaType} from 'amis/lib/Schema';
 
 /**
  * 区域的定义，容器渲染器都需要定义区域信息。
@@ -114,12 +116,19 @@ export interface RegionConfig {
     | 'default'
     | 'position-h'
     | 'position-v'
-    | (new (dnd: EditorDNDManager) => DNDModeInterface);
+    | 'flex'
+    // | (new (dnd: EditorDNDManager) => DNDModeInterface)
+    | ((node: any) => string | undefined);
 
   /**
    * 可以用来判断是否允许拖入当前节点。
    */
   accept?: (json: any) => boolean;
+
+  /**
+   * 当前区域是否隐藏
+   */
+  hiddenOn?: (schema: Schema) => boolean;
 }
 
 export interface VRendererConfig {
@@ -185,6 +194,18 @@ export interface RendererScaffoldInfo {
   scaffold?: any;
 }
 
+export interface InlineEditableElement {
+  // 元素选择器，当命中这个规则时支持内联编辑
+  match: string;
+
+  // 内联编辑模式
+  // 默认为 plain-text
+  mode?: 'plain-text' | 'rich-text';
+
+  // onChange?: (node: EditorNodeType, value: any, elem: HTMLElement) => void;
+  key: string;
+}
+
 /**
  * 渲染器信息。
  */
@@ -212,6 +233,16 @@ export interface RendererInfo extends RendererScaffoldInfo {
    * 配置区域。
    */
   regions?: Array<RegionConfig>;
+
+  /**
+   * 支持内联编辑的元素集合
+   */
+  inlineEditableElements?: Array<InlineEditableElement>;
+
+  /**
+   *  选中不需要高亮
+   */
+  notHighlight?: boolean;
 
   /**
    * 哪些容器属性需要自动转成数组的。如果不配置默认就从 regions 里面读取。
@@ -304,7 +335,9 @@ export interface RendererInfo extends RendererScaffoldInfo {
   sharedContext?: Record<string, any>;
   dialogTitle?: string; //弹窗标题用于弹窗大纲的展示
   dialogType?: string; //区分确认对话框类型
-  subEditorVariable?: Array<{label: string; children: any}>; // 传递给子编辑器的组件自定义变量，如listSelect的选项名称和值
+  getSubEditorVariable?: (
+    schema?: any
+  ) => Array<{label: string; children: any}>; // 传递给子编辑器的组件自定义变量，如listSelect的选项名称和值
 }
 
 export type BasicRendererInfo = Omit<
@@ -324,6 +357,9 @@ export interface PopOverForm {
    * @deprecated 改用 body 代替
    */
   controls?: Array<any>;
+
+  initApi?: any;
+  api?: any;
 }
 
 export interface ScaffoldForm extends PopOverForm {
@@ -331,6 +367,7 @@ export interface ScaffoldForm extends PopOverForm {
   stepsBody?: boolean;
   /** 是否可跳过创建向导直接创建 */
   canSkip?: boolean;
+  getSchema?: (value: any) => PopOverForm | Promise<PopOverForm>;
   mode?:
     | 'normal'
     | 'horizontal'
@@ -441,6 +478,8 @@ export interface PanelProps {
   store: EditorStoreType;
   manager: EditorManager;
   popOverContainer?: () => HTMLElement | void;
+  readonly?: boolean;
+  children?: React.ReactNode | ((props: PanelProps) => React.ReactNode);
 }
 
 /**
@@ -449,9 +488,10 @@ export interface PanelProps {
 export interface PanelItem {
   nodeId?: string;
   key: string;
-  icon: string;
+  icon: React.ReactNode;
+  tooltip?: string;
   pluginIcon?: string; // 新版icon（svg）
-  title: string | JSX.Element; // 标题
+  title?: React.ReactNode; // 标题
   component?: React.ComponentType<PanelProps | any>;
   order: number;
   position?: 'left' | 'right';
@@ -493,6 +533,16 @@ export interface RendererJSONSchemaResolveEventContext
   data: string;
 }
 
+export interface IGlobalEvent {
+  label: string;
+  name: string; // 事件名称，唯一
+  description: string; // 事件描述
+  mapping: Array<{
+    key: string; // 入参名称
+    type: string; // 入参类型
+  }>;
+}
+
 /**
  * 右键菜单事件的上下文。
  */
@@ -527,17 +577,18 @@ export interface InsertEventContext extends BaseEventContext {
   beforeId?: string;
   index: number;
   data: any;
-  subRenderer?: SubRendererInfo;
+  subRenderer?: SubRendererInfo | RendererInfo;
   dragInfo?: {
     id: string;
     type: string;
     data: any;
+    position?: string;
   };
 }
 
 export interface ReplaceEventContext extends BaseEventContext {
   data: any;
-  subRenderer?: SubRendererInfo;
+  subRenderer?: SubRendererInfo | RendererInfo;
   region?: string;
 }
 
@@ -582,6 +633,14 @@ export interface ResizeMoveEventContext extends EventContext {
   resizer: HTMLElement;
   node: EditorNodeType;
   store: EditorStoreType;
+}
+
+export interface GlobalVariablesEventContext extends EventContext {
+  data: Array<GlobalVariableItem>;
+}
+
+export interface GlobalVariableEventContext extends EventContext {
+  data: Partial<GlobalVariableItem>;
 }
 
 export interface AfterBuildPanelBody extends EventContext {
@@ -744,6 +803,24 @@ export interface PluginEventListener {
       }
     >
   ) => void;
+
+  // 外部可以接管全局变量的增删改查
+  // 全局变量列表获取
+  onGlobalVariableInit?: (
+    event: PluginEvent<GlobalVariablesEventContext>
+  ) => void;
+  // 全局变量详情信息
+  onGlobalVariableDetail?: (
+    event: PluginEvent<GlobalVariableEventContext>
+  ) => void;
+  // 全局变量保存
+  onGlobalVariableSave?: (
+    event: PluginEvent<GlobalVariableEventContext>
+  ) => void;
+  // 全局变量删除
+  onGlobalVariableDelete?: (
+    event: PluginEvent<GlobalVariableEventContext>
+  ) => void;
 }
 
 /**
@@ -800,7 +877,7 @@ export interface PluginInterface
    *
    * 事件定义集合
    */
-  events?: RendererPluginEvent[];
+  events?: RendererPluginEvent[] | ((schema: any) => RendererPluginEvent[]);
 
   /**
    *
@@ -819,6 +896,11 @@ export interface PluginInterface
   async?: AsyncLayerOptions;
 
   /**
+   * 拖拽模式
+   */
+  dragMode?: string;
+
+  /**
    * 有数据域的容器，可以为子组件提供读取的字段绑定页面
    */
   getAvailableContextFields?: (
@@ -831,7 +913,7 @@ export interface PluginInterface
   ) => Promise<SchemaCollection | void>;
 
   /** 配置面板表单的 pipeOut function */
-  panelFormPipeOut?: (value: any) => any;
+  panelFormPipeOut?: (value: any, oldValue: any) => any;
 
   /**
    * @deprecated 用 panelBodyCreator
@@ -969,7 +1051,7 @@ export interface RendererPluginEvent {
   defaultShow?: boolean; // 是否默认展示
   isBroadcast?: boolean; // 广播事件
   owner?: string; // 标记来源，主要用于广播
-  dataSchema?: any[]; // 上下文schema
+  dataSchema?: any[] | ((manager: EditorManager) => any[]); // 上下文schema
   strongDesc?: string;
 }
 
@@ -981,7 +1063,7 @@ export interface RendererPluginAction {
   schema?: any; // 动作配置schema
   supportComponents?: string[] | string; // 如果schema中包含选择组件，可以指定该动作支持的组件类型，用于组件数树过滤
   innerArgs?: string[]; // 动作专属配置参数，主要是为了区分特性字段和附加参数
-  descDetail?: (info: any) => string | JSX.Element; // 动作详细描述
+  descDetail?: (info: any, context: any, props: any) => string | JSX.Element; // 动作详细描述
   outputVarDataSchema?: any | any[]; // 动作出参的结构定义
   actions?: SubRendererPluginAction[]; // 分支动作（配置面板包含多种动作的情况）
   children?: RendererPluginAction[]; // 子类型，for动作树
@@ -995,7 +1077,9 @@ export interface SubRendererPluginAction
   > {}
 
 export interface PluginEvents {
-  [propName: string]: RendererPluginEvent[];
+  [propName: string]:
+    | RendererPluginEvent[]
+    | ((schema: any) => RendererPluginEvent[]);
 }
 
 export interface PluginActions {
@@ -1009,6 +1093,9 @@ export abstract class BasePlugin implements PluginInterface {
   constructor(readonly manager: EditorManager) {}
 
   static scene = ['global'];
+
+  name?: string;
+  rendererName?: string;
 
   /**
    * 如果配置里面有 rendererName 自动返回渲染器信息。
@@ -1036,6 +1123,7 @@ export abstract class BasePlugin implements PluginInterface {
       return {
         name: curPluginName,
         regions: plugin.regions,
+        inlineEditableElements: plugin.inlineEditableElements,
         patchContainers: plugin.patchContainers,
         // wrapper: plugin.wrapper,
         vRendererConfig: plugin.vRendererConfig,
@@ -1051,7 +1139,7 @@ export abstract class BasePlugin implements PluginInterface {
         isListComponent: plugin.isListComponent,
         rendererName: plugin.rendererName,
         memberImmutable: plugin.memberImmutable,
-        subEditorVariable: plugin.subEditorVariable
+        getSubEditorVariable: plugin.getSubEditorVariable
       };
     }
   }
@@ -1252,12 +1340,20 @@ export abstract class BasePlugin implements PluginInterface {
   ) {
     return {
       type: 'string',
+      rawType: RAW_TYPE_MAP[node.schema.type as SchemaType] || 'string',
       title:
         typeof node.schema.label === 'string'
           ? node.schema.label
           : node.schema.name,
       originalValue: node.schema.value // 记录原始值，循环引用检测需要
     } as any;
+  }
+
+  getKeyAndName() {
+    return {
+      key: this.rendererName,
+      name: this.name
+    };
   }
 }
 

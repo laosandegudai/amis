@@ -1,7 +1,7 @@
 .#{$ns}Panel {
   margin: var(--Panel-marginTop) var(--Panel-marginRight)
     var(--Panel-marginBottom) var(--Panel-marginLeft);
-  background: var(--Panel-bg);
+  background: var(--Panel-bg-color);
   border-color: var(--Panel-top-border-color) var(--Panel-right-border-color)
     var(--Panel-bottom-border-color) var(--Panel-left-border-color);
   border-style: var(--Panel-top-border-style) var(--Panel-right-border-style)
@@ -9,24 +9,7 @@
   border-width: var(--Panel-borderWidth);
   border-radius: var(--Panel-borderRadius);
   -webkit-box-shadow: var(--Panel-boxShadow);
-  box-shadow: var(--Panel-boxShadow);
-
-  &-fixedBottom {
-    position: absolute;
-    background: var(--white);
-    z-index: -1;
-    opacity: 0;
-    bottom: 999999px;
-    box-shadow: var(--Panel-fixedBottom-boxShadow);
-    border-top: var(--Panel-fixedBottom-borderTop);
-
-    &.in {
-      position: fixed;
-      bottom: 0;
-      z-index: $zindex-affix;
-      opacity: 1;
-    }
-  }
+  box-shadow: var(--Panel-shadow);
 
   /* 主题 */
   &--default {
@@ -34,7 +17,7 @@
       var(--Panel-bottom-border-color) var(--Panel-left-border-color);
 
     > .#{$ns}Panel-heading {
-      background: var(--Panel-heading-bg);
+      background: var(--Panel-heading-bg-color);
       color: var(--Panel-heading-color);
 
       .badge {
@@ -162,6 +145,19 @@
       var(--Panel-heading-bottom-border-width)
       var(--Panel-heading-left-border-width);
     border-radius: var(--Panel-headingBorderRadius);
+
+    &.is-collapsible {
+      display: flex;
+      justify-content: space-between;
+    }
+  }
+
+  &-arrow {
+    transition: transform 0.1s ease-in;
+    transform: rotate(180deg);
+    &.is-collapsed {
+      transform: rotate(0deg);
+    }
   }
 
   &-title {
@@ -194,6 +190,13 @@
     .#{$ns}Button + .#{$ns}Button {
       margin-left: var(--Panel-footerButtonMarginLeft);
     }
+  }
+
+  &-fixedBottom {
+    position: sticky;
+    background: var(--white);
+    bottom: var(--affix-offset-bottom);
+    z-index: $zindex-sticky;
   }
 
   &-btnToolbar {
@@ -229,8 +232,10 @@
       border-radius: 0;
 
       .#{$ns}Panel-title {
-        padding-left: var(--Panel-body-paddingLeft);
-        border-left: px2rem(3px) solid var(--primary);
+        .icon {
+          width: var(--sizes-base-7);
+          height: var(--sizes-base-7);
+        }
         font-size: var(--fontSizeLg);
       }
     }
@@ -245,6 +250,8 @@
       padding: 0 var(--Panel-body-paddingLeft);
 
       > .#{$ns}Button {
+        min-width: 0;
+        min-height: 0;
         flex: 1;
 
         &:first-child {

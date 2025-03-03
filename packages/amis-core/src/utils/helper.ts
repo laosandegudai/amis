@@ -10,10 +10,16 @@ import isNaN from 'lodash/isNaN';
 import isNumber from 'lodash/isNumber';
 import isString from 'lodash/isString';
 import qs from 'qs';
+import {compile} from 'path-to-regexp';
+import {matchSorter} from 'match-sorter';
 
 import type {Schema, PlainObject, FunctionPropertyNames} from '../types';
 
-import {evalExpression} from './tpl';
+import {
+  evalExpression,
+  evalExpressionWithConditionBuilder,
+  filter
+} from './tpl';
 import {IIRendererStore} from '../store';
 import {IFormStore} from '../store/form';
 import {autobindMethod} from './autobind';
@@ -35,6 +41,8 @@ import {string2regExp} from './string2regExp';
 import {getVariable} from './getVariable';
 import {keyToPath} from './keyToPath';
 import {isExpression, replaceExpression} from './formula';
+import type {IStatusStore} from '../store/status';
+import {isAlive} from 'mobx-state-tree';
 
 export {
   createObject,
@@ -113,7 +121,11 @@ export function syncDataFromSuper(
   let keys: Array<string> = [];
 
   // 如果是 form store，则从父级同步 formItem 种东西。
-  if (store && store.storeType === 'FormStore') {
+  if (
+    store &&
+    store.storeType === 'FormStore' &&
+    (store as any).canAccessSuperData !== false
+  ) {
     keys = uniq(
       (store as IFormStore).items
         .map(item => `${item.name}`.replace(/\..*$/, ''))
@@ -201,7 +213,9 @@ export function anyChanged(
     typeof attrs === 'string'
       ? attrs.split(',').map(item => item.trim())
       : attrs
-  ).some(key => (strictMode ? from[key] !== to[key] : from[key] != to[key]));
+  ).some(key =>
+    strictMode ? !Object.is(from[key], to[key]) : from[key] != to[key]
+  );
 }
 
 type Mutable<T> = {
@@ -222,7 +236,9 @@ export function changedEffect<T extends Record<string, any>>(
       : attrs;
 
   keys.forEach(key => {
-    if (strictMode ? origin[key] !== data[key] : origin[key] != data[key]) {
+    if (
+      strictMode ? !Object.is(origin[key], data[key]) : origin[key] != data[key]
+    ) {
       (changes as any)[key] = data[key];
     }
   });
@@ -250,9 +266,10 @@ export function rmUndefined(obj: PlainObject) {
 export function isObjectShallowModified(
   prev: any,
   next: any,
-  strictMode: boolean = true,
+  strictModeOrFunc: boolean | ((lhs: any, rhs: any) => boolean) = true,
   ignoreUndefined: boolean = false,
-  statck: Array<any> = []
+  stack: Array<any> = [],
+  maxDepth: number = -1
 ): boolean {
   if (Array.isArray(prev) && Array.isArray(next)) {
     return prev.length !== next.length
@@ -261,9 +278,9 @@ export function isObjectShallowModified(
           isObjectShallowModified(
             prev,
             next[index],
-            strictMode,
+            strictModeOrFunc,
             ignoreUndefined,
-            statck
+            stack
           )
         );
   }
@@ -277,10 +294,16 @@ export function isObjectShallowModified(
     null == next ||
     !isObject(prev) ||
     !isObject(next) ||
-    isObservable(prev) ||
-    isObservable(next)
+    // 不是 Object.create 创建的对象
+    // 不是 plain object
+    prev.constructor !== Object ||
+    next.constructor !== Object
   ) {
-    return strictMode ? prev !== next : prev != next;
+    if (strictModeOrFunc && typeof strictModeOrFunc === 'function') {
+      return strictModeOrFunc(prev, next);
+    }
+
+    return strictModeOrFunc ? prev !== next : prev != next;
   }
 
   if (ignoreUndefined) {
@@ -298,11 +321,14 @@ export function isObjectShallowModified(
   }
 
   // 避免循环引用死循环。
-  if (~statck.indexOf(prev)) {
+  if (~stack.indexOf(prev)) {
     return false;
   }
 
-  statck.push(prev);
+  stack.push(prev);
+  if (maxDepth > 0 && stack.length > maxDepth) {
+    return true;
+  }
 
   for (let i: number = keys.length - 1; i >= 0; i--) {
     const key = keys[i];
@@ -310,9 +336,9 @@ export function isObjectShallowModified(
       isObjectShallowModified(
         prev[key],
         next[key],
-        strictMode,
+        strictModeOrFunc,
         ignoreUndefined,
-        statck
+        stack
       )
     ) {
       return true;
@@ -336,14 +362,8 @@ export function isArrayChildrenModified(
 
   for (let i: number = prev.length - 1; i >= 0; i--) {
     if (
-      strictMode
-        ? prev[i] !== next[i]
-        : prev[i] != next[i] ||
-          isArrayChildrenModified(
-            prev[i].children,
-            next[i].children,
-            strictMode
-          )
+      (strictMode ? prev[i] !== next[i] : prev[i] != next[i]) ||
+      isArrayChildrenModified(prev[i].children, next[i].children, strictMode)
     ) {
       return true;
     }
@@ -418,18 +438,37 @@ export function hasVisibleExpression(schema: {
 
 export function isVisible(
   schema: {
+    id?: string;
+    name?: string;
     visibleOn?: string;
     hiddenOn?: string;
     visible?: boolean;
     hidden?: boolean;
   },
-  data?: object
+  data?: object,
+  statusStore?: IStatusStore
 ) {
+  // 有状态时，状态优先
+  if ((schema.id || schema.name) && statusStore) {
+    const id = filter(schema.id, data);
+    const name = filter(schema.name, data);
+
+    const visible = isAlive(statusStore)
+      ? statusStore.visibleState[id] ?? statusStore.visibleState[name]
+      : undefined;
+
+    if (typeof visible !== 'undefined') {
+      return visible;
+    }
+  }
+
   return !(
     schema.hidden ||
     schema.visible === false ||
-    (schema.hiddenOn && evalExpression(schema.hiddenOn, data)) ||
-    (schema.visibleOn && !evalExpression(schema.visibleOn, data))
+    (schema.hiddenOn &&
+      evalExpressionWithConditionBuilder(schema.hiddenOn, data)) ||
+    (schema.visibleOn &&
+      !evalExpressionWithConditionBuilder(schema.visibleOn, data))
   );
 }
 
@@ -474,7 +513,8 @@ export function isDisabled(
 ) {
   return (
     schema.disabled ||
-    (schema.disabledOn && evalExpression(schema.disabledOn, data))
+    (schema.disabledOn &&
+      evalExpressionWithConditionBuilder(schema.disabledOn, data))
   );
 }
 
@@ -487,7 +527,7 @@ export function hasAbility(
   return schema.hasOwnProperty(ability)
     ? schema[ability]
     : schema.hasOwnProperty(`${ability}On`)
-    ? evalExpression(schema[`${ability}On`], data || schema)
+    ? evalExpressionWithConditionBuilder(schema[`${ability}On`], data || schema)
     : defaultValue;
 }
 
@@ -620,7 +660,12 @@ export function difference<
           result[key] = a;
         }
 
-        if (isEqual(a, b)) {
+        // isEquals 里面没有处理好递归引用对象的情况
+        if (
+          object.hasOwnProperty(key) && // 其中一个不是自己的属性，就不要比对了
+          base.hasOwnProperty(key) &&
+          !isObjectShallowModified(a, b, true, undefined, undefined, 10)
+        ) {
           return;
         }
 
@@ -1358,6 +1403,19 @@ export function getTreeParent<T extends TreeItem>(tree: Array<T>, value: T) {
   return ancestors?.length ? ancestors[ancestors.length - 1] : null;
 }
 
+export function countTree<T extends TreeItem>(
+  tree: Array<T>,
+  iterator?: (item: T, key: number, level: number, paths?: Array<T>) => any
+): number {
+  let count = 0;
+  eachTree(tree, (item, key, level, paths) => {
+    if (!iterator || iterator(item, key, level, paths)) {
+      count++;
+    }
+  });
+  return count;
+}
+
 export function ucFirst(str?: string) {
   return typeof str === 'string'
     ? str.substring(0, 1).toUpperCase() + str.substring(1)
@@ -1438,6 +1496,64 @@ export function sortArray<T extends any>(
 
     return ret * dir;
   });
+}
+
+export function applyFilters<T extends any>(
+  items: Array<T>,
+  options: {
+    query: any;
+    columns?: Array<any>;
+    matchFunc?: Function | null;
+    filterOnAllColumns?: boolean;
+  }
+) {
+  if (options.matchFunc && typeof options.matchFunc === 'function') {
+    items = options.matchFunc(items, items, options);
+  } else {
+    if (Array.isArray(options.columns)) {
+      options.columns.forEach((column: any) => {
+        let value: any =
+          typeof column.name === 'string'
+            ? getVariable(options.query, column.name)
+            : undefined;
+        const key = column.name;
+
+        if (
+          (options.filterOnAllColumns ||
+            column.searchable ||
+            column.filterable) &&
+          key &&
+          value != null
+        ) {
+          // value可能为null、undefined、''、0
+          if (Array.isArray(value)) {
+            if (value.length > 0) {
+              const arr = [...items];
+              let arrItems: Array<any> = [];
+              value.forEach(item => {
+                arrItems = [
+                  ...arrItems,
+                  ...matchSorter(arr, item, {
+                    keys: [key],
+                    threshold: matchSorter.rankings.CONTAINS
+                  })
+                ];
+              });
+              items = items.filter((item: any) =>
+                arrItems.find(a => a === item)
+              );
+            }
+          } else {
+            items = matchSorter(items, value, {
+              keys: [key],
+              threshold: matchSorter.rankings.CONTAINS
+            });
+          }
+        }
+      });
+    }
+  } /** 字段的格式类型无法穷举，所以支持使用函数过滤 */
+  return items;
 }
 
 // 只判断一层, 如果层级很深，form-data 也不好表达。
@@ -1646,15 +1762,18 @@ export class SkipOperation extends Error {}
 export class ValidateError extends Error {
   name: 'ValidateError';
   detail: {[propName: string]: Array<string> | string};
+  rawError?: {[propName: string]: any};
 
   constructor(
     message: string,
-    error: {[propName: string]: Array<string> | string}
+    error: {[propName: string]: Array<string> | string},
+    rawError?: {[propName: string]: any}
   ) {
     super();
     this.name = 'ValidateError';
     this.message = message;
     this.detail = error;
+    this.rawError = rawError;
   }
 }
 
@@ -1881,7 +2000,7 @@ export function isClickOnInput(e: React.MouseEvent<HTMLElement>) {
     !e.currentTarget.contains(target) ||
     ~['INPUT', 'TEXTAREA'].indexOf(target.tagName) ||
     ((formItem = target.closest(
-      `button, a, [data-role="form-item"], label[data-role="checkbox"]`
+      `button, a, [data-role="form-item"], label[data-role="checkbox"], label[data-role="switch"]`
     )) &&
       e.currentTarget.contains(formItem))
   );
@@ -1934,6 +2053,7 @@ export function JSONValueMap(
     host: Object,
     stack: Array<Object>
   ) => any,
+  deepFirst: boolean = false,
   stack: Array<Object> = []
 ) {
   if (!isPlainObject(json) && !Array.isArray(json)) {
@@ -1946,40 +2066,42 @@ export function JSONValueMap(
     host: any,
     stack: Array<any> = []
   ) => {
-    let maped: any = mapper(origin, key, host, stack);
+    if (deepFirst) {
+      const value = JSONValueMap(origin, mapper, deepFirst, stack);
+      return mapper(value, key, host, stack) ?? value;
+    }
 
-    if (maped === origin && (isPlainObject(origin) || Array.isArray(origin))) {
-      return JSONValueMap(origin, mapper, stack);
+    let maped: any = mapper(origin, key, host, stack) ?? origin;
+
+    // 如果不是深度优先，上层的对象都修改了，就不继续递归进到新返回的对象了
+    if (maped === origin) {
+      return JSONValueMap(origin, mapper, deepFirst, stack);
     }
     return maped;
   };
 
   if (Array.isArray(json)) {
-    let flag = false;
-    let mapped = json.map((value, index) => {
-      let result: any = iterator(value, index, json, [json].concat(stack));
-      if (result !== value) {
-        flag = true;
-        return result;
-      }
-      return value;
+    let modified = false;
+    let arr = json.map((value, index) => {
+      let newValue: any = iterator(value, index, json, [json].concat(stack));
+      modified = modified || newValue !== value;
+      return newValue;
     });
-    return flag ? mapped : json;
+    return modified ? arr : json;
   }
 
-  let flag = false;
+  let modified = false;
   const toUpdate: any = {};
   Object.keys(json).forEach(key => {
     const value: any = json[key];
     let result: any = iterator(value, key, json, [json].concat(stack));
     if (result !== value) {
-      flag = true;
+      modified = true;
       toUpdate[key] = result;
-      return;
     }
   });
 
-  return flag
+  return modified
     ? {
         ...json,
         ...toUpdate
@@ -2027,26 +2149,92 @@ export function isNumeric(value: any): boolean {
   return /^[-+]?(?:\d*[.])?\d+$/.test(value);
 }
 
+export type PrimitiveTypes = 'boolean' | 'number';
+
+/**
+ * 解析Query字符串中的原始类型，目前仅支持转化布尔类型
+ *
+ * @param query 查询字符串
+ * @param options 配置参数
+ * @returns 解析后的查询字符串
+ */
+export function parsePrimitiveQueryString(
+  rawQuery: Record<string, any>,
+  options?: {
+    primitiveTypes: PrimitiveTypes[];
+  }
+) {
+  if (!isPlainObject(rawQuery)) {
+    return rawQuery;
+  }
+
+  options = options || {primitiveTypes: ['boolean']};
+
+  if (
+    !Array.isArray(options.primitiveTypes) ||
+    options.primitiveTypes.length === 0
+  ) {
+    options.primitiveTypes = ['boolean'];
+  }
+
+  const query = JSONValueMap(rawQuery, value => {
+    if (
+      (options?.primitiveTypes?.includes('boolean') && value === 'true') ||
+      value === 'false'
+    ) {
+      /** 解析布尔类型 */
+      return value === 'true';
+    } else if (
+      options?.primitiveTypes?.includes('number') &&
+      isNumeric(value) &&
+      isFinite(value) &&
+      value >= -Number.MAX_SAFE_INTEGER &&
+      value <= Number.MAX_SAFE_INTEGER
+    ) {
+      /** 解析数字类型 */
+      const result = Number(value);
+
+      return !isNaN(result) ? result : value;
+    }
+
+    return value;
+  });
+
+  return query;
+}
+
 /**
  * 获取URL链接中的query参数（包含hash mode）
  *
  * @param location Location对象，或者类Location结构的对象
+ * @param {Object} options 配置项
+ * @param {Boolean} options.parsePrimitive 是否将query的值解析为原始类型，目前仅支持转化布尔类型
  */
 export function parseQuery(
-  location?: Location | {query?: any; search?: any; [propName: string]: any}
+  location?: Location | {query?: any; search?: any; [propName: string]: any},
+  options?: {
+    parsePrimitive?: boolean;
+    primitiveTypes?: PrimitiveTypes[];
+  }
 ): Record<string, any> {
+  const {parsePrimitive = false, primitiveTypes = ['boolean']} = options || {};
   const query =
     (location && !(location instanceof Location) && location?.query) ||
     (location && location?.search && qsparse(location.search.substring(1))) ||
     (window.location.search && qsparse(window.location.search.substring(1)));
+  const normalizedQuery = isPlainObject(query)
+    ? parsePrimitive
+      ? parsePrimitiveQueryString(query, {primitiveTypes})
+      : query
+    : {};
   /* 处理hash中的query */
   const hash = window.location?.hash;
   let hashQuery = {};
   let idx = -1;
+
   if (typeof hash === 'string' && ~(idx = hash.indexOf('?'))) {
     hashQuery = qsparse(hash.substring(idx + 1));
   }
-  const normalizedQuery = isPlainObject(query) ? query : {};
 
   return merge(normalizedQuery, hashQuery);
 }
@@ -2183,4 +2371,128 @@ export function evalTrackExpression(
 // 很奇怪的问题，react-json-view import 有些情况下 mod.default 才是 esModule
 export function importLazyComponent(mod: any) {
   return mod.default.__esModule ? mod.default : mod;
+}
+
+export function replaceUrlParams(path: string, params: Record<string, any>) {
+  if (typeof path === 'string' && /\:\w+/.test(path)) {
+    return compile(path)(params);
+  }
+
+  return path;
+}
+
+export const TEST_ID_KEY: 'data-testid' = 'data-testid';
+
+export class TestIdBuilder {
+  testId?: string;
+
+  static fast(testId: string) {
+    return {
+      [TEST_ID_KEY]: testId
+    };
+  }
+
+  // 为空就表示没有启用testId，后续一直返回都将是空
+  constructor(testId?: string) {
+    this.testId = testId;
+  }
+
+  // 生成子区域的testid生成器
+  getChild(childPath: string | number, data?: object) {
+    if (this.testId == null) {
+      return new TestIdBuilder();
+    }
+
+    return new TestIdBuilder(
+      data
+        ? filter(`${this.testId}-${childPath}`, data)
+        : `${this.testId}-${childPath}`
+    );
+  }
+
+  // 获取当前组件的testid
+  getTestId(data?: object) {
+    if (this.testId == null) {
+      return undefined;
+    }
+
+    return {
+      [TEST_ID_KEY]: data ? filter(this.testId, data) : this.testId
+    };
+  }
+
+  getTestIdValue(data?: object) {
+    if (this.testId == null) {
+      return undefined;
+    }
+
+    return data ? filter(this.testId, data) : this.testId;
+  }
+}
+
+export function supportsMjs() {
+  try {
+    new Function('import("")');
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+export function formateId(id: string) {
+  if (!id) {
+    return guid();
+  }
+  // 将className非法字符替换为短横线
+  id = id.replace(/[^a-zA-Z0-9-]/g, '-');
+  // 将连续的-替换为单个-
+  id = id.replace(/-{2,}/g, '-');
+  // 去掉首尾的-
+  id = id.replace(/^-|-$/g, '');
+  // 首字母不能为数字
+  if (/^\d/.test(id)) {
+    id = 'amis-' + id;
+  }
+  return id;
+}
+
+export function formateCheckThemeCss(themeCss: any, type: string) {
+  if (!themeCss) {
+    return {};
+  }
+  const className = themeCss[`${type}ClassName`] || {};
+  const controlClassName = themeCss[`${type}ControlClassName`] || {};
+  const defaultControlThemeCss: any = {};
+  const checkedControlThemeCss: any = {};
+  const defaultThemeCss: any = {};
+  const checkedThemeCss: any = {};
+  Object.keys(className).forEach(key => {
+    if (key.includes('checked-')) {
+      const newKey = key.replace('checked-', '');
+      checkedThemeCss[newKey] = className[key];
+    } else if (key.includes(`${type}-`)) {
+      const newKey = key.replace(`${type}-`, '');
+      defaultThemeCss[newKey] = className[key];
+    } else {
+      defaultThemeCss[key] = className[key];
+    }
+  });
+  Object.keys(controlClassName).forEach(key => {
+    if (key.includes('checked-')) {
+      const newKey = key.replace('checked-', '');
+      checkedControlThemeCss[newKey] = controlClassName[key];
+    } else if (key.includes(`${type}-`)) {
+      const newKey = key.replace(`${type}-`, '');
+      defaultControlThemeCss[newKey] = controlClassName[key];
+    } else {
+      defaultControlThemeCss[key] = controlClassName[key];
+    }
+  });
+  return {
+    ...themeCss,
+    [`${type}ControlClassName`]: defaultControlThemeCss,
+    [`${type}ControlCheckedClassName`]: checkedControlThemeCss,
+    [`${type}ClassName`]: defaultThemeCss,
+    [`${type}CheckedClassName`]: checkedThemeCss
+  };
 }

@@ -1,13 +1,11 @@
 import React from 'react';
 import {
+  CustomStyle,
   RENDERER_TRANSMISSION_OMIT_PROPS,
   Renderer,
-  RendererProps
+  RendererProps,
+  setThemeClassName
 } from 'amis-core';
-import {SchemaNode, ActionObject} from 'amis-core';
-import {getScrollParent, autobind} from 'amis-core';
-import {findDOMNode} from 'react-dom';
-import {resizeSensor} from 'amis-core';
 import {
   BaseSchema,
   SchemaClassName,
@@ -17,6 +15,7 @@ import {
 import {ActionSchema} from './Action';
 import {FormHorizontal} from 'amis-core';
 import omit from 'lodash/omit';
+import {Icon} from 'amis-ui';
 
 /**
  * Panel渲染器。
@@ -83,6 +82,11 @@ export interface PanelSchema extends BaseSchema {
    */
   affixFooter?: boolean | 'always';
 
+  /**\
+   * 可折叠。先简单实现一下
+   */
+  collapsible?: boolean;
+
   /**
    * 配置子表单项默认的展示方式。
    */
@@ -91,6 +95,13 @@ export interface PanelSchema extends BaseSchema {
    * 如果是水平排版，这个属性可以细化水平排版的左右宽度占比。
    */
   subFormHorizontal?: FormHorizontal;
+
+  /**
+   * 外观配置的classname
+   */
+  headerControlClassName: string;
+  bodyControlClassName: string;
+  actionsControlClassName: string;
 }
 
 export interface PanelProps
@@ -99,8 +110,9 @@ export interface PanelProps
       PanelSchema,
       'type' | 'className' | 'panelClassName' | 'bodyClassName'
     > {}
-
-export default class Panel extends React.Component<PanelProps> {
+export default class Panel<
+  T extends PanelProps = PanelProps
+> extends React.Component<T> {
   static propsList: Array<string> = [
     'header',
     'actions',
@@ -119,65 +131,13 @@ export default class Panel extends React.Component<PanelProps> {
     // bodyClassName: 'Panel-body'
   };
 
-  parentNode?: any;
-  unSensor: Function;
-  affixDom: React.RefObject<HTMLDivElement> = React.createRef();
-  footerDom: React.RefObject<HTMLDivElement> = React.createRef();
-  timer: ReturnType<typeof setTimeout>;
+  state = {
+    collapsed: false
+  };
 
-  componentDidMount() {
-    const dom = findDOMNode(this) as HTMLElement;
-    let parent: HTMLElement | Window | null = dom ? getScrollParent(dom) : null;
-    if (!parent || parent === document.body) {
-      parent = window;
-    }
-    this.parentNode = parent;
-    parent.addEventListener('scroll', this.affixDetect);
-    this.unSensor = resizeSensor(dom as HTMLElement, this.affixDetect);
-    this.affixDetect();
-  }
-
-  componentWillUnmount() {
-    const parent = this.parentNode;
-    parent && parent.removeEventListener('scroll', this.affixDetect);
-    this.unSensor && this.unSensor();
-    clearTimeout(this.timer);
-  }
-
-  @autobind
-  affixDetect() {
-    if (
-      !this.props.affixFooter ||
-      !this.affixDom.current ||
-      !this.footerDom.current
-    ) {
-      return;
-    }
-
-    const affixDom = this.affixDom.current;
-    const footerDom = this.footerDom.current;
-    const offsetBottom =
-      this.props.affixOffsetBottom ?? this.props.env.affixOffsetBottom ?? 0;
-    let affixed = false;
-
-    if (footerDom.offsetWidth) {
-      affixDom.style.cssText = `bottom: ${offsetBottom}px;width: ${footerDom.offsetWidth}px`;
-    } else {
-      this.timer = setTimeout(this.affixDetect, 250);
-      return;
-    }
-
-    if (this.props.affixFooter === 'always') {
-      affixed = true;
-      footerDom.classList.add('invisible2');
-    } else {
-      const clip = footerDom.getBoundingClientRect();
-      const clientHeight = window.innerHeight;
-      // affixed = clip.top + clip.height / 2 > clientHeight;
-      affixed = clip.bottom > clientHeight - offsetBottom;
-    }
-
-    affixed ? affixDom.classList.add('in') : affixDom.classList.remove('in');
+  constructor(props: T) {
+    super(props);
+    props.mobileUI && props.collapsible && (this.state.collapsed = true);
   }
 
   renderBody(): JSX.Element | null {
@@ -203,6 +163,8 @@ export default class Panel extends React.Component<PanelProps> {
       subFormMode,
       subFormHorizontal,
       id,
+      themeCss,
+      wrapperCustomStyle,
       ...rest
     } = this.props;
 
@@ -251,6 +213,10 @@ export default class Panel extends React.Component<PanelProps> {
       actionsClassName,
       footerClassName,
       footerWrapClassName,
+      headerControlClassName,
+      headerTitleControlClassName,
+      bodyControlClassName,
+      actionsControlClassName,
       children,
       title,
       footer,
@@ -258,6 +224,9 @@ export default class Panel extends React.Component<PanelProps> {
       classPrefix: ns,
       classnames: cx,
       id,
+      collapsible,
+      themeCss,
+      wrapperCustomStyle,
       ...rest
     } = this.props;
 
@@ -267,64 +236,193 @@ export default class Panel extends React.Component<PanelProps> {
     };
 
     const footerDoms = [];
-    const actions = this.renderActions();
-    actions &&
-      footerDoms.push(
-        <div
-          key="actions"
-          className={cx(`Panel-btnToolbar`, actionsClassName || `Panel-footer`)}
-        >
-          {actions}
-        </div>
-      );
+    const collapsed = this.state.collapsed;
 
-    footer &&
-      footerDoms.push(
-        <div key="footer" className={cx(footerClassName || `Panel-footer`)}>
-          {render('footer', footer, subProps)}
-        </div>
-      );
+    if (!collapsed) {
+      const actions = this.renderActions();
+      actions &&
+        footerDoms.push(
+          <div
+            key="actions"
+            className={cx(
+              `Panel-btnToolbar`,
+              actionsClassName || `Panel-footer`,
+              actionsControlClassName
+            )}
+          >
+            {actions}
+          </div>
+        );
+
+      footer &&
+        footerDoms.push(
+          <div
+            key="footer"
+            className={cx(
+              footerClassName || `Panel-footer`,
+              actionsControlClassName
+            )}
+          >
+            {render('footer', footer, subProps)}
+          </div>
+        );
+    }
 
     let footerDom = footerDoms.length ? (
       <div
-        className={cx('Panel-footerWrap', footerWrapClassName)}
-        ref={this.footerDom}
+        className={cx(
+          'Panel-footerWrap',
+          footerWrapClassName,
+          affixFooter ? 'Panel-fixedBottom' : '',
+          setThemeClassName({
+            ...this.props,
+            name: 'footerControlClassName',
+            id,
+            themeCss
+          })
+        )}
       >
         {footerDoms}
       </div>
     ) : null;
 
     return (
-      <div className={cx(`Panel`, className || `Panel--default`)} style={style}>
+      <div
+        data-id={id}
+        data-role="container"
+        className={cx(
+          `Panel`,
+          className || `Panel--default`,
+          setThemeClassName({
+            ...this.props,
+            name: 'baseControlClassName',
+            id,
+            themeCss
+          }),
+          setThemeClassName({
+            ...this.props,
+            name: 'wrapperCustomStyle',
+            id,
+            themeCss: wrapperCustomStyle
+          })
+        )}
+        style={style}
+      >
         {header ? (
-          <div className={cx(headerClassName || `Panel-heading`)}>
+          <div
+            className={cx(
+              headerClassName || `Panel-heading`,
+              headerControlClassName,
+              setThemeClassName({
+                ...this.props,
+                name: 'headerControlClassName',
+                id,
+                themeCss
+              })
+            )}
+          >
             {render('header', header, subProps)}
           </div>
         ) : title ? (
-          <div className={cx(headerClassName || `Panel-heading`)}>
-            <h3 className={cx(`Panel-title`)}>
+          <div
+            className={cx(
+              headerClassName || `Panel-heading`,
+              headerControlClassName,
+              {
+                'is-collapsible': collapsible
+              },
+              setThemeClassName({
+                ...this.props,
+                name: 'headerControlClassName',
+                id,
+                themeCss
+              })
+            )}
+          >
+            <h3
+              className={cx(
+                `Panel-title`,
+                headerTitleControlClassName,
+                setThemeClassName({
+                  ...this.props,
+                  name: 'titleControlClassName',
+                  id,
+                  themeCss
+                })
+              )}
+            >
               {render('title', title, subProps)}
             </h3>
+            {collapsible ? (
+              <span
+                className={cx('Panel-arrow-wrap')}
+                onClick={() => {
+                  this.setState({
+                    collapsed: !collapsed
+                  });
+                }}
+              >
+                <Icon
+                  icon="down-arrow-bold"
+                  className={cx('Panel-arrow', 'icon', {
+                    'is-collapsed': collapsed
+                  })}
+                />
+              </span>
+            ) : null}
           </div>
         ) : null}
 
-        <div className={bodyClassName || `${ns}Panel-body`}>
-          {this.renderBody()}
-        </div>
+        {!collapsed ? (
+          <div
+            className={cx(
+              bodyClassName || `Panel-body`,
+              bodyControlClassName,
+              setThemeClassName({
+                ...this.props,
+                name: 'bodyControlClassName',
+                id,
+                themeCss
+              })
+            )}
+          >
+            {this.renderBody()}
+          </div>
+        ) : null}
 
         {footerDom}
 
-        {affixFooter && footerDoms.length ? (
-          <div
-            ref={this.affixDom}
-            className={cx(
-              'Panel-fixedBottom Panel-footerWrap',
-              footerWrapClassName
-            )}
-          >
-            {footerDoms}
-          </div>
-        ) : null}
+        <CustomStyle
+          {...this.props}
+          config={{
+            wrapperCustomStyle,
+            id,
+            themeCss,
+            classNames: [
+              {
+                key: 'baseControlClassName'
+              },
+              {
+                key: 'bodyControlClassName'
+              },
+              {
+                key: 'headerControlClassName',
+                weights: {
+                  default: {
+                    suf: `.${ns}Panel-heading`
+                  }
+                }
+              },
+              {
+                key: 'titleControlClassName'
+              },
+              {
+                key: 'footerControlClassName'
+              }
+            ]
+          }}
+          env={this.props.env}
+        />
       </div>
     );
   }

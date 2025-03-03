@@ -14,6 +14,7 @@ export interface LocationProps extends ThemeProps, LocaleProps {
   vendor: 'baidu' | 'gaode' | 'tenxun';
   coordinatesType: 'bd09' | 'gcj02';
   placeholder: string;
+  getLocationPlaceholder: string;
   clearable: boolean;
   ak: string;
   value?: {
@@ -27,6 +28,9 @@ export interface LocationProps extends ThemeProps, LocaleProps {
   popoverClassName?: string;
   onChange: (value: any) => void;
   popOverContainer?: any;
+  autoSelectCurrentLoc?: boolean;
+  onlySelectCurrentLoc?: boolean;
+  hideViewControl?: boolean; // 隐藏地图控件，默认为false，即显示控件
 }
 
 export interface LocationState {
@@ -40,6 +44,7 @@ export class LocationPicker extends React.Component<
 > {
   static defaultProps = {
     placeholder: 'LocationPicker.placeholder',
+    getLocationPlaceholder: 'LocationPicker.getLocation',
     clearable: false
   };
   domRef: React.RefObject<HTMLDivElement> = React.createRef();
@@ -155,12 +160,16 @@ export class LocationPicker extends React.Component<
       popoverClassName,
       disabled,
       placeholder,
+      getLocationPlaceholder,
       clearable,
       popOverContainer,
       vendor,
       coordinatesType,
       ak,
-      mobileUI
+      mobileUI,
+      autoSelectCurrentLoc,
+      onlySelectCurrentLoc,
+      hideViewControl = false
     } = this.props;
     const __ = this.props.translate;
     const {isFocused, isOpened} = this.state;
@@ -173,7 +182,10 @@ export class LocationPicker extends React.Component<
               ak={ak}
               value={value}
               coordinatesType={coordinatesType}
+              autoSelectCurrentLoc={autoSelectCurrentLoc}
+              onlySelectCurrentLoc={onlySelectCurrentLoc}
               onChange={this.handleChange}
+              hideViewControl={hideViewControl}
             />
           );
         case 'gaode':
@@ -213,7 +225,7 @@ export class LocationPicker extends React.Component<
           <span className={cx('LocationPicker-value')}>{value.address}</span>
         ) : (
           <span className={cx('LocationPicker-placeholder')}>
-            {__(placeholder)}
+            {__(onlySelectCurrentLoc ? getLocationPlaceholder : placeholder)}
           </span>
         )}
 
@@ -242,7 +254,10 @@ export class LocationPicker extends React.Component<
                   ak={ak}
                   value={value}
                   coordinatesType={coordinatesType}
+                  autoSelectCurrentLoc={autoSelectCurrentLoc}
+                  onlySelectCurrentLoc={onlySelectCurrentLoc}
                   onChange={this.handleTempChange}
+                  hideViewControl={hideViewControl}
                 />
               ) : (
                 <Alert2>{__('{{vendor}} 地图控件不支持', {vendor})}</Alert2>
@@ -268,7 +283,10 @@ export class LocationPicker extends React.Component<
                   ak={ak}
                   value={value}
                   coordinatesType={coordinatesType}
+                  autoSelectCurrentLoc={autoSelectCurrentLoc}
+                  onlySelectCurrentLoc={onlySelectCurrentLoc}
                   onChange={this.handleChange}
+                  hideViewControl={hideViewControl}
                 />
               ) : (
                 <Alert2>{__('{{vendor}} 地图控件不支持', {vendor})}</Alert2>

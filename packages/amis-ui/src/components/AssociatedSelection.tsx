@@ -52,7 +52,7 @@ export class AssociatedSelection extends BaseSelection<
 
   componentDidMount() {
     const leftValue = this.state.leftValue;
-    const {options, onDeferLoad} = this.props;
+    const {options, onDeferLoad, deferField = 'defer'} = this.props;
 
     if (leftValue) {
       const selectdOption = BaseSelection.resolveSelected(
@@ -61,7 +61,7 @@ export class AssociatedSelection extends BaseSelection<
         (option: Option) => option.ref
       );
 
-      if (selectdOption && onDeferLoad && selectdOption.defer) {
+      if (selectdOption && onDeferLoad && selectdOption[deferField]) {
         onDeferLoad(selectdOption);
       }
     }
@@ -74,7 +74,7 @@ export class AssociatedSelection extends BaseSelection<
 
   @autobind
   handleLeftSelect(value: Option) {
-    const {options, onDeferLoad} = this.props;
+    const {options, onDeferLoad, deferField = 'defer'} = this.props;
     this.setState({leftValue: value});
 
     const selectdOption = BaseSelection.resolveSelected(
@@ -83,7 +83,7 @@ export class AssociatedSelection extends BaseSelection<
       (option: Option) => option.ref
     );
 
-    if (selectdOption && onDeferLoad && selectdOption.defer) {
+    if (selectdOption && onDeferLoad && selectdOption[deferField]) {
       onDeferLoad(selectdOption);
     }
   }
@@ -127,7 +127,9 @@ export class AssociatedSelection extends BaseSelection<
       itemHeight,
       loadingConfig,
       checkAll,
-      checkAllLabel
+      checkAllLabel,
+      deferField = 'defer',
+      testIdBuilder
     } = this.props;
 
     const selectdOption = BaseSelection.resolveSelected(
@@ -151,6 +153,7 @@ export class AssociatedSelection extends BaseSelection<
               virtualThreshold={virtualThreshold}
               itemHeight={itemHeight}
               loadingConfig={loadingConfig}
+              testIdBuilder={testIdBuilder?.getChild('left-selection')}
             />
           ) : (
             <GroupedSelection
@@ -163,13 +166,14 @@ export class AssociatedSelection extends BaseSelection<
               clearable={false}
               virtualThreshold={virtualThreshold}
               itemHeight={itemHeight}
+              testIdBuilder={testIdBuilder?.getChild('left-selection')}
             />
           )}
         </div>
         <div className={cx('AssociatedSelection-right')}>
           {this.state.leftValue ? (
             selectdOption ? (
-              selectdOption.defer && !selectdOption.loaded ? (
+              selectdOption[deferField] && !selectdOption.loaded ? (
                 <div className={cx('AssociatedSelection-box')}>
                   <div
                     className={cx(
@@ -203,6 +207,7 @@ export class AssociatedSelection extends BaseSelection<
                   multiple={multiple}
                   virtualThreshold={virtualThreshold}
                   itemHeight={itemHeight}
+                  testIdBuilder={testIdBuilder?.getChild('right-selection')}
                 />
               ) : rightMode === 'tree' ? (
                 <Tree
@@ -217,6 +222,7 @@ export class AssociatedSelection extends BaseSelection<
                   loadingConfig={loadingConfig}
                   checkAllLabel={checkAllLabel}
                   checkAll={checkAll}
+                  testIdBuilder={testIdBuilder?.getChild('right-selection')}
                 />
               ) : rightMode === 'chained' ? (
                 <ChainedSelection
@@ -233,6 +239,7 @@ export class AssociatedSelection extends BaseSelection<
                   loadingConfig={loadingConfig}
                   checkAllLabel={checkAllLabel}
                   checkAll={checkAll}
+                  testIdBuilder={testIdBuilder?.getChild('right-selection')}
                 />
               ) : (
                 <GroupedSelection
@@ -248,6 +255,7 @@ export class AssociatedSelection extends BaseSelection<
                   itemHeight={itemHeight}
                   checkAllLabel={checkAllLabel}
                   checkAll={checkAll}
+                  testIdBuilder={testIdBuilder?.getChild('right-selection')}
                 />
               )
             ) : (

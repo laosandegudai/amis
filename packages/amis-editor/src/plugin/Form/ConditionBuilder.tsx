@@ -15,6 +15,7 @@ import isString from 'lodash/isString';
 import defaultConfig, {
   OperationMap
 } from 'amis-ui/lib/components/condition-builder/config';
+import {generateId} from '../../util';
 
 export class ConditionBilderPlugin extends BasePlugin {
   static id = 'ConditionBilderPlugin';
@@ -41,21 +42,25 @@ export class ConditionBilderPlugin extends BasePlugin {
       {
         label: '文本',
         type: 'text',
+        id: generateId(),
         name: 'text'
       },
       {
         label: '数字',
         type: 'number',
+        id: generateId(),
         name: 'number'
       },
       {
         label: '布尔',
         type: 'boolean',
+        id: generateId(),
         name: 'boolean'
       },
       {
         label: '选项',
         type: 'select',
+        id: generateId(),
         name: 'select',
         options: [
           {
@@ -83,16 +88,19 @@ export class ConditionBilderPlugin extends BasePlugin {
       {
         label: '日期',
         type: 'date',
+        id: generateId(),
         name: 'date'
       },
       {
         label: '时间',
         type: 'time',
+        id: generateId(),
         name: 'time'
       },
       {
         label: '日期时间',
         type: 'datetime',
+        id: generateId(),
         name: 'datetime'
       }
     ]
@@ -163,7 +171,7 @@ export class ConditionBilderPlugin extends BasePlugin {
 
             {
               type: 'group',
-              visibleOn: 'data.type === "number"',
+              visibleOn: 'this.type === "number"',
               body: [
                 {
                   type: 'input-number',
@@ -186,7 +194,7 @@ export class ConditionBilderPlugin extends BasePlugin {
 
             {
               type: 'group',
-              visibleOn: '!!~["date", "datetime", "time"].indexOf(data.type)',
+              visibleOn: '!!~["date", "datetime", "time"].indexOf(this.type)',
               body: [
                 {
                   type: 'input-text',
@@ -202,14 +210,14 @@ export class ConditionBilderPlugin extends BasePlugin {
                   type: 'input-text',
                   name: 'timeFormat',
                   placeholder: '时间显示格式',
-                  visibleOn: 'data.type === "datetime"'
+                  visibleOn: 'this.type === "datetime"'
                 }
               ]
             },
 
             {
               type: 'group',
-              visibleOn: 'data.type === "select"',
+              visibleOn: 'this.type === "select"',
               body: [
                 {
                   type: 'input-text',

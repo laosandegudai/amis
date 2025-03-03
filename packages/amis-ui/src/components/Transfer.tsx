@@ -4,7 +4,6 @@ import includes from 'lodash/includes';
 import debounce from 'lodash/debounce';
 import isEqual from 'lodash/isEqual';
 import unionWith from 'lodash/unionWith';
-
 import {ThemeProps, themeable, findTree, differenceFromAll} from 'amis-core';
 import {BaseSelectionProps, BaseSelection, ItemRenderStates} from './Selection';
 import {Options, Option} from './Select';
@@ -24,6 +23,9 @@ import {ItemRenderStates as ResultItemRenderStates} from './ResultList';
 import ResultTableList from './ResultTableList';
 import ResultTreeList from './ResultTreeList';
 import {SpinnerExtraProps} from './Spinner';
+import Pagination from './Pagination';
+
+import type {TestIdBuilder} from 'amis-core';
 
 export type SelectMode =
   | 'table'
@@ -79,8 +81,14 @@ export interface TransferProps
   onChange?: (value: Array<Option>, optionModified?: boolean) => void;
   onSearch?: (
     term: string,
-    setCancel: (cancel: () => void) => void
-  ) => Promise<Options | void>;
+    setCancel: (cancel: () => void) => void,
+    targetPage?: {page: number; perPage?: number}
+  ) => Promise<{
+    items: Options;
+    page?: number;
+    perPage?: number;
+    total?: number;
+  } | void>;
 
   // 自定义选择框相关
   selectRender?: (
@@ -113,12 +121,60 @@ export interface TransferProps
   checkAllLabel?: string;
   /** 树形模式下，给 tree 的属性 */
   onlyChildren?: boolean;
+  /** 分页模式下累积的选项值，用于右侧回显 */
+  accumulatedOptions?: Option[];
+  /** 分页配置 */
+  pagination?: {
+    /** 是否开启分页 */
+    enable: boolean;
+    /** 分页组件CSS类名 */
+    className?: string;
+    /**
+     * 通过控制layout属性的顺序，调整分页结构 total,perPage,pager,go
+     * @default 'pager'
+     */
+    layout?: string | Array<string>;
+
+    /**
+     * 指定每页可以显示多少条
+     * @default [10, 20, 50, 100]
+     */
+    perPageAvailable?: Array<number>;
+
+    /**
+     * 最多显示多少个分页按钮。
+     *
+     * @default 5
+     */
+    maxButtons?: number;
+    page?: number;
+    perPage?: number;
+    total?: number;
+    popOverContainer?: any;
+    popOverContainerSelector?: string;
+  };
+  /** 切换分页事件 */
+  onPageChange?: (
+    page: number,
+    perPage?: number,
+    direction?: 'forward' | 'backward'
+  ) => void;
+  /**
+   * 是否默认都展开
+   */
+  initiallyOpen?: boolean;
+  /**
+   * ui级联关系，true代表级联选中，false代表不级联，默认为true
+   */
+  autoCheckChildren?: boolean;
+  testIdBuilder?: TestIdBuilder;
 }
 
 export interface TransferState {
   tempValue?: Array<Option> | Option;
   inputValue: string;
   searchResult: Options | null;
+  searchResultPage?: {page?: number; perPage?: number; total?: number} | null;
   isTreeDeferLoad: boolean;
   resultSelectMode: 'list' | 'tree' | 'table';
 }
@@ -134,6 +190,7 @@ export class Transfer<
     | 'statistics'
     | 'virtualThreshold'
     | 'checkAllLabel'
+    | 'itemHeight'
     | 'valueField'
   > = {
     multiple: true,
@@ -141,6 +198,7 @@ export class Transfer<
     selectMode: 'list',
     statistics: true,
     virtualThreshold: 100,
+    itemHeight: 38,
     checkAllLabel: 'Select.checkAll',
     valueField: 'value'
   };
@@ -148,6 +206,7 @@ export class Transfer<
   state: TransferState = {
     inputValue: '',
     searchResult: null,
+    searchResultPage: null,
     isTreeDeferLoad: false,
     resultSelectMode: 'list'
   };
@@ -169,7 +228,8 @@ export class Transfer<
       props.selectMode === 'tree' &&
       !!findTree(
         props.options,
-        (option: Option) => option.deferApi || option.defer
+        (option: Option) =>
+          option.deferApi || option[(props.deferField as string) || 'defer']
       );
 
     // 计算结果的selectMode
@@ -335,37 +395,50 @@ export class Transfer<
   handleSeachCancel() {
     this.setState({
       inputValue: '',
-      searchResult: null
+      searchResult: null,
+      searchResultPage: null
     });
   }
 
-  lazySearch = debounce(
-    async () => {
-      const {inputValue} = this.state;
-      if (!inputValue) {
-        return;
-      }
-      const onSearch = this.props.onSearch!;
-      let result = await onSearch(
-        inputValue,
-        (cancelExecutor: () => void) => (this.cancelSearch = cancelExecutor)
-      );
+  lazySearch = debounce(this.searchRequest, 250, {
+    trailing: true,
+    leading: false
+  });
 
-      if (this.unmounted) {
-        return;
-      }
+  @autobind
+  async searchRequest(page?: number, perPage?: number) {
+    const {pagination} = this.props;
+    const {inputValue} = this.state;
+    if (!inputValue) {
+      return;
+    }
 
-      if (!Array.isArray(result)) {
+    const onSearch = this.props.onSearch!;
+    let result = await onSearch(
+      inputValue,
+      (cancelExecutor: () => void) => (this.cancelSearch = cancelExecutor),
+      this.props.pagination?.enable
+        ? {page: page || 1, perPage: perPage || pagination?.perPage || 10}
+        : undefined
+    );
+
+    if (this.unmounted) {
+      return;
+    }
+
+    if (result) {
+      const {items, ...currentPage} = result;
+
+      if (!Array.isArray(items)) {
         throw new Error('onSearch 需要返回数组');
       }
 
       this.setState({
-        searchResult: result
+        searchResult: items,
+        searchResultPage: {...currentPage}
       });
-    },
-    250,
-    {trailing: true, leading: false}
-  );
+    }
+  }
 
   getFlattenArr(options: Array<Option>) {
     const {valueField = 'value'} = this.props;
@@ -437,6 +510,22 @@ export class Transfer<
         });
   }
 
+  @autobind
+  onPageChangeHandle(
+    page: number,
+    perPage?: number,
+    direction?: 'forward' | 'backward'
+  ) {
+    const {onPageChange, onSearch} = this.props;
+    const {searchResult, inputValue} = this.state;
+
+    if (searchResult) {
+      this.searchRequest(page, perPage);
+    } else if (onPageChange) {
+      onPageChange(page, perPage, direction);
+    }
+  }
+
   renderSelect(
     props: TransferProps & {
       onToggleAll?: () => void;
@@ -454,7 +543,8 @@ export class Transfer<
       translate: __,
       searchPlaceholder = __('Transfer.searchKeyword'),
       mobileUI,
-      valueField = 'value'
+      valueField = 'value',
+      testIdBuilder
     } = props;
 
     if (selectRender) {
@@ -499,6 +589,7 @@ export class Transfer<
                 partial={checkedPartial && !checkedAll}
                 onChange={props.onToggleAll || this.toggleAll}
                 size="sm"
+                testIdBuilder={testIdBuilder?.getChild('toggle-all')}
               />
             ) : null}
             {__(selectTitle || 'Transfer.available')}
@@ -519,6 +610,7 @@ export class Transfer<
                 'Transfer-checkAll',
                 disabled || !options.length ? 'is-disabled' : ''
               )}
+              {...testIdBuilder?.getChild('toggle-all').getTestId()}
             >
               {__('Select.checkAll')}
             </a>
@@ -534,9 +626,13 @@ export class Transfer<
               onKeyDown={this.handleSearchKeyDown}
               placeholder={searchPlaceholder}
               mobileUI={mobileUI}
+              testIdBuilder={testIdBuilder?.getChild('search-input')}
             >
               {this.state.searchResult !== null ? (
-                <a onClick={this.handleSeachCancel}>
+                <a
+                  onClick={this.handleSeachCancel}
+                  {...testIdBuilder?.getChild('search-cancel').getTestId()}
+                >
                   <Icon icon="close" className="icon" />
                 </a>
               ) : (
@@ -549,7 +645,48 @@ export class Transfer<
         {this.state.searchResult !== null
           ? this.renderSearchResult(props)
           : this.renderOptions(props)}
+
+        {this.renderFooter()}
       </>
+    );
+  }
+
+  renderFooter() {
+    const {classnames: cx, pagination} = this.props;
+    const {searchResult, searchResultPage} = this.state;
+
+    if (!pagination || !pagination?.enable) {
+      return null;
+    }
+
+    const currentPage =
+      searchResult && searchResultPage
+        ? {
+            page: searchResultPage.page,
+            perPage: searchResultPage.perPage,
+            total: searchResultPage.total
+          }
+        : {
+            page: pagination.page,
+            perPage: pagination.perPage,
+            total: pagination.total
+          };
+
+    return (
+      <div className={cx('Transfer-footer')}>
+        <Pagination
+          className={cx('Transfer-footer-pagination', pagination.className)}
+          activePage={currentPage.page}
+          perPage={currentPage.perPage}
+          total={currentPage.total}
+          layout={pagination.layout}
+          maxButtons={pagination.maxButtons}
+          perPageAvailable={pagination.perPageAvailable}
+          popOverContainer={pagination.popOverContainer}
+          popOverContainerSelector={pagination.popOverContainerSelector}
+          onPageChange={this.onPageChangeHandle}
+        />
+      </div>
     );
   }
 
@@ -575,7 +712,9 @@ export class Transfer<
       virtualListHeight,
       checkAll,
       checkAllLabel,
-      onlyChildren
+      onlyChildren,
+      autoCheckChildren,
+      testIdBuilder
     } = props;
     const {isTreeDeferLoad, searchResult, inputValue} = this.state;
     const options = searchResult ?? [];
@@ -603,6 +742,7 @@ export class Transfer<
         virtualThreshold={virtualThreshold}
         itemHeight={itemHeight}
         virtualListHeight={virtualListHeight}
+        testIdBuilder={testIdBuilder?.getChild('search-result')}
       />
     ) : mode === 'tree' ? (
       <Tree
@@ -628,6 +768,7 @@ export class Transfer<
         itemHeight={itemHeight}
         checkAllLabel={checkAllLabel}
         checkAll={checkAll}
+        autoCheckChildren={autoCheckChildren}
       />
     ) : mode === 'chained' ? (
       <ChainedSelection
@@ -666,6 +807,7 @@ export class Transfer<
         virtualListHeight={virtualListHeight}
         checkAllLabel={checkAllLabel}
         checkAll={checkAll}
+        testIdBuilder={testIdBuilder?.getChild('search-result')}
       />
     );
   }
@@ -690,13 +832,17 @@ export class Transfer<
       noResultsText,
       labelField,
       valueField = 'value',
+      deferField = 'defer',
       virtualThreshold,
       itemHeight,
       virtualListHeight,
       loadingConfig,
       checkAll,
       checkAllLabel,
-      onlyChildren
+      onlyChildren,
+      autoCheckChildren = true,
+      initiallyOpen = true,
+      testIdBuilder
     } = props;
 
     return selectMode === 'table' ? (
@@ -716,6 +862,7 @@ export class Transfer<
         virtualListHeight={virtualListHeight}
         checkAllLabel={checkAllLabel}
         checkAll={checkAll}
+        testIdBuilder={testIdBuilder?.getChild('selection')}
       />
     ) : selectMode === 'tree' ? (
       <Tree
@@ -739,6 +886,9 @@ export class Transfer<
         loadingConfig={loadingConfig}
         checkAllLabel={checkAllLabel}
         checkAll={checkAll}
+        initiallyOpen={initiallyOpen}
+        autoCheckChildren={autoCheckChildren}
+        testIdBuilder={testIdBuilder?.getChild('selection')}
       />
     ) : selectMode === 'chained' ? (
       <ChainedSelection
@@ -759,6 +909,7 @@ export class Transfer<
         loadingConfig={loadingConfig}
         checkAllLabel={checkAllLabel}
         checkAll={checkAll}
+        testIdBuilder={testIdBuilder?.getChild('selection')}
       />
     ) : selectMode === 'associated' ? (
       <AssociatedSelection
@@ -778,12 +929,14 @@ export class Transfer<
         multiple={multiple}
         labelField={labelField}
         valueField={valueField}
+        deferField={deferField}
         virtualThreshold={virtualThreshold}
         itemHeight={itemHeight}
         virtualListHeight={virtualListHeight}
         loadingConfig={loadingConfig}
         checkAllLabel={checkAllLabel}
         checkAll={checkAll}
+        testIdBuilder={testIdBuilder?.getChild('selection')}
       />
     ) : (
       <GroupedSelection
@@ -803,6 +956,7 @@ export class Transfer<
         virtualListHeight={virtualListHeight}
         checkAllLabel={checkAllLabel}
         checkAll={checkAll}
+        testIdBuilder={testIdBuilder?.getChild('selection')}
       />
     );
   }
@@ -827,9 +981,11 @@ export class Transfer<
       virtualThreshold,
       itemHeight,
       loadingConfig,
-      showInvalidMatch
+      showInvalidMatch,
+      pagination,
+      accumulatedOptions,
+      testIdBuilder
     } = this.props;
-
     const {resultSelectMode, isTreeDeferLoad} = this.state;
     const searchable = !isTreeDeferLoad && resultSearchable;
 
@@ -840,7 +996,7 @@ export class Transfer<
             ref={this.domResultRef}
             classnames={cx}
             columns={columns!}
-            options={options || []}
+            options={(pagination?.enable ? accumulatedOptions : options) || []}
             value={value}
             disabled={disabled}
             option2value={option2value}
@@ -853,6 +1009,7 @@ export class Transfer<
             onSearch={onResultSearch}
             virtualThreshold={virtualThreshold}
             itemHeight={itemHeight}
+            testIdBuilder={testIdBuilder?.getChild('result')}
           />
         );
       case 'tree':
@@ -862,7 +1019,7 @@ export class Transfer<
             loadingConfig={loadingConfig}
             classnames={cx}
             className={cx('Transfer-value')}
-            options={options}
+            options={(pagination?.enable ? accumulatedOptions : options) || []}
             valueField={'value'}
             value={value || []}
             onChange={onChange!}
@@ -874,6 +1031,7 @@ export class Transfer<
             labelField={labelField}
             virtualThreshold={virtualThreshold}
             itemHeight={itemHeight}
+            testIdBuilder={testIdBuilder?.getChild('result')}
           />
         );
       default:
@@ -894,6 +1052,7 @@ export class Transfer<
             virtualThreshold={virtualThreshold}
             itemHeight={itemHeight}
             showInvalidMatch={showInvalidMatch}
+            testIdBuilder={testIdBuilder?.getChild('result')}
           />
         );
     }
@@ -915,7 +1074,9 @@ export class Transfer<
       selectMode = 'list',
       translate: __,
       valueField = 'value',
-      mobileUI
+      mobileUI,
+      pagination,
+      testIdBuilder
     } = this.props as any;
     const {searchResult} = this.state;
 
@@ -939,7 +1100,11 @@ export class Transfer<
       <div
         className={cx('Transfer', className, inline ? 'Transfer--inline' : '')}
       >
-        <div className={cx('Transfer-select')}>
+        <div
+          className={cx('Transfer-select', {
+            'Transfer-select--pagination': !!pagination?.enable
+          })}
+        >
           {this.renderSelect(this.props)}
         </div>
         <div className={cx('Transfer-mid', {'is-mobile': mobileUI})}>
@@ -949,7 +1114,12 @@ export class Transfer<
             </div>
           ) : null}
         </div>
-        <div className={cx('Transfer-result', {'is-mobile': mobileUI})}>
+        <div
+          className={cx('Transfer-result', {
+            'is-mobile': mobileUI,
+            'Transfer-select--pagination': !!pagination?.enable
+          })}
+        >
           <div
             className={cx(
               'Transfer-title',
@@ -969,6 +1139,7 @@ export class Transfer<
                 'Transfer-clearAll',
                 disabled || !this.valueArray.length ? 'is-disabled' : ''
               )}
+              {...testIdBuilder?.getChild('clear-all').getTestId()}
             >
               {__('clear')}
             </a>

@@ -1,4 +1,6 @@
 .#{$ns}InputBox {
+  height: var(--input-size-default-height);
+
   @include input-input();
   @include input-border();
 
@@ -39,7 +41,13 @@
   }
 
   &-clear {
+    visibility: hidden;
     @include input-clear();
+  }
+
+  &.is-focused &-clear,
+  &:hover &-clear {
+    visibility: visible;
   }
 
   > svg {

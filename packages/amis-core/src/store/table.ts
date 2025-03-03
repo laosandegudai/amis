@@ -22,6 +22,7 @@ import {
   isVisible,
   guid,
   findTree,
+  findTreeIndex,
   flattenTree,
   eachTree,
   difference,
@@ -38,6 +39,61 @@ import {getStoreById} from './manager';
  * 内部列的数量 '__checkme' | '__dragme' | '__expandme'
  */
 const PARTITION_INDEX = 3;
+
+function initChildren(
+  children: Array<any>,
+  depth: number,
+  pindex: number,
+  parentId: string,
+  path: string = '',
+  getEntryId?: (entry: any, index: number) => string
+): any {
+  depth += 1;
+  return children.map((item, index) => {
+    item = isObject(item)
+      ? item
+      : {
+          item
+        };
+    const id = String(
+      getEntryId ? getEntryId(item, index) : item.__id ?? guid()
+    );
+
+    return {
+      // id: String(item && (item as any)[self.primaryField] || `${pindex}-${depth}-${key}`),
+      id: String(id),
+      parentId: String(parentId),
+      key: String(`${pindex}-${depth}-${index}`),
+      path: `${path}${index}`,
+      depth: depth,
+      index: index,
+      newIndex: index,
+      pristine: item,
+      data: item,
+      defer: !!item.defer,
+      loaded: false,
+      loading: false,
+      rowSpans: {},
+      children:
+        item && Array.isArray(item.children)
+          ? initChildren(
+              item.children,
+              depth,
+              index,
+              id,
+              `${path}${index}.`,
+              getEntryId
+            )
+          : []
+    };
+  });
+}
+
+export enum SELECTED_STATUS {
+  ALL,
+  PARTIAL,
+  NONE
+}
 
 export const Column = types
   .model('Column', {
@@ -70,7 +126,15 @@ export const Column = types
     get isPrimary() {
       const table = getParent(self, 2) as any;
 
-      return table.filteredColumns[0]?.id === self.id;
+      return (
+        table.filteredColumns.find(
+          (column: any) => !column.type.startsWith('__')
+        )?.id === self.id
+      );
+    },
+
+    get columnKey() {
+      return self.pristine.uid || self.name || self.label || self.rawIndex;
     }
   }))
   .actions(self => ({
@@ -89,11 +153,13 @@ export const Column = types
       self.toggled = value;
     },
 
-    setEnableSearch(value: boolean) {
+    setEnableSearch(value: boolean, skipSave = false) {
       self.enableSearch = value;
 
-      const table = getParent(self, 2) as ITableStore;
-      table.persistSaveToggledColumns();
+      if (!skipSave) {
+        const table = getParent(self, 2) as ITableStore;
+        table.persistSaveToggledColumns();
+      }
     },
 
     setMinWidth(value: number) {
@@ -123,20 +189,69 @@ export const Row = types
     rowSpans: types.frozen({} as any),
     index: types.number,
     newIndex: types.number,
-    nth: 0,
     path: '', // 行数据的位置
-    expandable: false,
     checkdisable: false,
     isHover: false,
     children: types.optional(
       types.array(types.late((): IAnyModelType => Row)),
       []
     ),
+    defer: false, // 是否为懒数据
+    loaded: false, // 懒数据是否加载完了
+    loading: false, // 懒数据是否正在加载
+    error: '', // 懒数据加载失败的错误信息
     depth: types.number, // 当前children位于第几层，便于使用getParent获取最顶层TableStore
     appeared: true,
     lazyRender: false
   })
   .views(self => ({
+    get parent() {
+      return getParent(self, 2);
+    },
+
+    get table() {
+      return getParent(self, self.depth * 2);
+    },
+
+    get expandable(): boolean {
+      let table: any;
+      return !!(
+        (self && self.children.length) ||
+        (self && self.defer && !self.loaded) ||
+        ((table = getParent(self, self.depth * 2) as any) &&
+          table.footable &&
+          table.footableColumns.length)
+      );
+    },
+
+    childrenSelected() {
+      const {children, table} = self as IRow;
+
+      const selectedLength = children.filter((child: IRow) =>
+        (table as ITableStore).isSelected(child)
+      ).length;
+
+      if (!selectedLength) {
+        return SELECTED_STATUS.NONE;
+      }
+
+      if (selectedLength === children.length) {
+        return SELECTED_STATUS.ALL;
+      }
+
+      return SELECTED_STATUS.PARTIAL;
+    },
+
+    get partial(): boolean {
+      const childrenSelected =
+        this.childrenSelected() === SELECTED_STATUS.PARTIAL;
+      const childrenPartial = (self as IRow).children.some(
+        (child: IRow) => child.partial
+      );
+
+      return childrenSelected || childrenPartial;
+    },
+
     get checked(): boolean {
       return (getParent(self, self.depth * 2) as ITableStore).isSelected(
         self as IRow
@@ -154,14 +269,13 @@ export const Row = types
     },
 
     getDataWithModifiedChilden() {
-      let data = {
-        ...self.data
-      };
+      let data = self.data;
 
       if (data.children && self.children) {
-        data.children = self.children.map(item =>
-          item.getDataWithModifiedChilden()
-        );
+        data = {
+          ...data,
+          children: self.children.map(item => item.getDataWithModifiedChilden())
+        };
       }
 
       return data;
@@ -205,12 +319,12 @@ export const Row = types
       return createObject(
         extendObject((getParent(self, self.depth * 2) as ITableStore).data, {
           index: self.index,
+          path: self.path,
           // todo 以后再支持多层，目前先一层
           parent: parent.storeType === Row.name ? parent.data : undefined,
 
           // 只有table时，也可以获取选中行
-          selectedItems: table.selectedRows.map(item => item.data),
-          unSelectedItems: table.unSelectedRows.map(item => item.data)
+          ...table.eventContext
         }),
         children
           ? {
@@ -241,13 +355,10 @@ export const Row = types
      */
     get isCheckAvaiableOnClick(): boolean {
       const table = getParent(self, self.depth * 2) as ITableStore;
-      const keepItemSelectionOnPageChange =
-        table?.keepItemSelectionOnPageChange;
-      const selectionUpperLimit = table?.maxKeepItemSelectionLength;
+      const selectionUpperLimit = table.getSelectionUpperLimit();
 
       // 如果未做配置，或者配置不合法直接通过检查
       if (
-        !keepItemSelectionOnPageChange ||
         !Number.isInteger(selectionUpperLimit) ||
         selectionUpperLimit === Infinity
       ) {
@@ -278,10 +389,17 @@ export const Row = types
   }))
   .actions(self => ({
     toggle(checked: boolean) {
-      (getParent(self, self.depth * 2) as ITableStore).toggle(
-        self as IRow,
-        checked
-      );
+      const table = self.table as ITableStore;
+      const row = self as IRow;
+
+      table.toggle(row, checked);
+
+      // 多选才需要处理祖先和后代
+      // 单选只处理自己就行了
+      if (table.multiple) {
+        table.toggleAncestors(row);
+        table.toggleDescendants(row, checked);
+      }
     },
 
     toggleExpanded() {
@@ -290,9 +408,27 @@ export const Row = types
       );
     },
 
+    setExpanded(expanded: boolean) {
+      (getParent(self, self.depth * 2) as ITableStore).setExpanded(
+        self as IRow,
+        expanded
+      );
+    },
+
     change(values: object, savePristine?: boolean) {
-      self.data = immutableExtends(self.data, values);
-      savePristine && (self.pristine = self.data);
+      let data = immutableExtends(self.data, values);
+
+      Object.isExtensible(data) &&
+        !data.__pristine &&
+        Object.defineProperty(data, '__pristine', {
+          value: savePristine ? data : self.pristine,
+          enumerable: false,
+          configurable: false,
+          writable: false
+        });
+
+      self.data = data;
+      savePristine && (self.pristine = data);
     },
 
     reset() {
@@ -316,36 +452,87 @@ export const Row = types
       });
 
       if (Array.isArray(data.children)) {
-        const arr = data.children;
-        const pool = arr.concat();
+        this.replaceChildren(data.children);
+      }
+    },
 
-        // 把多的删了先
-        if (self.children.length > arr.length) {
-          self.children.splice(arr.length, self.children.length - arr.length);
+    replaceChildren(children: Array<any>) {
+      const arr = children;
+      const pool = arr.concat();
+
+      // 把多的删了先
+      if (self.children.length > arr.length) {
+        self.children.splice(arr.length, self.children.length - arr.length);
+      }
+
+      let index = 0;
+      const len = self.children.length;
+      while (pool.length) {
+        // 因为父级id未更新，所以需要将子级的parentId正确指向父级id
+        const item = {
+          ...pool.shift(),
+          parentId: self.id
+        }!;
+
+        if (index < len) {
+          self.children[index].replaceWith(item);
+        } else {
+          const row = Row.create(item);
+          self.children.push(row);
         }
-
-        let index = 0;
-        const len = self.children.length;
-        while (pool.length) {
-          // 因为父级id未更新，所以需要将子级的parentId正确指向父级id
-          const item = {
-            ...pool.shift(),
-            parentId: self.id
-          }!;
-
-          if (index < len) {
-            self.children[index].replaceWith(item);
-          } else {
-            const row = Row.create(item);
-            self.children.push(row);
-          }
-          index++;
-        }
+        index++;
       }
     },
 
     markAppeared(value: any) {
       value && (self.appeared = !!value);
+    },
+
+    markLoading(value: any) {
+      self.loading = !!value;
+    },
+
+    markLoaded(value: any) {
+      self.loaded = !!value;
+    },
+
+    setError(value: any) {
+      self.error = String(value);
+    },
+
+    resetDefered() {
+      self.error = '';
+      self.loaded = false;
+    },
+
+    updateData({children, ...rest}: any) {
+      let data = {
+        ...self.data,
+        ...rest
+      };
+
+      Object.isExtensible(data) &&
+        !data.__pristine &&
+        Object.defineProperty(data, '__pristine', {
+          value: self.data.__pristine || self.pristine,
+          enumerable: false,
+          configurable: false,
+          writable: false
+        });
+
+      self.data = data;
+
+      if (Array.isArray(children)) {
+        this.replaceChildren(
+          initChildren(
+            children,
+            self.depth,
+            self.index,
+            self.id,
+            `${self.path}.`
+          )
+        );
+      }
     }
   }));
 
@@ -357,6 +544,13 @@ export const TableStore = iRendererStore
   .props({
     columns: types.array(Column),
     rows: types.array(Row),
+
+    // 记录原始列表和原始选中的列表
+    // 因为如果是前端分页，上层 crud 或者 input-table 下发到这层的
+    // 是某个页区间的数据，这个时候 items 和 selectedItems 会少很多条
+    fullItems: types.optional(types.array(types.frozen()), []),
+    fullSelectedItems: types.optional(types.array(types.frozen()), []),
+
     selectedRows: types.array(types.reference(Row)),
     expandedRows: types.array(types.string),
     primaryField: 'id',
@@ -374,6 +568,7 @@ export const TableStore = iRendererStore
     draggable: false,
     dragging: false,
     selectable: false,
+    showIndex: false,
     multiple: true,
     footable: types.frozen(),
     expandConfig: types.frozen(),
@@ -390,11 +585,13 @@ export const TableStore = iRendererStore
     formsRef: types.optional(types.array(types.frozen()), []),
     maxKeepItemSelectionLength: Infinity,
     keepItemSelectionOnPageChange: false,
+    maxItemSelectionLength: Infinity,
     // 导出 Excel 按钮的 loading 状态
     exportExcelLoading: false,
     searchFormExpanded: false, // 用来控制搜索框是否展开了，那个自动根据 searchable 生成的表单 autoGenerateFilter
     lazyRenderAfter: 100,
-    tableLayout: 'auto'
+    tableLayout: 'auto',
+    theadHeight: 0
   })
   .views(self => {
     function getColumnsExceptBuiltinTypes() {
@@ -528,14 +725,6 @@ export const TableStore = iRendererStore
       return flattenTree<IRow>(self.rows).filter((item: IRow) => !item.checked);
     }
 
-    function getData(superData: any): any {
-      return createObject(superData, {
-        items: self.rows.map(item => item.data),
-        selectedItems: self.selectedRows.map(item => item.data),
-        unSelectedItems: getUnSelectedRows().map(item => item.data)
-      });
-    }
-
     function hasColumnHidden() {
       return self.columns.findIndex(column => !column.toggled) !== -1;
     }
@@ -641,7 +830,24 @@ export const TableStore = iRendererStore
       return self.columns.filter(column => column.searchable);
     }
 
+    function getSelectionUpperLimit() {
+      const keep = self.keepItemSelectionOnPageChange;
+      const selectionUpperLimit = keep
+        ? self.maxKeepItemSelectionLength !== Infinity
+          ? self.maxKeepItemSelectionLength
+          : self.maxItemSelectionLength
+        : self.maxItemSelectionLength;
+
+      return selectionUpperLimit;
+    }
+
     return {
+      getSelectionUpperLimit,
+
+      get columnsKey() {
+        return location.pathname + self.path;
+      },
+
       get columnsData() {
         return getColumnsExceptBuiltinTypes();
       },
@@ -684,6 +890,11 @@ export const TableStore = iRendererStore
       },
 
       get allChecked(): boolean {
+        const selectionUpperLimit = getSelectionUpperLimit();
+
+        if (selectionUpperLimit !== Infinity) {
+          return (self as ITableStore).isSelectionThresholdReached;
+        }
         // 只要selectedRows中包含checkableRows中的全部数据，就认为是全选
         return (self as ITableStore).checkableRows.every(item =>
           self.selectedRows.includes(item)
@@ -744,9 +955,9 @@ export const TableStore = iRendererStore
       /** 已选择item是否达到数量上限 */
       get isSelectionThresholdReached() {
         const selectedLength = self.data?.selectedItems?.length;
-        const maxLength = self.maxKeepItemSelectionLength;
+        const maxLength = getSelectionUpperLimit();
 
-        if (!self.data || !self.keepItemSelectionOnPageChange || !maxLength) {
+        if (!self.data || maxLength === Infinity) {
           return false;
         }
 
@@ -757,7 +968,9 @@ export const TableStore = iRendererStore
         return getFirstToggledColumnIndex();
       },
 
-      getData,
+      getData(superData: any): any {
+        return createObject(superData, this.eventContext);
+      },
 
       get columnGroup() {
         return getColumnGroup();
@@ -794,7 +1007,7 @@ export const TableStore = iRendererStore
         return getFilteredColumns().every(column => column.realWidth);
       },
 
-      getStickyStyles(column: IColumn, columns: Array<IColumn>) {
+      getStickyStyles(column: IColumn, columns: Array<IColumn>, colSpan = 1) {
         let stickyClassName = '';
         const style: any = {};
         const autoFixLeftColumns = ['__checkme', '__dragme', '__expandme'];
@@ -808,7 +1021,7 @@ export const TableStore = iRendererStore
 
           if (
             columns
-              .slice(index + 2)
+              .slice(index + (colSpan - 1) + 2)
               .every(
                 col =>
                   !(
@@ -867,7 +1080,7 @@ export const TableStore = iRendererStore
       },
 
       buildStyles(style: any) {
-        style = {...style};
+        style = {...style, '--Table-thead-height': self.theadHeight + 'px'};
 
         getFilteredColumns().forEach(column => {
           style[`--Table-column-${column.index}-width`] =
@@ -875,6 +1088,49 @@ export const TableStore = iRendererStore
         });
 
         return style;
+      },
+
+      /**
+       * 构建事件的上下文数据
+       * @param buildChain
+       * @returns
+       */
+      get eventContext() {
+        const context = {
+          selectedItems: self.selectedRows.map(item => item.data),
+          selectedIndexes: self.selectedRows.map(item => item.path),
+          items: self.rows.map(item => item.data),
+          unSelectedItems: this.unSelectedRows.map(item => item.data)
+        };
+
+        // 如果是前端分页情况，需要根据全量数据计算
+        // 如果不是前端分页，数据都没有返回，那种就没办法支持全量数据信息了
+        if (self.fullItems.length > self.rows.length) {
+          // todo 这里的选择顺序会一直变，这个有影响吗?
+          const selectedItems = self.fullSelectedItems
+            .filter(
+              item =>
+                !self.rows.find(
+                  row => row.pristine === (item.__pristine || item)
+                )
+            )
+            .concat(context.selectedItems);
+
+          context.selectedItems = selectedItems;
+          context.items = self.fullItems.concat();
+          context.unSelectedItems = self.fullItems.filter(
+            item => !selectedItems.includes(item)
+          );
+          context.selectedIndexes = selectedItems.map(
+            item =>
+              findTreeIndex(
+                self.fullItems,
+                i => (item.__pristine || item) === (i.__pristine || i)
+              )?.join('.') || '-1'
+          );
+        }
+
+        return context;
       }
     };
   })
@@ -889,7 +1145,12 @@ export const TableStore = iRendererStore
       return tableRef;
     }
 
-    function update(config: Partial<STableStore>) {
+    function update(
+      config: Partial<STableStore>,
+      options?: {
+        resolveDefinitions?: (ref: string) => any;
+      }
+    ) {
       config.primaryField !== undefined &&
         (self.primaryField = config.primaryField);
       config.selectable !== undefined && (self.selectable = config.selectable);
@@ -933,6 +1194,8 @@ export const TableStore = iRendererStore
       config.keepItemSelectionOnPageChange !== undefined &&
         (self.keepItemSelectionOnPageChange =
           config.keepItemSelectionOnPageChange);
+      config.maxItemSelectionLength !== undefined &&
+        (self.maxItemSelectionLength = config.maxItemSelectionLength);
 
       config.exportExcelLoading !== undefined &&
         (self.exportExcelLoading = config.exportExcelLoading);
@@ -947,13 +1210,28 @@ export const TableStore = iRendererStore
       typeof config.tableLayout === 'string' &&
         (self.tableLayout = config.tableLayout);
 
+      config.showIndex !== undefined && (self.showIndex = config.showIndex);
+
       if (config.columns && Array.isArray(config.columns)) {
         let columns: Array<SColumn> = config.columns
-          .filter(column => column)
-          .concat();
+          .map(column => {
+            if (
+              options?.resolveDefinitions &&
+              typeof (column as any)?.$ref == 'string' &&
+              (column as any).$ref
+            ) {
+              return {
+                ...options.resolveDefinitions((column as any).$ref),
+                ...column
+              };
+            }
+
+            return column;
+          })
+          .filter(column => column);
 
         // 更新列顺序，afterCreate生命周期中更新columns不会触发组件的render
-        const key = getPersistDataKey(columns);
+        const key = self.columnsKey;
         const data = localStorage.getItem(key);
         let tableMetaData = null;
 
@@ -965,9 +1243,12 @@ export const TableStore = iRendererStore
           const order = tableMetaData?.columnOrder;
 
           if (Array.isArray(order) && order.length != 0) {
-            columns = sortBy(columns, (item, index) =>
-              order.indexOf(item.name || item.label || index)
-            );
+            columns = sortBy(columns, (item, index) => {
+              const columnKey =
+                (item as any).uid || item.name || item.label || index;
+              const idx = order.indexOf(columnKey);
+              return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+            });
           }
         }
 
@@ -983,6 +1264,13 @@ export const TableStore = iRendererStore
           columns.push({
             type: 'text',
             label: '空'
+          });
+        }
+
+        if (self.showIndex) {
+          columns.unshift({
+            type: '__index',
+            width: 50
           });
         }
 
@@ -1006,14 +1294,24 @@ export const TableStore = iRendererStore
         });
 
         const originColumns = self.columns.concat();
+        const ids: Array<any> = [];
         columns = columns.map((item, index) => {
           const origin = item.id
             ? originColumns.find(column => column.pristine.id === item.id)
             : originColumns[index];
 
+          let id = origin?.id || guid();
+
+          // 还不知道为何会出现这个，先用这种方式避免 id 重复
+          if (ids.includes(id)) {
+            id = guid();
+          }
+
+          ids.push(id);
+
           return {
             ...item,
-            id: origin?.id || guid(),
+            id: id,
             index,
             width: origin?.width || 0,
             minWidth: origin?.minWidth || 0,
@@ -1023,10 +1321,7 @@ export const TableStore = iRendererStore
             pristine: item.pristine || item,
             toggled: item.toggled !== false,
             breakpoint: item.breakpoint,
-            /** 提前映射变量，方便后续view中使用 */
-            label: isPureVariable(item.label)
-              ? resolveVariableAndFilter(item.label, self.data)
-              : item.label
+            isPrimary: index === PARTITION_INDEX
           };
         });
 
@@ -1109,7 +1404,7 @@ export const TableStore = iRendererStore
           typeof column.pristine.width === 'number'
             ? `width: ${column.pristine.width}px;`
             : column.pristine.width
-            ? `width: ${column.pristine.width};`
+            ? `width: ${column.pristine.width};min-width: ${column.pristine.width};`
             : '' // todo 可能需要让修改过列宽的保持相应宽度，目前这样相当于重置了
         }`;
       });
@@ -1146,9 +1441,9 @@ export const TableStore = iRendererStore
       if (!table) {
         return;
       }
-      const cols = [].slice.call(
-        table.querySelectorAll(':scope>thead>tr>th[data-index]')
-      );
+      const thead = table.querySelector(':scope>thead') as HTMLElement;
+      const cols = [].slice.call(thead.querySelectorAll('tr>th[data-index]'));
+      self.theadHeight = thead.offsetHeight;
       cols.forEach((col: HTMLElement) => {
         const index = parseInt(col.getAttribute('data-index')!, 10);
         const column = self.columns[index];
@@ -1234,59 +1529,12 @@ export const TableStore = iRendererStore
       return combineCell(arr, keys);
     }
 
-    function initChildren(
-      children: Array<any>,
-      depth: number,
-      pindex: number,
-      parentId: string,
-      path: string = '',
-      nThRef: {index: number}
-    ): any {
-      depth += 1;
-      return children.map((item, index) => {
-        item = isObject(item)
-          ? item
-          : {
-              item
-            };
-        const id = item.__id ?? guid();
-
-        return {
-          // id: String(item && (item as any)[self.primaryField] || `${pindex}-${depth}-${key}`),
-          id: String(id),
-          parentId: String(parentId),
-          key: String(`${pindex}-${depth}-${index}`),
-          path: `${path}${index}`,
-          depth: depth,
-          index: index,
-          nth: nThRef.index++,
-          newIndex: index,
-          pristine: item,
-          data: item,
-          rowSpans: {},
-          children:
-            item && Array.isArray(item.children)
-              ? initChildren(
-                  item.children,
-                  depth,
-                  index,
-                  id,
-                  `${path}${index}.`,
-                  nThRef
-                )
-              : [],
-          expandable: !!(
-            (item && Array.isArray(item.children) && item.children.length) ||
-            (self.footable && self.footableColumns.length)
-          )
-        };
-      });
-    }
-
     function initRows(
       rows: Array<any>,
       getEntryId?: (entry: any, index: number) => string,
-      reUseRow?: boolean
+      reUseRow?: boolean | 'match',
+      fullItems?: Array<any>,
+      fullSelectedItems?: Array<any>
     ) {
       self.selectedRows.clear();
       // self.expandedRows.clear();
@@ -1294,7 +1542,6 @@ export const TableStore = iRendererStore
       /* 避免输入内容为非数组挂掉 */
       rows = !Array.isArray(rows) ? [] : rows;
 
-      const nThRef = {index: 0};
       let arr: Array<SRow> = rows.map((item, index) => {
         if (!isObject(item)) {
           item = {
@@ -1311,20 +1558,25 @@ export const TableStore = iRendererStore
           key: String(`${index}-1-${index}`),
           depth: 1, // 最大父节点默认为第一层，逐层叠加
           index: index,
-          nth: nThRef.index++,
           newIndex: index,
-          pristine: item,
+          pristine: item.__pristine || item,
           path: `${index}`,
           data: item,
           rowSpans: {},
+          defer: !!item.defer,
+          loaded: false,
+          loading: false,
           children:
             item && Array.isArray(item.children)
-              ? initChildren(item.children, 1, index, id, `${index}.`, nThRef)
-              : [],
-          expandable: !!(
-            (item && Array.isArray(item.children) && item.children.length) ||
-            (self.footable && self.footableColumns.length)
-          )
+              ? initChildren(
+                  item.children,
+                  1,
+                  index,
+                  id,
+                  `${index}.`,
+                  getEntryId
+                )
+              : []
         };
       });
 
@@ -1337,40 +1589,48 @@ export const TableStore = iRendererStore
         );
       }
 
-      replaceRow(arr, reUseRow);
-      self.isNested = self.rows.some(item => item.children.length);
+      let allMatched = replaceRow(arr, reUseRow);
+      self.isNested = self.rows.some(
+        item => item.children.length || (item.defer && !item.loaded)
+      );
 
-      // 前 20 个直接渲染，后面的按需渲染
-      if (
-        self.lazyRenderAfter &&
-        self.falttenedRows.length > self.lazyRenderAfter
-      ) {
-        for (
-          let i = self.lazyRenderAfter, len = self.falttenedRows.length;
-          i < len;
-          i++
+      if (!allMatched) {
+        // 前 20 个直接渲染，后面的按需渲染
+        if (
+          self.lazyRenderAfter &&
+          self.falttenedRows.length > self.lazyRenderAfter
         ) {
-          self.falttenedRows[i].appeared = false;
-          self.falttenedRows[i].lazyRender = true;
+          for (
+            let i = self.lazyRenderAfter, len = self.falttenedRows.length;
+            i < len;
+            i++
+          ) {
+            self.falttenedRows[i].appeared = false;
+            self.falttenedRows[i].lazyRender = true;
+          }
+        }
+
+        const expand = self.footable && self.footable.expand;
+        if (
+          expand === 'first' ||
+          (self.expandConfig && self.expandConfig.expand === 'first')
+        ) {
+          self.rows.length && self.expandedRows.push(self.rows[0].id);
+        } else if (
+          (expand === 'all' && !self.footable.accordion) ||
+          (self.expandConfig &&
+            self.expandConfig.expand === 'all' &&
+            !self.expandConfig.accordion)
+        ) {
+          self.expandedRows.replace(getExpandAllRows(self.rows));
         }
       }
 
-      const expand = self.footable && self.footable.expand;
-      if (
-        expand === 'first' ||
-        (self.expandConfig && self.expandConfig.expand === 'first')
-      ) {
-        self.rows.length && self.expandedRows.push(self.rows[0].id);
-      } else if (
-        (expand === 'all' && !self.footable.accordion) ||
-        (self.expandConfig &&
-          self.expandConfig.expand === 'all' &&
-          !self.expandConfig.accordion)
-      ) {
-        self.expandedRows.replace(getExpandAllRows(self.rows));
-      }
-
       self.dragging = false;
+
+      Array.isArray(fullItems) && self.fullItems.replace(fullItems);
+      Array.isArray(fullSelectedItems) &&
+        self.fullSelectedItems.replace(fullSelectedItems);
     }
 
     // 获取所有层级的子节点id
@@ -1387,10 +1647,26 @@ export const TableStore = iRendererStore
     }
 
     // 尽可能的复用 row
-    function replaceRow(arr: Array<SRow>, reUseRow?: boolean) {
+    function replaceRow(arr: Array<SRow>, reUseRow?: boolean | 'match'): any {
       if (reUseRow === false) {
         self.rows.replace(arr.map(item => Row.create(item)));
-        return;
+        return false;
+      } else if (reUseRow === 'match') {
+        const rows = self.falttenedRows;
+        let allMatched = true;
+        self.rows.replace(
+          arr.map(item => {
+            const exist = rows.find(row => row.id === item.id);
+            if (exist) {
+              exist.replaceWith(item);
+              return exist;
+            }
+
+            allMatched = false;
+            return Row.create(item);
+          })
+        );
+        return allMatched;
       }
 
       const pool = arr.concat();
@@ -1413,38 +1689,46 @@ export const TableStore = iRendererStore
         }
         index++;
       }
+
+      return false;
     }
 
     function updateSelected(selected: Array<any>, valueField?: string) {
       self.selectedRows.clear();
 
-      eachTree(self.rows, item => {
-        if (~selected.indexOf(item.pristine)) {
-          self.selectedRows.push(item.id);
-        } else if (
-          find(
-            selected,
-            a =>
-              a[valueField || 'value'] &&
-              a[valueField || 'value'] == item.pristine[valueField || 'value']
-          )
-        ) {
-          self.selectedRows.push(item.id);
+      selected.forEach(item => {
+        let resolved = findTree(self.rows, a => a.pristine === item);
+
+        // 先严格比较，
+        if (!resolved) {
+          resolved = findTree(self.rows, a => {
+            const selectValue = item[valueField || 'value'];
+            const itemValue = a.pristine[valueField || 'value'];
+            return selectValue === itemValue;
+          });
         }
+
+        // 再宽松比较
+        if (!resolved) {
+          resolved = findTree(self.rows, a => {
+            const selectValue = item[valueField || 'value'];
+            const itemValue = a.pristine[valueField || 'value'];
+            return selectValue == itemValue;
+          });
+        }
+
+        resolved && self.selectedRows.push(resolved as any);
       });
 
       updateCheckDisable();
     }
 
     function getSelectedRows() {
-      const maxLength = self.maxKeepItemSelectionLength;
-      const keep = self.keepItemSelectionOnPageChange;
-
+      const maxLength = self.getSelectionUpperLimit();
       const selectedItems = self.data?.selectedItems;
 
       if (
-        keep &&
-        maxLength &&
+        maxLength !== Infinity &&
         selectedItems &&
         maxLength >= selectedItems.length
       ) {
@@ -1495,6 +1779,33 @@ export const TableStore = iRendererStore
           ? !checked && self.selectedRows.splice(idx, 1)
           : checked && self.selectedRows.replace([row]);
       }
+    }
+
+    function toggleAncestors(row: IRow) {
+      const parent = row.parent as IRow;
+
+      if (!parent.depth) {
+        return;
+      }
+
+      const selectedStatus = parent.childrenSelected();
+
+      toggle(parent, selectedStatus === SELECTED_STATUS.ALL);
+
+      toggleAncestors(parent);
+    }
+
+    function toggleDescendants(row: IRow, checked: boolean) {
+      const {children} = row;
+
+      if (!children?.length) {
+        return;
+      }
+
+      children.forEach((child: IRow) => {
+        toggle(child, checked);
+        toggleDescendants(child, checked);
+      });
     }
 
     function getToggleShiftRows(row: IRow) {
@@ -1558,11 +1869,11 @@ export const TableStore = iRendererStore
       if (!self.data) {
         return;
       }
-      const maxLength = self.maxKeepItemSelectionLength;
-      const selectedItems = self.data.selectedItems;
+      const maxLength = self.getSelectionUpperLimit();
+      const selectedItems = self.selectedRows.map(item => item.data);
 
       self.selectedRows.map(item => item.setCheckdisable(false));
-      if (maxLength && maxLength <= selectedItems.length) {
+      if (maxLength !== Infinity && maxLength <= selectedItems.length) {
         self.unSelectedRows.map(
           item => !item.checked && item.setCheckdisable(true)
         );
@@ -1602,6 +1913,19 @@ export const TableStore = iRendererStore
         self.expandedRows.replace(rows.map(item => item.id));
       } else {
         self.expandedRows.push(row.id);
+      }
+    }
+
+    function setExpanded(row: IRow | string, expanded: boolean) {
+      const id = typeof row === 'string' ? row : row.id;
+      const idx = self.expandedRows.indexOf(id);
+
+      if (expanded) {
+        if (!~idx) {
+          self.expandedRows.push(id);
+        }
+      } else {
+        ~idx && self.expandedRows.splice(idx, 1);
       }
     }
 
@@ -1648,6 +1972,10 @@ export const TableStore = iRendererStore
       self.dragging = !self.dragging;
     }
 
+    function startDragging() {
+      self.dragging = true;
+    }
+
     function stopDragging() {
       self.dragging = false;
     }
@@ -1681,21 +2009,26 @@ export const TableStore = iRendererStore
      * 前端持久化记录列排序，查询字段，显示列信息
      */
     function persistSaveToggledColumns() {
-      const key = getPersistDataKey(self.columnsData);
+      const key = self.columnsKey;
+      const toggledColumns = self.activeToggaleColumns;
+      const activedSearchableColumns = self.activedSearchableColumns;
 
       localStorage.setItem(
         key,
         JSON.stringify({
-          // 可显示列index
-          toggledColumnIndex: self.activeToggaleColumns.map(item => item.index),
+          // 记录隐藏的字段，因为默认不设置是显示的，设置了隐藏才需要记录，这样新出来的字段才会默认显示
+          unToggledColumns: self.columnsData
+            .filter(item => !toggledColumns.includes(item))
+            .map(item => item.columnKey),
           // 列排序，name，label可能不存在
-          columnOrder: self.columnsData.map(
-            item => item.name || item.label || item.rawIndex
-          ),
-          // 已激活的可查询列
-          enabledSearchableColumn: self.activedSearchableColumns.map(
-            item => item.name
-          )
+          columnOrder: self.columnsData.map(item => item.columnKey),
+          // 同理只记录不启用的，因为默认是启用的
+          disabledSearchableColumn: self.columnsData
+            .filter(
+              item =>
+                item.searchable && !activedSearchableColumns.includes(item)
+            )
+            .map(item => item.columnKey)
         })
       );
     }
@@ -1730,18 +2063,6 @@ export const TableStore = iRendererStore
       }
     }
 
-    function getPersistDataKey(columns: any[]) {
-      // 这里的columns使用除了__开头的所有列
-      // sort保证存储和读取的key值保持一致
-      return (
-        location.pathname +
-        self.path +
-        sortBy(
-          columns.map((item, index) => item.name || item.label || index)
-        ).join('-')
-      );
-    }
-
     function setSearchFormExpanded(value: any) {
       self.searchFormExpanded = !!value;
     }
@@ -1761,16 +2082,20 @@ export const TableStore = iRendererStore
       toggleAll,
       getSelectedRows,
       toggle,
+      toggleAncestors,
+      toggleDescendants,
       toggleShift,
       getToggleShiftRows,
       toggleExpandAll,
       toggleExpanded,
+      setExpanded,
       collapseAllAtDepth,
       clear,
       setOrderByInfo,
       changeOrder,
       reset,
       toggleDragging,
+      startDragging,
       stopDragging,
       exchange,
       addForm,
@@ -1786,24 +2111,30 @@ export const TableStore = iRendererStore
           if (!isAlive(self)) {
             return;
           }
-          const key = getPersistDataKey(self.columnsData);
+          const key = self.columnsKey;
           const data = localStorage.getItem(key);
 
           if (data) {
             const tableMetaData = JSON.parse(data);
-            const toggledColumns = isObject(tableMetaData)
-              ? tableMetaData?.toggledColumnIndex
-              : tableMetaData; // 兼容之前的类型
+            const unToggledColumns = Array.isArray(
+              tableMetaData.unToggledColumns
+            )
+              ? tableMetaData.unToggledColumns
+              : [];
+            const disabledSearchableColumn = Array.isArray(
+              tableMetaData.disabledSearchableColumn
+            )
+              ? tableMetaData.disabledSearchableColumn
+              : [];
 
             self.toggableColumns.forEach(item =>
-              item.setToggled(!!~toggledColumns.indexOf(item.index))
+              item.setToggled(!unToggledColumns.includes(item.columnKey))
             );
 
             self.searchableColumns.forEach(item => {
               item.setEnableSearch(
-                !!~(tableMetaData?.enabledSearchableColumn ?? []).indexOf(
-                  item.name
-                )
+                !disabledSearchableColumn.includes(item.columnKey),
+                true
               );
             });
           }

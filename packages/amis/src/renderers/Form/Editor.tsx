@@ -3,7 +3,8 @@ import {
   FormItem,
   FormControlProps,
   FormBaseControl,
-  resolveEventData
+  resolveEventData,
+  getVariable
 } from 'amis-core';
 import {LazyComponent} from 'amis-core';
 import {Editor} from 'amis-ui';
@@ -128,7 +129,7 @@ export interface EditorProps extends FormControlProps {
 export default class EditorControl extends React.Component<EditorProps, any> {
   static defaultProps: Partial<EditorProps> = {
     language: 'javascript',
-    editorTheme: 'vs',
+    editorTheme: '',
     allowFullscreen: true,
     options: {
       automaticLayout: true,
@@ -160,14 +161,21 @@ export default class EditorControl extends React.Component<EditorProps, any> {
     this.toDispose.forEach(fn => fn());
   }
 
-  doAction(action: ListenerAction, args: any) {
+  doAction(
+    action: ListenerAction,
+    data: any,
+    throwErrors: boolean = false,
+    args?: any
+  ) {
     const actionType = action?.actionType as string;
-    const {onChange, resetValue} = this.props;
+    const {onChange, resetValue, formStore, store, name} = this.props;
 
     if (actionType === 'clear') {
       onChange('');
     } else if (actionType === 'reset') {
-      onChange(resetValue ?? '');
+      const pristineVal =
+        getVariable(formStore?.pristine ?? store?.pristine, name) ?? resetValue;
+      onChange(pristineVal ?? '');
     } else if (actionType === 'focus') {
       this.focus();
     }
@@ -285,6 +293,7 @@ export default class EditorControl extends React.Component<EditorProps, any> {
       disabled,
       options,
       editorTheme,
+      theme,
       size,
       data,
       allowFullscreen,
@@ -325,7 +334,7 @@ export default class EditorControl extends React.Component<EditorProps, any> {
           onFocus={this.handleFocus}
           onBlur={this.handleBlur}
           language={language}
-          editorTheme={editorTheme}
+          editorTheme={editorTheme || (theme === 'dark' ? 'vs-dark' : 'vs')}
           editorDidMount={this.handleEditorMounted}
           childProps={{
             placeholder: placeholder

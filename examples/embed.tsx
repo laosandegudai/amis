@@ -4,24 +4,33 @@ import {createRoot} from 'react-dom/client';
 import axios from 'axios';
 import {match} from 'path-to-regexp';
 import copy from 'copy-to-clipboard';
-import {normalizeLink} from 'amis-core';
+import {normalizeLink, supportsMjs} from 'amis-core';
 
 import qs from 'qs';
-import {
-  toast,
-  alert,
-  confirm,
-  ToastComponent,
-  AlertComponent,
-  render as renderAmis,
-  makeTranslator
-} from 'amis';
+import {alert, confirm} from 'amis-ui/lib/components/Alert';
+import {toast, default as ToastComponent} from 'amis-ui/lib/components/Toast';
+import AlertComponent from 'amis-ui/lib/components/Alert';
+import {render as renderAmis, makeTranslator} from 'amis-core';
+import 'amis/lib/minimal';
 
 import 'amis-ui/lib/locale/en-US';
+import 'amis-ui/lib/locale/zh-CN';
+import 'amis-ui/lib/locale/en-US';
+import 'amis-ui/lib/locale/de-DE';
+import 'amis-ui/lib/themes/cxd';
+import 'amis-ui/lib/themes/ang';
+import 'amis-ui/lib/themes/antd';
+import 'amis-ui/lib/themes/dark';
+
 import 'history';
-import {attachmentAdpator} from 'amis-core';
+import {attachmentAdpator, setGlobalOptions} from 'amis-core';
+import {pdfUrlLoad} from './loadPdfjsWorker';
 
 import type {ToastLevel, ToastConf} from 'amis-ui/lib/components/Toast';
+
+setGlobalOptions({
+  pdfjsWorkerSrc: supportsMjs() ? pdfUrlLoad() : ''
+});
 
 export function embed(
   container: string | HTMLElement,
@@ -31,11 +40,6 @@ export function embed(
   callback?: () => void
 ) {
   const __ = makeTranslator(env?.locale || props?.locale);
-
-  // app 模式自动加 affixOffsetTop
-  if (!('affixOffsetTop' in props) && schema.type === 'app') {
-    props.affixOffsetTop = 50;
-  }
 
   if (typeof container === 'string') {
     container = document.querySelector(container) as HTMLElement;
@@ -213,7 +217,7 @@ export function embed(
       let response = config.mockResponse
         ? config.mockResponse
         : await axios(config);
-      response = await attachmentAdpator(response, __);
+      response = await attachmentAdpator(response, __, api);
       response = responseAdaptor(api)(response);
 
       if (response.status >= 400) {
@@ -264,7 +268,13 @@ export function embed(
       ...props,
       scopeRef: (ref: any) => {
         if (ref) {
-          Object.assign(scoped, ref);
+          Object.keys(ref).forEach(key => {
+            let value = ref[key];
+            if (typeof value === 'function') {
+              value = value.bind(ref);
+            }
+            (scoped as any)[key] = value;
+          });
           callback?.();
         }
       }

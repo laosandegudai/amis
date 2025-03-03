@@ -10,10 +10,13 @@ import {Badge} from 'amis-ui';
 import {ColorScale} from 'amis-core';
 import {isPureVariable, resolveVariableAndFilter} from 'amis-core';
 
+import type {TestIdBuilder} from 'amis-core';
+
 export interface TableCellProps extends RendererProps {
   wrapperComponent?: React.ElementType;
   column: any;
   contentsOnly?: boolean;
+  testIdBuilder?: TestIdBuilder;
 }
 
 export class TableCell extends React.Component<TableCellProps> {
@@ -49,6 +52,7 @@ export class TableCell extends React.Component<TableCellProps> {
       children,
       width,
       align,
+      vAlign,
       innerClassName,
       label,
       tabIndex,
@@ -64,6 +68,8 @@ export class TableCell extends React.Component<TableCellProps> {
       row,
       showBadge,
       itemBadge,
+      textOverflow,
+      testIdBuilder,
       ...rest
     } = this.props;
 
@@ -76,6 +82,11 @@ export class TableCell extends React.Component<TableCellProps> {
 
     const schema = {
       ...column,
+      // 因为列本身已经做过显隐判断了，单元格不应该再处理
+      visibleOn: '',
+      hiddenOn: '',
+      visible: true,
+      hidden: false,
       style: column.innerStyle, // column的innerStyle配置 作为内部组件的style 覆盖column的style
       className: innerClassName,
       type: (column && column.type) || 'plain'
@@ -98,7 +109,8 @@ export class TableCell extends React.Component<TableCellProps> {
 
     if (isTableCell) {
       // table Cell 会用 colGroup 来设置宽度，这里不需要再设置
-      style.width && (style = omit(style, ['width']));
+      // 同时剔除style中的定位相关样式，避免表格样式异常
+      style = omit(style, ['width', 'position', 'display']);
     } else if (width) {
       style = {
         ...style,
@@ -110,6 +122,13 @@ export class TableCell extends React.Component<TableCellProps> {
       style = {
         ...style,
         textAlign: align
+      };
+    }
+
+    if (vAlign) {
+      style = {
+        ...style,
+        verticalAlign: vAlign
       };
     }
 
@@ -154,12 +173,10 @@ export class TableCell extends React.Component<TableCellProps> {
       <Component
         rowSpan={rowSpan > 1 ? rowSpan : undefined}
         style={style}
-        className={cx(
-          className,
-          column.classNameExpr ? filter(column.classNameExpr, data) : null
-        )}
+        className={cx(className)}
         tabIndex={tabIndex}
         onKeyUp={onKeyUp}
+        {...testIdBuilder?.getChild('cell').getTestId()}
       >
         {showBadge ? (
           <Badge
@@ -172,7 +189,11 @@ export class TableCell extends React.Component<TableCellProps> {
           />
         ) : null}
         {cellPrefix}
-        {body}
+        {textOverflow === 'ellipsis' && width ? (
+          <div className={cx(`TableCell-ellipsis`)}>{body}</div>
+        ) : (
+          body
+        )}
         {cellAffix}
       </Component>
     );
@@ -180,13 +201,13 @@ export class TableCell extends React.Component<TableCellProps> {
 }
 
 @Renderer({
-  test: /(^|\/)table\/(?:.*\/)?cell$/,
+  type: 'cell',
   name: 'table-cell'
 })
-@QuickEdit()
 @PopOverable({
   targetOutter: true
 })
+@QuickEdit()
 @Copyable()
 @observer
 export class TableCellRenderer extends TableCell {

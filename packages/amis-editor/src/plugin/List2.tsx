@@ -11,7 +11,8 @@ import {
 import {defaultValue, getSchemaTpl} from 'amis-editor-core';
 import {repeatArray} from 'amis-editor-core';
 import set from 'lodash/set';
-import {escapeFormula, resolveArrayDatasource} from '../util';
+import {escapeFormula, generateId, resolveArrayDatasource} from '../util';
+import merge from 'lodash/merge';
 
 export class List2Plugin extends BasePlugin {
   static id = 'List2Plugin';
@@ -45,24 +46,39 @@ export class List2Plugin extends BasePlugin {
               tpl: '01',
               inline: true,
               wrapperComponent: '',
-              style: {
-                color: 'var(--colors-neutral-text-2)',
-                fontSize: 'var(--fonts-size-3)',
-                fontWeight: 'var(--fonts-weight-5)',
-                marginRight: '10px'
-              }
+              style: {},
+              themeCss: {
+                baseControlClassName: {
+                  'padding-and-margin:default': {
+                    marginRight: '10px'
+                  },
+                  'font:default': {
+                    color: 'var(--colors-neutral-text-2)',
+                    fontSize: 'var(--fonts-size-3)',
+                    fontWeight: 'var(--fonts-weight-5)'
+                  }
+                }
+              },
+              id: generateId()
             },
             {
               type: 'tpl',
               tpl: '/',
               inline: true,
               wrapperComponent: '',
-              style: {
-                marginRight: '10px',
-                fontSize: 'var(--fonts-size-3)',
-                color: '#cccccc'
-              },
-              id: 'u:95d2a3ac3e70'
+              style: {},
+              id: generateId(),
+              themeCss: {
+                baseControlClassName: {
+                  'padding-and-margin:default': {
+                    marginRight: '10px'
+                  },
+                  'font:default': {
+                    fontSize: 'var(--fonts-size-3)',
+                    color: '#cccccc'
+                  }
+                }
+              }
             },
             {
               type: 'container',
@@ -72,18 +88,30 @@ export class List2Plugin extends BasePlugin {
                   tpl: '3月',
                   inline: true,
                   wrapperComponent: '',
-                  style: {
-                    fontSize: 'var(--fonts-size-6)'
-                  }
+                  style: {},
+                  themeCss: {
+                    baseControlClassName: {
+                      'font:default': {
+                        fontSize: 'var(--fonts-size-6)'
+                      }
+                    }
+                  },
+                  id: generateId()
                 },
                 {
                   type: 'tpl',
                   tpl: '2023',
                   inline: true,
                   wrapperComponent: '',
-                  style: {
-                    fontSize: 'var(--fonts-size-6)'
-                  }
+                  style: {},
+                  themeCss: {
+                    baseControlClassName: {
+                      'font:default': {
+                        fontSize: 'var(--fonts-size-6)'
+                      }
+                    }
+                  },
+                  id: generateId()
                 }
               ],
               style: {
@@ -96,29 +124,39 @@ export class List2Plugin extends BasePlugin {
               },
               wrapperBody: false,
               isFixedHeight: false,
-              isFixedWidth: false
+              isFixedWidth: false,
+              id: generateId()
             }
           ],
           size: 'none',
           style: {
-            'position': 'static',
-            'display': 'flex',
-            'flex': '1 1 auto',
-            'flexGrow': 0,
-            'flexBasis': 'auto',
-            'flexWrap': 'nowrap',
-            'justifyContent': 'flex-start',
-            'alignItems': 'center',
-            'paddingLeft': '20px',
-            'paddingRight': '40px',
-            'right-border-width': 'var(--borders-width-2)',
-            'right-border-style': 'var(--borders-style-2)',
-            'right-border-color': '#ececec',
-            'marginRight': '40px'
+            position: 'static',
+            display: 'flex',
+            flex: '1 1 auto',
+            flexGrow: 0,
+            flexBasis: 'auto',
+            flexWrap: 'nowrap',
+            justifyContent: 'flex-start',
+            alignItems: 'center'
           },
           wrapperBody: false,
           isFixedHeight: false,
-          isFixedWidth: false
+          isFixedWidth: false,
+          themeCss: {
+            baseControlClassName: {
+              'border:default': {
+                'right-border-width': 'var(--borders-width-2)',
+                'right-border-style': 'var(--borders-style-2)',
+                'right-border-color': '#ececec'
+              },
+              'padding-and-margin:default': {
+                paddingLeft: '20px',
+                paddingRight: '40px',
+                marginRight: '40px'
+              }
+            }
+          },
+          id: generateId()
         },
         {
           type: 'container',
@@ -128,14 +166,21 @@ export class List2Plugin extends BasePlugin {
               tpl: '列表标题',
               inline: true,
               wrapperComponent: '',
-              style: {
-                fontSize: 'var(--fonts-size-5)',
-                color: 'var(--colors-neutral-text-4)',
-                fontWeight: 'var(--fonts-weight-4)',
-                marginBottom: '10px'
-              },
+              style: {},
               maxLine: 1,
-              id: 'u:105ca9cda3ef'
+              id: generateId(),
+              themeCss: {
+                baseControlClassName: {
+                  'padding-and-margin:default': {
+                    marginBottom: '10px'
+                  },
+                  'font:default': {
+                    fontSize: 'var(--fonts-size-5)',
+                    color: 'var(--colors-neutral-text-4)',
+                    fontWeight: 'var(--fonts-weight-4)'
+                  }
+                }
+              }
             },
             {
               type: 'tpl',
@@ -143,10 +188,16 @@ export class List2Plugin extends BasePlugin {
               inline: true,
               wrapperComponent: '',
               maxLine: 1,
-              style: {
-                fontSize: '13px',
-                color: 'var(--colors-neutral-text-5)'
-              }
+              style: {},
+              themeCss: {
+                baseControlClassName: {
+                  'font:default': {
+                    fontSize: '13px',
+                    color: 'var(--colors-neutral-text-5)'
+                  }
+                }
+              },
+              id: generateId()
             }
           ],
           size: 'none',
@@ -162,7 +213,8 @@ export class List2Plugin extends BasePlugin {
           },
           wrapperBody: false,
           isFixedHeight: false,
-          isFixedWidth: false
+          isFixedWidth: false,
+          id: generateId()
         },
         {
           type: 'container',
@@ -177,7 +229,6 @@ export class List2Plugin extends BasePlugin {
               },
               level: 'default',
               size: 'default',
-              editorState: 'default',
               themeCss: {
                 className: {
                   'border:default': {
@@ -208,7 +259,8 @@ export class List2Plugin extends BasePlugin {
                     color: 'var(--colors-brand-6)'
                   }
                 }
-              }
+              },
+              id: generateId()
             }
           ],
           size: 'xs',
@@ -225,44 +277,53 @@ export class List2Plugin extends BasePlugin {
           wrapperBody: false,
           isFixedHeight: false,
           isFixedWidth: false,
-          id: 'u:77cb3edb2288'
+          id: generateId()
         }
       ],
       wrapperBody: false,
       style: {
-        'position': 'relative',
-        'display': 'flex',
-        'width': '100%',
-        'paddingTop': '10px',
-        'paddingRight': '10px',
-        'paddingBottom': '10px',
-        'paddingLeft': '10px',
-        'radius': {
-          'top-left-border-radius': '6px',
-          'top-right-border-radius': '6px',
-          'bottom-left-border-radius': '6px',
-          'bottom-right-border-radius': '6px'
-        },
-        'top-border-width': 'var(--borders-width-1)',
-        'left-border-width': 'var(--borders-width-1)',
-        'right-border-width': 'var(--borders-width-1)',
-        'bottom-border-width': 'var(--borders-width-1)',
-        'top-border-style': 'var(--borders-style-1)',
-        'left-border-style': 'var(--borders-style-1)',
-        'right-border-style': 'var(--borders-style-1)',
-        'bottom-border-style': 'var(--borders-style-1)',
-        'top-border-color': '#3be157',
-        'left-border-color': '#3be157',
-        'right-border-color': '#3be157',
-        'bottom-border-color': '#3be157',
-        'boxShadow': ' 0px 0px 10px 0px var(--colors-neutral-line-8)'
-      }
+        position: 'relative',
+        display: 'flex',
+        width: '100%'
+      },
+      themeCss: {
+        baseControlClassName: {
+          'radius:default': {
+            'top-left-border-radius': '6px',
+            'top-right-border-radius': '6px',
+            'bottom-left-border-radius': '6px',
+            'bottom-right-border-radius': '6px'
+          },
+          'boxShadow:default': ' 0px 0px 10px 0px var(--colors-neutral-line-8)',
+          'border:default': {
+            'top-border-width': 'var(--borders-width-1)',
+            'left-border-width': 'var(--borders-width-1)',
+            'right-border-width': 'var(--borders-width-1)',
+            'bottom-border-width': 'var(--borders-width-1)',
+            'top-border-style': 'var(--borders-style-1)',
+            'left-border-style': 'var(--borders-style-1)',
+            'right-border-style': 'var(--borders-style-1)',
+            'bottom-border-style': 'var(--borders-style-1)',
+            'top-border-color': '#3be157',
+            'left-border-color': '#3be157',
+            'right-border-color': '#3be157',
+            'bottom-border-color': '#3be157'
+          },
+          'padding-and-margin:default': {
+            paddingTop: '10px',
+            paddingRight: '10px',
+            paddingBottom: '10px',
+            paddingLeft: '10px'
+          }
+        }
+      },
+      id: generateId()
     },
     placeholder: '',
-    // name: 'items',
     style: {
       gutterY: 10
-    }
+    },
+    id: generateId()
   };
 
   previewSchema = {
@@ -360,37 +421,52 @@ export class List2Plugin extends BasePlugin {
       node.schema.source && String(node.schema.source).match(/{([\w-_]+)}/);
     let field = node.schema.name || match?.[1];
     const scope = this.manager.dataSchema.getScope(`${node.id}-${node.type}`);
-    const schema = scope?.parent?.getSchemaByPath(field);
-    if (isObject(schema?.items)) {
-      dataSchema = {
-        ...dataSchema,
-        ...(schema!.items as any)
-      };
 
-      // 列表添加序号方便处理
-      set(dataSchema, 'properties.index', {
-        type: 'number',
-        title: '索引'
-      });
+    if (scope) {
+      const origin = this.manager.dataSchema.current;
+      this.manager.dataSchema.switchTo(scope.parent!);
+      const schema = this.manager.dataSchema.getSchemaByPath(field);
+      this.manager.dataSchema.switchTo(origin);
+      if (isObject(schema?.items)) {
+        dataSchema = {
+          ...dataSchema,
+          ...(schema!.items as any)
+        };
+
+        // 列表添加序号方便处理
+        set(dataSchema, 'properties.index', {
+          type: 'number',
+          title: '索引'
+        });
+      }
     }
 
     return dataSchema;
   }
 
-  filterProps(props: any) {
+  filterProps(props: any, node: EditorNodeType) {
     // 编辑时显示两行假数据
     const count = (props.columnsCount || 3) * 2;
-    props.value = repeatArray({}, count).map((item, index) => {
-      return {
-        ...item,
-        id: index + 1
-      };
-    });
+    if (!node.state.value) {
+      node.updateState({
+        value: repeatArray({}, count).map((item, index) => {
+          return {
+            ...item,
+            id: index + 1
+          };
+        })
+      });
+    }
 
     props.className = `${props.className || ''} ae-Editor-list`;
     props.itemsClassName = `${props.itemsClassName || ''} cards-items`;
     if (props.card && !props.card.className?.includes('listItem')) {
-      props.card.className = `${props.card.className || ''} ae-Editor-listItem`;
+      props.card = merge(
+        {
+          className: `${props.card.className || ''} ae-Editor-listItem`
+        },
+        props.card
+      );
     }
 
     // 列表类型内的文本元素显示原始公式

@@ -6,11 +6,11 @@ import {
   tipedLabel,
   EditorManager
 } from 'amis-editor-core';
-import type {SchemaObject} from 'amis';
+import {render, type SchemaObject} from 'amis';
 import flatten from 'lodash/flatten';
 import {InputComponentName} from '../component/InputComponentName';
 import {FormulaDateType} from '../renderer/FormulaControl';
-import {VariableItem} from 'amis-ui/lib/components/formula/Editor';
+import type {VariableItem} from 'amis-ui/lib/components/formula/CodeEditor';
 import reduce from 'lodash/reduce';
 import map from 'lodash/map';
 import omit from 'lodash/omit';
@@ -85,9 +85,11 @@ setSchemaTpl(
   'formItemExtraName',
   getSchemaTpl('formItemName', {
     required: false,
-    label: '结尾字段名',
-    name: 'extraName',
-    description: '配置了结尾字段名，该组件将开始和结尾存成两个字段'
+    label: tipedLabel(
+      '结尾字段名',
+      '配置了结尾字段名，该组件将开始和结尾存成两个字段'
+    ),
+    name: 'extraName'
   })
 );
 
@@ -116,12 +118,14 @@ setSchemaTpl(
         label: '垂直',
         value: 'normal'
       },
-      config?.isForm
-        ? null
-        : {
-            label: '继承',
-            value: ''
-          }
+      !config?.isForm && {
+        label: '继承',
+        value: ''
+      },
+      config?.isForm && {
+        label: '网格',
+        value: 'flex'
+      }
     ].filter(i => i),
     pipeOut: (v: string) => (v ? v : undefined)
   })
@@ -138,6 +142,13 @@ setSchemaTpl('expressionFormulaControl', (schema: object = {}) => {
   return {
     type: 'ae-expressionFormulaControl',
     variableMode: 'tree',
+    ...schema
+  };
+});
+
+setSchemaTpl('conditionFormulaControl', (schema: object = {}) => {
+  return {
+    type: 'ae-conditionFormulaControl',
     ...schema
   };
 });
@@ -169,7 +180,8 @@ setSchemaTpl('formItemInline', {
   type: 'switch',
   label: '表单项内联',
   name: 'inline',
-  visibleOn: 'data.mode != "inline"',
+  visibleOn: 'this.mode != "inline"',
+  inputClassName: 'is-inline',
   pipeIn: defaultValue(false)
   // onChange: (value:any, origin:any, item:any, form:any) => form.getValueByName('size') === "full" && form.setValueByName('')
 });
@@ -247,7 +259,29 @@ setSchemaTpl('labelHide', () =>
     pipeIn: (value: any) => value === false,
     pipeOut: (value: any) => (value === true ? false : ''),
     visibleOn:
-      'this.__props__ && this.__props__.formMode === "horizontal" || data.mode === "horizontal" || data.label === false'
+      'this.__props__ && this.__props__.formMode === "horizontal" || this.mode === "horizontal"'
+  })
+);
+
+setSchemaTpl('theme:labelHide', () =>
+  getSchemaTpl('switch', {
+    name: '__label',
+    label: '隐藏标题',
+    value: '${label === false}',
+    onChange: (value: any, origin: any, item: any, form: any) => {
+      if (value) {
+        form.setValueByName(
+          '$$tempLabel',
+          form.getValueByName('label') || item.label
+        );
+        form.setValueByName('label', false);
+      } else {
+        form.setValueByName(
+          'label',
+          form.getValueByName('$$tempLabel') || item['$$tempLabel'] || ''
+        );
+      }
+    }
   })
 );
 
@@ -779,6 +813,19 @@ setSchemaTpl('combo-container', (config: SchemaObject) => {
 });
 
 /**
+ * Page组件静态数据
+ */
+setSchemaTpl(
+  'pageData',
+  getSchemaTpl('combo-container', {
+    type: 'input-kv',
+    mode: 'normal',
+    name: 'data',
+    label: '组件静态数据'
+  })
+);
+
+/**
  * 所有组件的状态
  */
 setSchemaTpl(
@@ -792,16 +839,14 @@ setSchemaTpl(
     return {
       title: '状态',
       body: [
-        getSchemaTpl('newVisible'),
+        getSchemaTpl('visible'),
         getSchemaTpl('hidden'),
+        config?.isFormItem ? getSchemaTpl('clearValueOnHidden') : null,
         !config?.unsupportStatic && config?.isFormItem
           ? getSchemaTpl('static')
           : null,
         config?.readonly ? getSchemaTpl('readonly') : null,
-        config?.disabled || config?.isFormItem
-          ? getSchemaTpl('disabled')
-          : null,
-        config?.isFormItem ? getSchemaTpl('clearValueOnHidden') : null
+        config?.disabled || config?.isFormItem ? getSchemaTpl('disabled') : null
       ].filter(Boolean)
     };
   }
@@ -876,17 +921,6 @@ setSchemaTpl('static', {
   mode: 'normal',
   name: 'static',
   expressionName: 'staticOn'
-});
-
-// 新版配置面板兼容 [可见] 状态
-setSchemaTpl('newVisible', {
-  type: 'ae-StatusControl',
-  label: '可见',
-  mode: 'normal',
-  name: 'visible',
-  expressionName: 'visibleOn',
-  visibleOn:
-    'data.visible || data.visible === false || data.visibleOn !== undefined'
 });
 
 setSchemaTpl('hidden', {
@@ -1322,11 +1356,12 @@ setSchemaTpl('pageSubTitle', {
   type: 'textarea'
 });
 
-setSchemaTpl('textareaDefaultValue', () => {
+setSchemaTpl('textareaDefaultValue', (options: any) => {
   return getSchemaTpl('textareaFormulaControl', {
     label: '默认值',
     name: 'value',
-    mode: 'normal'
+    mode: 'normal',
+    ...options
   });
 });
 
@@ -1500,7 +1535,7 @@ setSchemaTpl('avatarText', {
   name: 'text',
   type: 'input-text',
   pipeOut: (value: any) => (value === '' ? undefined : value),
-  visibleOn: 'data.showtype === "text"'
+  visibleOn: 'this.showtype === "text"'
 });
 
 setSchemaTpl('cardTitle', {
@@ -1736,4 +1771,119 @@ setSchemaTpl('primaryField', {
 
     return value;
   }
+});
+
+/**
+ * 是否为懒加载节点字段
+ */
+setSchemaTpl('deferField', {
+  label: tipedLabel(
+    '懒加载字段',
+    '是否为懒加载节点的字段名称，默认为defer，可以用该配置项自定义字段名称'
+  ),
+  name: 'deferField',
+  type: 'input-text',
+  placeholder: '自定义开启懒加载的字段'
+});
+
+setSchemaTpl(
+  'signBtn',
+  (options: {label: string; name: string; icon: string}) => {
+    return {
+      type: 'flex',
+      justify: 'space-between',
+      alignItems: 'center',
+      items: [
+        {
+          style: {
+            color: '#5c5f66'
+          },
+          type: 'tpl',
+          tpl: options.label
+        },
+        {
+          type: 'action',
+          label: '设置',
+          level: 'link',
+          actionType: 'dialog',
+          dialog: {
+            title: '设置',
+            body: {
+              type: 'form',
+              body: [
+                {
+                  name: options.name,
+                  label: '按钮文案',
+                  type: 'input-text'
+                },
+                getSchemaTpl('icon', {
+                  name: options.icon,
+                  label: '图标'
+                })
+              ]
+            },
+            actions: [
+              {
+                type: 'submit',
+                label: '确认',
+                mergeData: true,
+                level: 'primary'
+              }
+            ]
+          }
+        }
+      ]
+    };
+  }
+);
+
+setSchemaTpl('closable', {
+  type: 'ae-StatusControl',
+  label: tipedLabel('可关闭选项卡', '选项卡内优先级更高'),
+  mode: 'normal',
+  name: 'closable',
+  expressionName: 'closableOn'
+});
+
+setSchemaTpl('inputForbid', {
+  type: 'switch',
+  label: '禁止输入',
+  name: 'inputForbid',
+  inputClassName: 'is-inline'
+});
+
+setSchemaTpl('button-manager', () => {
+  return getSchemaTpl('combo-container', {
+    type: 'combo',
+    label: '按钮管理',
+    name: 'actions',
+    mode: 'normal',
+    multiple: true,
+    addable: true,
+    draggable: true,
+    editable: false,
+    items: [
+      {
+        component: (props: any) => {
+          return render({
+            ...props.data,
+            onEvent: {},
+            actionType: '',
+            onClick: (e: any, props: any) => {
+              const editorStore = (window as any).editorStore;
+              const subEditorStore = editorStore.getSubEditorRef()?.store;
+              (subEditorStore || editorStore).setActiveIdByComponentId(
+                props.id
+              );
+            }
+          });
+        }
+      }
+    ],
+    addButtonText: '新增按钮',
+    scaffold: {
+      type: 'button',
+      label: '按钮'
+    }
+  });
 });

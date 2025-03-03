@@ -144,6 +144,111 @@ order: 55
 | blur     | `[name]: string` 组件的值<br/>`selectedItems: Option[]` 选中的项<br/>`items: Option[]` 所有选项                   | 输入框失去焦点时触发 |
 | focus    | `[name]: string` 组件的值<br/>`selectedItems: Option[]` 选中的项<br/>`items: Option[]` 所有选项                   | 输入框获取焦点时触发 |
 
+### change
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+      {
+        "type": "input-tag",
+        "name": "tag",
+        "label": "标签",
+        "placeholder": "请选择标签",
+        "options": [
+          "Aaron Rodgers",
+          "Tom Brady",
+          "Charlse Woodson",
+          "Aaron Jones"
+        ],
+        "onEvent": {
+            "change": {
+                "actions": [
+                    {
+                      "actionType": "toast",
+                      "args": {
+                          "msg": "${event.data.value|json}"
+                      }
+                    }
+                ]
+            }
+        }
+      }
+    ]
+  }
+```
+
+### blur
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+      {
+        "type": "input-tag",
+        "name": "tag",
+        "label": "标签",
+        "placeholder": "请选择标签",
+        "options": [
+          "Aaron Rodgers",
+          "Tom Brady",
+          "Charlse Woodson",
+          "Aaron Jones"
+        ],
+        "onEvent": {
+            "blur": {
+                "actions": [
+                    {
+                      "actionType": "toast",
+                      "args": {
+                          "msg": "${event.data.value|json}"
+                      }
+                    }
+                ]
+            }
+        }
+      }
+    ]
+  }
+```
+
+### focus
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+      {
+        "type": "input-tag",
+        "name": "tag",
+        "label": "标签",
+        "placeholder": "请选择标签",
+        "options": [
+          "Aaron Rodgers",
+          "Tom Brady",
+          "Charlse Woodson",
+          "Aaron Jones"
+        ],
+        "onEvent": {
+            "focus": {
+                "actions": [
+                    {
+                      "actionType": "toast",
+                      "args": {
+                          "msg": "${event.data.value|json}"
+                      }
+                    }
+                ]
+            }
+        }
+      }
+    ]
+  }
+```
+
 ## 动作表
 
 当前组件对外暴露以下特性动作，其他组件可以通过指定`actionType: 动作名称`、`componentId: 该组件id`来触发这些动作，动作配置可以通过`args: {动作配置项名称: xxx}`来配置具体的参数，详细请查看[事件动作](../../docs/concepts/event-action#触发其他组件的动作)。
@@ -151,6 +256,164 @@ order: 55
 | 动作名称 | 动作配置                 | 说明                                                    |
 | -------- | ------------------------ | ------------------------------------------------------- |
 | clear    | -                        | 清空                                                    |
-| reset    | -                        | 将值重置为`resetValue`，若没有配置`resetValue`，则清空  |
+| reset    | -                        | 将值重置为初始值。6.3.0 及以下版本为`resetValue`        |
 | reload   | -                        | 重新加载，调用 `source`，刷新数据域数据刷新（重新加载） |
 | setValue | `value: string` 更新的值 | 更新数据，多个值用`,`分隔                               |
+
+### clear
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+          "type": "input-tag",
+          "name": "tag",
+          "label": "标签",
+          "placeholder": "请选择标签",
+          "options": [
+            "Aaron Rodgers",
+            "Tom Brady",
+            "Charlse Woodson",
+            "Aaron Jones"
+          ],
+          "value": "Charlse Woodson",
+          "id": "clear_text"
+        },
+        {
+            "type": "button",
+            "label": "清空",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "clear",
+                            "componentId": "clear_text"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+### reset
+
+如果配置了`resetValue`，则重置时使用`resetValue`的值，否则使用初始值。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+          "type": "input-tag",
+          "name": "tag",
+          "label": "标签",
+          "placeholder": "请选择标签",
+          "options": [
+            "Aaron Rodgers",
+            "Tom Brady",
+            "Charlse Woodson",
+            "Aaron Jones"
+          ],
+          "value": "Charlse Woodson",
+          "id": "reset_text"
+        },
+        {
+            "type": "button",
+            "label": "重置",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "reset",
+                            "componentId": "reset_text"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+### reload
+
+只有选择器模式支持，即配置`source`，用于重新加载选择器的数据源。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+          "type": "input-tag",
+          "name": "tag",
+          "label": "标签",
+          "placeholder": "请选择标签",
+          "id": "reload_type",
+          "source": "/api/mock2/form/getOptions?waitSeconds=1",
+          "value": "a"
+        },
+        {
+            "type": "button",
+            "label": "重新加载",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "reload",
+                            "componentId": "reload_type"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+### setValue
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+          "type": "input-tag",
+          "name": "tag",
+          "label": "标签",
+          "placeholder": "请选择标签",
+          "options": [
+            "Aaron Rodgers",
+            "Tom Brady",
+            "Charlse Woodson",
+            "Aaron Jones"
+          ],
+          "value": "Charlse Woodson",
+          "id": "setvalue_text"
+        },
+        {
+            "type": "button",
+            "label": "赋值",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "setValue",
+                            "componentId": "setvalue_text",
+                            "args": {
+                                "value": "Tom Brady"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```

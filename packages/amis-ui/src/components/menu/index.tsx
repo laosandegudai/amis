@@ -12,14 +12,14 @@ import RcMenu, {
   Divider as RcDivider,
   ItemGroup
 } from 'rc-menu';
-import Overflow from 'rc-overflow';
 import Sortable from 'sortablejs';
 import {
   mapTree,
   autobind,
   filterTree,
   findTree,
-  getTreeAncestors
+  getTreeAncestors,
+  TestIdBuilder
 } from 'amis-core';
 import {ClassNamesFn, themeable} from 'amis-core';
 
@@ -27,7 +27,11 @@ import {Icon} from '../icons';
 import {BadgeObject} from '../Badge';
 import MenuItem, {MenuItemProps} from './MenuItem';
 import SubMenu, {SubMenuProps} from './SubMenu';
+import PanelMenu from './PanelMenu';
 import {MenuContext} from './MenuContext';
+
+const INVALIDATE = 'invalidate';
+const RESPONSIVE = 'responsive';
 
 export interface NavigationItem {
   id?: string;
@@ -61,6 +65,8 @@ export interface MenuProps extends Omit<RcMenuProps, 'mode'> {
    */
   navigations: Array<NavigationItem>;
 
+  testIdBuilder?: TestIdBuilder;
+
   /**
    * 导航排列方式 stacked为true垂直 默认为false
    */
@@ -69,7 +75,7 @@ export interface MenuProps extends Omit<RcMenuProps, 'mode'> {
   /**
    * 垂直模式 非折叠状态下 控制菜单打开方式
    */
-  mode?: 'inline' | 'float'; // float（悬浮）inline（内联） 默认inline
+  mode?: 'inline' | 'float' | 'panel'; // float（悬浮）inline（内联） 默认inline
 
   /**
    * 主题配色
@@ -416,7 +422,8 @@ export class Menu extends React.Component<MenuProps, MenuState> {
   }) {
     // 菜单项里面可能会有按钮
     // 如果里面事件执行了e.preventDefault() 则不执行后面的
-    if (domEvent && domEvent.defaultPrevented) {
+    // model:panel RcMenu收集itemClick key为空的情况
+    if ((domEvent && domEvent.defaultPrevented) || !key) {
       return;
     }
     const {onSelect} = this.props;
@@ -449,6 +456,20 @@ export class Menu extends React.Component<MenuProps, MenuState> {
     }
 
     this.selectSubItem({key, domEvent, props});
+  }
+
+  @autobind
+  handlePanelMenuClick({
+    key,
+    domEvent,
+    keyPath
+  }: {
+    key: string;
+    domEvent: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>;
+    props: NavigationItem;
+    keyPath: string[];
+  }) {
+    this.handleItemClick({key, domEvent, keyPath});
   }
 
   selectSubItem({
@@ -538,8 +559,9 @@ export class Menu extends React.Component<MenuProps, MenuState> {
     disabled?: boolean;
     [propName: string]: any;
   }) {
-    const {classnames: cx, expandIcon} = this.props;
-
+    const navigations = this.state.navigations;
+    const {classnames: cx, expandIcon, testIdBuilder} = this.props;
+    const link = findTree(navigations, item => item.id === ctx.eventKey);
     return (
       <span
         key="expand-toggle"
@@ -548,6 +570,10 @@ export class Menu extends React.Component<MenuProps, MenuState> {
           this.handleToggleExpand(ctx);
           e.preventDefault();
         }}
+        {...testIdBuilder
+          ?.getChild(link?.link?.testid || ctx.eventKey)
+          .getChild('expand-toggle')
+          .getTestId()}
       >
         {!React.isValidElement(expandIcon) ? (
           <Icon
@@ -563,7 +589,7 @@ export class Menu extends React.Component<MenuProps, MenuState> {
     );
   }
 
-  renderMenuContent(list: NavigationItem[], level?: number) {
+  renderMenuContent(list: NavigationItem[], level?: number, mode?: string) {
     const {
       renderLink,
       classnames: cx,
@@ -575,7 +601,8 @@ export class Menu extends React.Component<MenuProps, MenuState> {
       collapsed,
       overflowedIndicator,
       overflowMaxCount,
-      popupClassName
+      popupClassName,
+      testIdBuilder
     } = this.props;
 
     return list.map((item: NavigationItem, index: number) => {
@@ -611,9 +638,14 @@ export class Menu extends React.Component<MenuProps, MenuState> {
             badge={badge}
             renderLink={renderLink}
             depth={level || 1}
+            testIdBuilder={testIdBuilder?.getChild(link.testid || index)}
             popupClassName={popupClassName}
           >
-            {this.renderMenuContent(item.children || [], item.depth + 1)}
+            {mode === 'panel' ? (
+              <PanelMenu {...item} data={data} />
+            ) : (
+              this.renderMenuContent(item.children || [], item.depth + 1)
+            )}
           </SubMenu>
         );
       }
@@ -632,6 +664,7 @@ export class Menu extends React.Component<MenuProps, MenuState> {
           renderLink={renderLink}
           badge={badge}
           data={data}
+          testIdBuilder={testIdBuilder?.getChild(link.testid || index)}
           depth={level || 1}
           order={index}
           overflowedIndicator={overflowedIndicator}
@@ -669,14 +702,18 @@ export class Menu extends React.Component<MenuProps, MenuState> {
       expandBefore,
       onDragStart
     } = this.props;
+
     const {navigations, activeKey, defaultOpenKeys, openKeys} = this.state;
     const isDarkTheme = themeColor === 'dark';
     const rcMode = stacked
-      ? mode === 'float'
+      ? mode === 'float' || mode === 'panel'
         ? 'vertical-left'
         : 'vertical'
       : 'horizontal';
-    const disableOpen = collapsed || !stacked || (stacked && mode === 'float');
+    const disableOpen =
+      collapsed ||
+      !stacked ||
+      (stacked && (mode === 'float' || mode === 'panel'));
 
     return (
       <MenuContext.Provider
@@ -691,7 +728,8 @@ export class Menu extends React.Component<MenuProps, MenuState> {
           accordion,
           draggable,
           onDragStart,
-          onSubmenuClick: this.handleSubMenuTitleClick
+          onSubmenuClick: this.handleSubMenuTitleClick,
+          onPanelMenuClick: this.handlePanelMenuClick
         }}
       >
         <RcMenu
@@ -734,8 +772,8 @@ export class Menu extends React.Component<MenuProps, MenuState> {
           // @ts-ignore
           maxCount={
             stacked || disabledOverflow
-              ? Overflow.INVALIDATE
-              : overflowMaxCount || Overflow.RESPONSIVE
+              ? INVALIDATE
+              : overflowMaxCount || RESPONSIVE
           }
           component={overflowComponent || 'ul'}
           style={overflowStyle}
@@ -747,7 +785,7 @@ export class Menu extends React.Component<MenuProps, MenuState> {
           openKeys={disableOpen ? undefined : openKeys}
           onClick={this.handleItemClick}
         >
-          {this.renderMenuContent(navigations)}
+          {this.renderMenuContent(navigations, 0, mode)}
         </RcMenu>
       </MenuContext.Provider>
     );

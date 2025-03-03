@@ -10,11 +10,19 @@ import getMiniDecimal, {
 } from '@rc-component/mini-decimal';
 
 import {Icon} from './icons';
-import {ThemeProps, themeable, isNumeric, autobind, ucFirst} from 'amis-core';
+import {
+  ThemeProps,
+  themeable,
+  isNumeric,
+  autobind,
+  ucFirst,
+  TestIdBuilder
+} from 'amis-core';
 
 export type ValueType = string | number;
 
 export interface NumberProps extends ThemeProps {
+  name?: string;
   placeholder?: string;
   max?: ValueType;
   min?: ValueType;
@@ -66,6 +74,16 @@ export interface NumberProps extends ThemeProps {
   resetValue?: any;
 
   /**
+   * 后缀
+   */
+  suffix?: string;
+
+  /**
+   * 用来开启百分号的展示形式，搭配suffix使用
+   */
+  showAsPercent?: boolean;
+
+  /**
    * 是否在清空内容时从数据域中删除该表单项对应的值
    */
   clearValueOnEmpty?: boolean;
@@ -74,6 +92,8 @@ export interface NumberProps extends ThemeProps {
    * 数字输入框类名
    */
   inputControlClassName?: string;
+
+  testIdBuilder?: TestIdBuilder;
 }
 
 export interface NumberState {
@@ -149,12 +169,37 @@ export class NumberInput extends React.Component<NumberProps, NumberState> {
       }
     }
     /**
-     * 非大数模式下，如果精度不满足要求，需要处理value值，遵循四舍五入的处理规则
+     * 非大数模式下，如果精度不满足要求，需要处理value值，只做精度处理，不做四舍五入
      */
     if (!isBig && getNumberPrecision(value) !== precision) {
-      value = getMiniDecimal(
-        toFixed(num2str(value), '.', precision)
-      ).toNumber();
+      const multiplier = Math.pow(10, precision);
+      const truncatedValue =
+        Math.trunc(getMiniDecimal(value).multi(multiplier).toNumber()) /
+        multiplier;
+      value = getMiniDecimal(truncatedValue).toNumber();
+    }
+
+    return value;
+  };
+
+  /**
+   * 处理value值（仅使用 resetValue 和 clearValueOnEmpty）
+   *
+   * @param value value 值
+   * @param resetValue 重置值
+   * @param clearValueOnEmpty 是否在清空内容时从数据域中删除该表单项对应的值
+   */
+  static normalizeValue2 = (
+    value: any,
+    resetValue: any,
+    clearValueOnEmpty?: boolean
+  ) => {
+    if (!isNumeric(value)) {
+      if (!isNumeric(resetValue)) {
+        return clearValueOnEmpty ? undefined : '';
+      }
+
+      value = resetValue;
     }
 
     return value;
@@ -209,10 +254,15 @@ export class NumberInput extends React.Component<NumberProps, NumberState> {
 
   @autobind
   handleChange(value: any) {
-    const {min, max, step, precision, resetValue, clearValueOnEmpty, onChange} =
+    const {min, max, step, resetValue, clearValueOnEmpty, onChange} =
       this.props;
+    let {suffix, precision, showAsPercent} = this.props;
+    //在显示百分号情况下，需先将数值恢复到实际value值
+    if (showAsPercent && suffix == '%') {
+      value = value / 100;
+      precision = (precision || 0) + 2;
+    }
     const finalPrecision = NumberInput.normalizePrecision(precision, step);
-
     const result = NumberInput.normalizeValue(
       value,
       min,
@@ -240,7 +290,16 @@ export class NumberInput extends React.Component<NumberProps, NumberState> {
   }
 
   @autobind
-  handleEnhanceModeChange(action: 'add' | 'subtract'): void {
+  handleClick(e: React.SyntheticEvent<HTMLElement>) {
+    e.stopPropagation();
+  }
+
+  @autobind
+  handleEnhanceModeChange(
+    action: 'add' | 'subtract',
+    e: React.MouseEvent
+  ): void {
+    e.stopPropagation();
     const {value, step = 1, disabled, readOnly, precision} = this.props;
     // value为undefined会导致溢出错误
     let val = value || 0;
@@ -292,15 +351,14 @@ export class NumberInput extends React.Component<NumberProps, NumberState> {
       className,
       classPrefix: ns,
       classnames: cx,
-      value,
       step,
       precision,
-      max,
-      min,
       disabled,
       placeholder,
       showSteps,
       formatter,
+      suffix,
+      showAsPercent,
       parser,
       borderMode,
       readOnly,
@@ -308,17 +366,28 @@ export class NumberInput extends React.Component<NumberProps, NumberState> {
       inputRef,
       keyboard,
       inputControlClassName,
-      mobileUI
+      mobileUI,
+      name,
+      testIdBuilder
     } = this.props;
+
+    let {value, max, min} = this.props;
+    //需要展示百分号的情况下,数值乘100显示,注意精度丢失问题
+    if (showAsPercent && suffix == '%' && value) {
+      value = parseFloat((Number(value) * 100).toFixed(precision));
+      max = max != null ? Math.round(Number(max) * 100) : max;
+      min = min != null ? Math.round(Number(min) * 100) : min;
+    }
     const precisionProps: any = {
       precision: NumberInput.normalizePrecision(precision, step)
     };
 
     return (
       <InputNumber
+        name={name}
         className={cx(
           className,
-          showSteps === false ? 'no-steps' : '',
+          showSteps === false || readOnly ? 'no-steps' : '',
           displayMode === 'enhance'
             ? 'Number--enhance-input'
             : inputControlClassName,
@@ -342,10 +411,12 @@ export class NumberInput extends React.Component<NumberProps, NumberState> {
         disabled={disabled}
         placeholder={placeholder}
         onFocus={this.handleFocus}
+        onClick={this.handleClick}
         onBlur={this.handleBlur}
         stringMode={this.isBig ? true : false}
         keyboard={keyboard}
         {...precisionProps}
+        {...testIdBuilder?.getTestId()}
       />
     );
   }
@@ -386,7 +457,7 @@ export class NumberInput extends React.Component<NumberProps, NumberState> {
                 disabled ? 'Number--enhance-border-disabled' : '',
                 readOnly ? 'Number--enhance-border-readOnly' : ''
               )}
-              onClick={() => this.handleEnhanceModeChange('subtract')}
+              onClick={e => this.handleEnhanceModeChange('subtract', e)}
             >
               <Icon
                 icon="minus"
@@ -403,7 +474,7 @@ export class NumberInput extends React.Component<NumberProps, NumberState> {
                 disabled ? 'Number--enhance-border-disabled' : '',
                 readOnly ? 'Number--enhance-border-readOnly' : ''
               )}
-              onClick={() => this.handleEnhanceModeChange('add')}
+              onClick={e => this.handleEnhanceModeChange('add', e)}
             >
               <Icon
                 icon="plus"

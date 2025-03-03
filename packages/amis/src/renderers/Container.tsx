@@ -157,7 +157,8 @@ export default class Container<T> extends React.Component<
       classnames: cx,
       bodyClassName,
       disabled,
-      wrapperBody
+      wrapperBody,
+      testIdBuilder
     } = this.props;
 
     const isWrapperBody = wrapperBody ?? true;
@@ -172,7 +173,10 @@ export default class Container<T> extends React.Component<
 
     if (isWrapperBody) {
       return (
-        <div className={cx('Container-body', bodyClassName)}>
+        <div
+          className={cx('Container-body', bodyClassName)}
+          {...testIdBuilder?.getTestId()}
+        >
           {containerBody}
         </div>
       );
@@ -214,16 +218,29 @@ export default class Container<T> extends React.Component<
           'Container',
           size && size !== 'none' ? `Container--${size}` : '',
           className,
-          setThemeClassName('baseControlClassName', id, themeCss),
-          setThemeClassName('wrapperCustomStyle', id, wrapperCustomStyle)
+          setThemeClassName({
+            ...this.props,
+            name: 'baseControlClassName',
+            id,
+            themeCss
+          }),
+          setThemeClassName({
+            ...this.props,
+            name: 'wrapperCustomStyle',
+            id,
+            themeCss: wrapperCustomStyle
+          })
         )}
         onClick={this.handleClick}
         onMouseEnter={this.handleMouseEnter}
         onMouseLeave={this.handleMouseLeave}
         style={buildStyle(style, data)}
+        data-id={id}
+        data-role="container"
       >
         {this.renderBody()}
         <CustomStyle
+          {...this.props}
           config={{
             wrapperCustomStyle,
             id,

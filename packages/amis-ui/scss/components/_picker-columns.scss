@@ -2,6 +2,8 @@
   position: relative;
   background-color: var(--PickerColumns-bg);
   user-select: none;
+  min-width: 0;
+  min-height: 0;
   flex: 1;
   overflow: hidden;
   font-size: var(--PickerColumns-option-fontSize);
@@ -133,6 +135,6 @@
 
   &-columnItemis-selected {
     font-size: 18px;
-    color: --PickerColumns-title-color;
+    color: var(--PickerColumns-title-color);
   }
 }

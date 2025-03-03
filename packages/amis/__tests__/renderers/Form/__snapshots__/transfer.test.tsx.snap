@@ -17,7 +17,7 @@ exports[`Renderer:transfer 1`] = `
         >
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -26,7 +26,7 @@ exports[`Renderer:transfer 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -47,6 +47,7 @@ exports[`Renderer:transfer 1`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="transfer"
                   data-role="form-item"
                 >
                   <label
@@ -54,7 +55,7 @@ exports[`Renderer:transfer 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           默认
@@ -76,13 +77,17 @@ exports[`Renderer:transfer 1`] = `
                         >
                           <span>
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -104,13 +109,17 @@ exports[`Renderer:transfer 1`] = `
                             class="cxd-GroupedSelection-item"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -130,13 +139,17 @@ exports[`Renderer:transfer 1`] = `
                             class="cxd-GroupedSelection-item"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -156,13 +169,17 @@ exports[`Renderer:transfer 1`] = `
                             class="cxd-GroupedSelection-item"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -182,13 +199,17 @@ exports[`Renderer:transfer 1`] = `
                             class="cxd-GroupedSelection-item"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -208,13 +229,17 @@ exports[`Renderer:transfer 1`] = `
                             class="cxd-GroupedSelection-item"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -234,13 +259,17 @@ exports[`Renderer:transfer 1`] = `
                             class="cxd-GroupedSelection-item"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -312,45 +341,6 @@ exports[`Renderer:transfer 1`] = `
                 </button>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -363,7 +353,7 @@ exports[`Renderer:transfer associated mode with virtual 1`] = `
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -372,7 +362,7 @@ exports[`Renderer:transfer associated mode with virtual 1`] = `
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -393,6 +383,7 @@ exports[`Renderer:transfer associated mode with virtual 1`] = `
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="b"
           data-role="form-item"
         >
           <label
@@ -400,7 +391,7 @@ exports[`Renderer:transfer associated mode with virtual 1`] = `
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   关联选择模式
@@ -653,20 +644,24 @@ exports[`Renderer:transfer associated mode with virtual 1`] = `
                           style="overflow: auto; will-change: transform; height: 0px; width: 100%;"
                         >
                           <div
-                            style="position: relative; width: auto; white-space: nowrap; min-height: 100%; height: 6400px;"
+                            style="position: relative; width: auto; white-space: nowrap; min-height: 100%; height: 7600px;"
                           >
                             <div
                               class="cxd-GroupedSelection-item"
-                              style="position: absolute; top: 0px; left: 0px; width: 100%; height: 32px;"
+                              style="position: absolute; top: 0px; left: 0px; width: 100%; height: 38px;"
                             >
                               <label
-                                class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                 data-role="checkbox"
                               >
                                 <input
                                   type="checkbox"
                                 />
-                                <i />
+                                <i>
+                                  <div
+                                    class="checkbox-icon icon"
+                                  />
+                                </i>
                                 <span
                                   class=""
                                 />
@@ -684,16 +679,20 @@ exports[`Renderer:transfer associated mode with virtual 1`] = `
                             </div>
                             <div
                               class="cxd-GroupedSelection-item"
-                              style="position: absolute; top: 32px; left: 0px; width: 100%; height: 32px;"
+                              style="position: absolute; top: 38px; left: 0px; width: 100%; height: 38px;"
                             >
                               <label
-                                class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                 data-role="checkbox"
                               >
                                 <input
                                   type="checkbox"
                                 />
-                                <i />
+                                <i>
+                                  <div
+                                    class="checkbox-icon icon"
+                                  />
+                                </i>
                                 <span
                                   class=""
                                 />
@@ -711,16 +710,20 @@ exports[`Renderer:transfer associated mode with virtual 1`] = `
                             </div>
                             <div
                               class="cxd-GroupedSelection-item"
-                              style="position: absolute; top: 64px; left: 0px; width: 100%; height: 32px;"
+                              style="position: absolute; top: 76px; left: 0px; width: 100%; height: 38px;"
                             >
                               <label
-                                class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                 data-role="checkbox"
                               >
                                 <input
                                   type="checkbox"
                                 />
-                                <i />
+                                <i>
+                                  <div
+                                    class="checkbox-icon icon"
+                                  />
+                                </i>
                                 <span
                                   class=""
                                 />
@@ -738,16 +741,20 @@ exports[`Renderer:transfer associated mode with virtual 1`] = `
                             </div>
                             <div
                               class="cxd-GroupedSelection-item"
-                              style="position: absolute; top: 96px; left: 0px; width: 100%; height: 32px;"
+                              style="position: absolute; top: 114px; left: 0px; width: 100%; height: 38px;"
                             >
                               <label
-                                class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                 data-role="checkbox"
                               >
                                 <input
                                   type="checkbox"
                                 />
-                                <i />
+                                <i>
+                                  <div
+                                    class="checkbox-icon icon"
+                                  />
+                                </i>
                                 <span
                                   class=""
                                 />
@@ -764,45 +771,6 @@ exports[`Renderer:transfer associated mode with virtual 1`] = `
                               </div>
                             </div>
                           </div>
-                        </div>
-                        <div
-                          class="resize-sensor"
-                          style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-                        >
-                          
-  
-                          <div
-                            class="resize-sensor-expand"
-                            style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                          >
-                            
-    
-                            <div
-                              style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                            />
-                            
-  
-                          </div>
-                          
-  
-                          <div
-                            class="resize-sensor-shrink"
-                            style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                          >
-                            
-    
-                            <div
-                              style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                            />
-                            
-  
-                          </div>
-                          
-  
-                          <div
-                            class="resize-sensor-appear"
-                            style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                          />
                         </div>
                       </div>
                     </div>
@@ -863,45 +831,6 @@ exports[`Renderer:transfer associated mode with virtual 1`] = `
         </button>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -923,7 +852,7 @@ exports[`Renderer:transfer chained 1`] = `
         >
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -932,7 +861,7 @@ exports[`Renderer:transfer chained 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -953,6 +882,7 @@ exports[`Renderer:transfer chained 1`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="transfer5"
                   data-role="form-item"
                 >
                   <label
@@ -960,7 +890,7 @@ exports[`Renderer:transfer chained 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           级联选择
@@ -1127,45 +1057,6 @@ exports[`Renderer:transfer chained 1`] = `
                 </button>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -1178,7 +1069,7 @@ exports[`Renderer:transfer chained mode with virtual 1`] = `
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -1187,7 +1078,7 @@ exports[`Renderer:transfer chained mode with virtual 1`] = `
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -1208,6 +1099,7 @@ exports[`Renderer:transfer chained mode with virtual 1`] = `
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="transfer"
           data-role="form-item"
         >
           <label
@@ -1215,7 +1107,7 @@ exports[`Renderer:transfer chained mode with virtual 1`] = `
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   分组
@@ -1408,20 +1300,24 @@ exports[`Renderer:transfer chained mode with virtual 1`] = `
                         style="overflow: auto; will-change: transform; height: 0px; width: 100%;"
                       >
                         <div
-                          style="position: relative; width: auto; white-space: nowrap; min-height: 100%; height: 6400px;"
+                          style="position: relative; width: auto; white-space: nowrap; min-height: 100%; height: 7600px;"
                         >
                           <div
                             class="cxd-ChainedSelection-item"
-                            style="position: absolute; top: 0px; left: 0px; width: 100%; height: 32px;"
+                            style="position: absolute; top: 0px; left: 0px; width: 100%; height: 38px;"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -1439,16 +1335,20 @@ exports[`Renderer:transfer chained mode with virtual 1`] = `
                           </div>
                           <div
                             class="cxd-ChainedSelection-item"
-                            style="position: absolute; top: 32px; left: 0px; width: 100%; height: 32px;"
+                            style="position: absolute; top: 38px; left: 0px; width: 100%; height: 38px;"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -1466,16 +1366,20 @@ exports[`Renderer:transfer chained mode with virtual 1`] = `
                           </div>
                           <div
                             class="cxd-ChainedSelection-item"
-                            style="position: absolute; top: 64px; left: 0px; width: 100%; height: 32px;"
+                            style="position: absolute; top: 76px; left: 0px; width: 100%; height: 38px;"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -1493,16 +1397,20 @@ exports[`Renderer:transfer chained mode with virtual 1`] = `
                           </div>
                           <div
                             class="cxd-ChainedSelection-item"
-                            style="position: absolute; top: 96px; left: 0px; width: 100%; height: 32px;"
+                            style="position: absolute; top: 114px; left: 0px; width: 100%; height: 38px;"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -1519,45 +1427,6 @@ exports[`Renderer:transfer chained mode with virtual 1`] = `
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <div
-                        class="resize-sensor"
-                        style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-                      >
-                        
-  
-                        <div
-                          class="resize-sensor-expand"
-                          style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                        >
-                          
-    
-                          <div
-                            style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                          />
-                          
-  
-                        </div>
-                        
-  
-                        <div
-                          class="resize-sensor-shrink"
-                          style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                        >
-                          
-    
-                          <div
-                            style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                          />
-                          
-  
-                        </div>
-                        
-  
-                        <div
-                          class="resize-sensor-appear"
-                          style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                        />
                       </div>
                     </div>
                   </div>
@@ -1617,45 +1486,6 @@ exports[`Renderer:transfer chained mode with virtual 1`] = `
         </button>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -1664,7 +1494,7 @@ exports[`Renderer:transfer follow left mode 1`] = `
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -1673,7 +1503,7 @@ exports[`Renderer:transfer follow left mode 1`] = `
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -1694,6 +1524,7 @@ exports[`Renderer:transfer follow left mode 1`] = `
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="transfer4"
           data-role="form-item"
         >
           <label
@@ -1701,7 +1532,7 @@ exports[`Renderer:transfer follow left mode 1`] = `
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   树型展示
@@ -1723,13 +1554,17 @@ exports[`Renderer:transfer follow left mode 1`] = `
                 >
                   <span>
                     <label
-                      class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--sm"
+                      class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--partial cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                       data-role="checkbox"
                     >
                       <input
                         type="checkbox"
                       />
-                      <i />
+                      <i>
+                        <div
+                          class="checkbox-icon icon"
+                        />
+                      </i>
                       <span
                         class=""
                       />
@@ -1784,13 +1619,17 @@ exports[`Renderer:transfer follow left mode 1`] = `
                           />
                         </div>
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -1825,13 +1664,17 @@ exports[`Renderer:transfer follow left mode 1`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -1871,13 +1714,17 @@ exports[`Renderer:transfer follow left mode 1`] = `
                           />
                         </div>
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -1912,13 +1759,17 @@ exports[`Renderer:transfer follow left mode 1`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -1953,13 +1804,17 @@ exports[`Renderer:transfer follow left mode 1`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -1999,13 +1854,17 @@ exports[`Renderer:transfer follow left mode 1`] = `
                           />
                         </div>
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2040,13 +1899,17 @@ exports[`Renderer:transfer follow left mode 1`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2081,13 +1944,17 @@ exports[`Renderer:transfer follow left mode 1`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2122,13 +1989,17 @@ exports[`Renderer:transfer follow left mode 1`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2222,10 +2093,7 @@ exports[`Renderer:transfer follow left mode 1`] = `
                               <div
                                 class="cxd-Tree-item-icons"
                               >
-                                <a
-                                  data-position="left"
-                                  data-tooltip="移除该节点"
-                                >
+                                <a>
                                   <icon-mock
                                     classname="icon icon-minus"
                                     icon="minus"
@@ -2261,10 +2129,7 @@ exports[`Renderer:transfer follow left mode 1`] = `
                               <div
                                 class="cxd-Tree-item-icons"
                               >
-                                <a
-                                  data-position="left"
-                                  data-tooltip="移除该节点"
-                                >
+                                <a>
                                   <icon-mock
                                     classname="icon icon-minus"
                                     icon="minus"
@@ -2300,45 +2165,6 @@ exports[`Renderer:transfer follow left mode 1`] = `
         </button>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -2347,7 +2173,7 @@ exports[`Renderer:transfer follow left mode 2`] = `
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -2356,7 +2182,7 @@ exports[`Renderer:transfer follow left mode 2`] = `
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -2377,6 +2203,7 @@ exports[`Renderer:transfer follow left mode 2`] = `
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="transfer4"
           data-role="form-item"
         >
           <label
@@ -2384,7 +2211,7 @@ exports[`Renderer:transfer follow left mode 2`] = `
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   树型展示
@@ -2406,13 +2233,17 @@ exports[`Renderer:transfer follow left mode 2`] = `
                 >
                   <span>
                     <label
-                      class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--sm"
+                      class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--partial cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                       data-role="checkbox"
                     >
                       <input
                         type="checkbox"
                       />
-                      <i />
+                      <i>
+                        <div
+                          class="checkbox-icon icon"
+                        />
+                      </i>
                       <span
                         class=""
                       />
@@ -2467,13 +2298,17 @@ exports[`Renderer:transfer follow left mode 2`] = `
                           />
                         </div>
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2508,13 +2343,17 @@ exports[`Renderer:transfer follow left mode 2`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2554,13 +2393,17 @@ exports[`Renderer:transfer follow left mode 2`] = `
                           />
                         </div>
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--partial cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2595,13 +2438,17 @@ exports[`Renderer:transfer follow left mode 2`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2636,13 +2483,17 @@ exports[`Renderer:transfer follow left mode 2`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2682,13 +2533,17 @@ exports[`Renderer:transfer follow left mode 2`] = `
                           />
                         </div>
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2723,13 +2578,17 @@ exports[`Renderer:transfer follow left mode 2`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2764,13 +2623,17 @@ exports[`Renderer:transfer follow left mode 2`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2805,13 +2668,17 @@ exports[`Renderer:transfer follow left mode 2`] = `
                           class="cxd-Tree-itemArrowPlaceholder"
                         />
                         <label
-                          class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                          class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                           data-role="checkbox"
                         >
                           <input
                             type="checkbox"
                           />
-                          <i />
+                          <i>
+                            <div
+                              class="checkbox-icon icon"
+                            />
+                          </i>
                           <span
                             class=""
                           />
@@ -2926,10 +2793,7 @@ exports[`Renderer:transfer follow left mode 2`] = `
                               <div
                                 class="cxd-Tree-item-icons"
                               >
-                                <a
-                                  data-position="left"
-                                  data-tooltip="移除该节点"
-                                >
+                                <a>
                                   <icon-mock
                                     classname="icon icon-minus"
                                     icon="minus"
@@ -2965,10 +2829,7 @@ exports[`Renderer:transfer follow left mode 2`] = `
                               <div
                                 class="cxd-Tree-item-icons"
                               >
-                                <a
-                                  data-position="left"
-                                  data-tooltip="移除该节点"
-                                >
+                                <a>
                                   <icon-mock
                                     classname="icon icon-minus"
                                     icon="minus"
@@ -3004,45 +2865,6 @@ exports[`Renderer:transfer follow left mode 2`] = `
         </button>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -3051,7 +2873,7 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -3060,7 +2882,7 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -3081,6 +2903,7 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="transfer"
           data-role="form-item"
         >
           <label
@@ -3088,7 +2911,7 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   分组
@@ -3110,13 +2933,17 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
                 >
                   <span>
                     <label
-                      class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                      class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                       data-role="checkbox"
                     >
                       <input
                         type="checkbox"
                       />
-                      <i />
+                      <i>
+                        <div
+                          class="checkbox-icon icon"
+                        />
+                      </i>
                       <span
                         class=""
                       />
@@ -3154,13 +2981,17 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
                               class="cxd-GroupedSelection-item"
                             >
                               <label
-                                class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                 data-role="checkbox"
                               >
                                 <input
                                   type="checkbox"
                                 />
-                                <i />
+                                <i>
+                                  <div
+                                    class="checkbox-icon icon"
+                                  />
+                                </i>
                                 <span
                                   class=""
                                 />
@@ -3189,13 +3020,17 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
                               class="cxd-GroupedSelection-item"
                             >
                               <label
-                                class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                 data-role="checkbox"
                               >
                                 <input
                                   type="checkbox"
                                 />
-                                <i />
+                                <i>
+                                  <div
+                                    class="checkbox-icon icon"
+                                  />
+                                </i>
                                 <span
                                   class=""
                                 />
@@ -3224,13 +3059,17 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
                               class="cxd-GroupedSelection-item"
                             >
                               <label
-                                class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                 data-role="checkbox"
                               >
                                 <input
                                   type="checkbox"
                                 />
-                                <i />
+                                <i>
+                                  <div
+                                    class="checkbox-icon icon"
+                                  />
+                                </i>
                                 <span
                                   class=""
                                 />
@@ -3259,13 +3098,17 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
                               class="cxd-GroupedSelection-item"
                             >
                               <label
-                                class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                 data-role="checkbox"
                               >
                                 <input
                                   type="checkbox"
                                 />
-                                <i />
+                                <i>
+                                  <div
+                                    class="checkbox-icon icon"
+                                  />
+                                </i>
                                 <span
                                   class=""
                                 />
@@ -3284,45 +3127,6 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
                           </div>
                         </div>
                       </div>
-                    </div>
-                    <div
-                      class="resize-sensor"
-                      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-                    >
-                      
-  
-                      <div
-                        class="resize-sensor-expand"
-                        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                      >
-                        
-    
-                        <div
-                          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                        />
-                        
-  
-                      </div>
-                      
-  
-                      <div
-                        class="resize-sensor-shrink"
-                        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                      >
-                        
-    
-                        <div
-                          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                        />
-                        
-  
-                      </div>
-                      
-  
-                      <div
-                        class="resize-sensor-appear"
-                        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                      />
                     </div>
                   </div>
                 </div>
@@ -3381,45 +3185,6 @@ exports[`Renderer:transfer group mode with virtual 1`] = `
         </button>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -3441,7 +3206,7 @@ exports[`Renderer:transfer left tree 1`] = `
         >
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -3450,7 +3215,7 @@ exports[`Renderer:transfer left tree 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -3471,6 +3236,7 @@ exports[`Renderer:transfer left tree 1`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="b"
                   data-role="form-item"
                 >
                   <label
@@ -3478,7 +3244,7 @@ exports[`Renderer:transfer left tree 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           关联选择模式
@@ -3916,45 +3682,6 @@ exports[`Renderer:transfer left tree 1`] = `
                 </button>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -3980,7 +3707,7 @@ exports[`Renderer:transfer table 1`] = `
         >
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -3989,7 +3716,7 @@ exports[`Renderer:transfer table 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -4010,6 +3737,7 @@ exports[`Renderer:transfer table 1`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="transfer"
                   data-role="form-item"
                 >
                   <label
@@ -4017,7 +3745,7 @@ exports[`Renderer:transfer table 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           表格形式
@@ -4063,13 +3791,17 @@ exports[`Renderer:transfer table 1`] = `
                                     class="cxd-Table-checkCell"
                                   >
                                     <label
-                                      class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                      class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                       data-role="checkbox"
                                     >
                                       <input
                                         type="checkbox"
                                       />
-                                      <i />
+                                      <i>
+                                        <div
+                                          class="checkbox-icon icon"
+                                        />
+                                      </i>
                                       <span
                                         class=""
                                       />
@@ -4091,13 +3823,17 @@ exports[`Renderer:transfer table 1`] = `
                                     class="cxd-Table-checkCell"
                                   >
                                     <label
-                                      class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                      class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                       data-role="checkbox"
                                     >
                                       <input
                                         type="checkbox"
                                       />
-                                      <i />
+                                      <i>
+                                        <div
+                                          class="checkbox-icon icon"
+                                        />
+                                      </i>
                                       <span
                                         class=""
                                       />
@@ -4125,13 +3861,17 @@ exports[`Renderer:transfer table 1`] = `
                                     class="cxd-Table-checkCell"
                                   >
                                     <label
-                                      class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                      class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                       data-role="checkbox"
                                     >
                                       <input
                                         type="checkbox"
                                       />
-                                      <i />
+                                      <i>
+                                        <div
+                                          class="checkbox-icon icon"
+                                        />
+                                      </i>
                                       <span
                                         class=""
                                       />
@@ -4159,13 +3899,17 @@ exports[`Renderer:transfer table 1`] = `
                                     class="cxd-Table-checkCell"
                                   >
                                     <label
-                                      class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                      class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                       data-role="checkbox"
                                     >
                                       <input
                                         type="checkbox"
                                       />
-                                      <i />
+                                      <i>
+                                        <div
+                                          class="checkbox-icon icon"
+                                        />
+                                      </i>
                                       <span
                                         class=""
                                       />
@@ -4193,13 +3937,17 @@ exports[`Renderer:transfer table 1`] = `
                                     class="cxd-Table-checkCell"
                                   >
                                     <label
-                                      class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                      class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                       data-role="checkbox"
                                     >
                                       <input
                                         type="checkbox"
                                       />
-                                      <i />
+                                      <i>
+                                        <div
+                                          class="checkbox-icon icon"
+                                        />
+                                      </i>
                                       <span
                                         class=""
                                       />
@@ -4227,13 +3975,17 @@ exports[`Renderer:transfer table 1`] = `
                                     class="cxd-Table-checkCell"
                                   >
                                     <label
-                                      class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                      class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                       data-role="checkbox"
                                     >
                                       <input
                                         type="checkbox"
                                       />
-                                      <i />
+                                      <i>
+                                        <div
+                                          class="checkbox-icon icon"
+                                        />
+                                      </i>
                                       <span
                                         class=""
                                       />
@@ -4261,13 +4013,17 @@ exports[`Renderer:transfer table 1`] = `
                                     class="cxd-Table-checkCell"
                                   >
                                     <label
-                                      class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                      class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                       data-role="checkbox"
                                     >
                                       <input
                                         type="checkbox"
                                       />
-                                      <i />
+                                      <i>
+                                        <div
+                                          class="checkbox-icon icon"
+                                        />
+                                      </i>
                                       <span
                                         class=""
                                       />
@@ -4347,45 +4103,6 @@ exports[`Renderer:transfer table 1`] = `
                 </button>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -4398,7 +4115,7 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -4407,7 +4124,7 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -4428,6 +4145,7 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="transfer"
           data-role="form-item"
         >
           <label
@@ -4435,7 +4153,7 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   分组
@@ -4481,14 +4199,18 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                             class="cxd-Table-checkCell"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--partial cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                               data-role="checkbox"
                             >
                               <input
                                 checked=""
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -4530,20 +4252,24 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                             <tbody>
                               <tr
                                 class="is-active"
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                                     data-role="checkbox"
                                   >
                                     <input
                                       checked=""
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4566,19 +4292,23 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                               </tr>
                               <tr
                                 class=""
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                     data-role="checkbox"
                                   >
                                     <input
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4601,20 +4331,24 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                               </tr>
                               <tr
                                 class="is-active"
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                                     data-role="checkbox"
                                   >
                                     <input
                                       checked=""
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4637,19 +4371,23 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                               </tr>
                               <tr
                                 class=""
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                     data-role="checkbox"
                                   >
                                     <input
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4672,20 +4410,24 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                               </tr>
                               <tr
                                 class="is-active"
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                                     data-role="checkbox"
                                   >
                                     <input
                                       checked=""
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4708,19 +4450,23 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                               </tr>
                               <tr
                                 class=""
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                     data-role="checkbox"
                                   >
                                     <input
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4743,20 +4489,24 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                               </tr>
                               <tr
                                 class="is-active"
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                                     data-role="checkbox"
                                   >
                                     <input
                                       checked=""
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4779,19 +4529,23 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                               </tr>
                               <tr
                                 class=""
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                     data-role="checkbox"
                                   >
                                     <input
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4814,20 +4568,24 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                               </tr>
                               <tr
                                 class="is-active"
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                                     data-role="checkbox"
                                   >
                                     <input
                                       checked=""
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4850,19 +4608,23 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                               </tr>
                               <tr
                                 class=""
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                     data-role="checkbox"
                                   >
                                     <input
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4885,20 +4647,24 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                               </tr>
                               <tr
                                 class="is-active"
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                                     data-role="checkbox"
                                   >
                                     <input
                                       checked=""
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -4922,46 +4688,7 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
                             </tbody>
                           </table>
                           <div
-                            style="position: absolute; width: 1px; white-space: nowrap; min-height: 100%; height: 6400px; top: 0px; visibility: hidden;"
-                          />
-                        </div>
-                        <div
-                          class="resize-sensor"
-                          style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-                        >
-                          
-  
-                          <div
-                            class="resize-sensor-expand"
-                            style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                          >
-                            
-    
-                            <div
-                              style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                            />
-                            
-  
-                          </div>
-                          
-  
-                          <div
-                            class="resize-sensor-shrink"
-                            style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                          >
-                            
-    
-                            <div
-                              style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                            />
-                            
-  
-                          </div>
-                          
-  
-                          <div
-                            class="resize-sensor-appear"
-                            style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
+                            style="position: absolute; width: 1px; white-space: nowrap; min-height: 100%; height: 7600px; top: 0px; visibility: hidden;"
                           />
                         </div>
                       </div>
@@ -5252,45 +4979,6 @@ exports[`Renderer:transfer table mode with virtual: result not virtual 1`] = `
         </button>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -5299,7 +4987,7 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -5308,7 +4996,7 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -5329,6 +5017,7 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="transfer"
           data-role="form-item"
         >
           <label
@@ -5336,7 +5025,7 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   分组
@@ -5382,14 +5071,18 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                             class="cxd-Table-checkCell"
                           >
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--partial cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                               data-role="checkbox"
                             >
                               <input
                                 checked=""
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -5431,20 +5124,24 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                             <tbody>
                               <tr
                                 class="is-active"
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                                     data-role="checkbox"
                                   >
                                     <input
                                       checked=""
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -5467,19 +5164,23 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                               </tr>
                               <tr
                                 class="is-active"
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                                     data-role="checkbox"
                                   >
                                     <input
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -5502,20 +5203,24 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                               </tr>
                               <tr
                                 class="is-active"
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm checked cxd-Checkbox--checkbox--default--checked"
                                     data-role="checkbox"
                                   >
                                     <input
                                       checked=""
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -5538,19 +5243,23 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                               </tr>
                               <tr
                                 class=""
-                                style="height: 32px;"
+                                style="height: 38px;"
                               >
                                 <td
                                   class="cxd-Table-checkCell"
                                 >
                                   <label
-                                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                     data-role="checkbox"
                                   >
                                     <input
                                       type="checkbox"
                                     />
-                                    <i />
+                                    <i>
+                                      <div
+                                        class="checkbox-icon icon"
+                                      />
+                                    </i>
                                     <span
                                       class=""
                                     />
@@ -5574,46 +5283,7 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                             </tbody>
                           </table>
                           <div
-                            style="position: absolute; width: 1px; white-space: nowrap; min-height: 100%; height: 6400px; top: 0px; visibility: hidden;"
-                          />
-                        </div>
-                        <div
-                          class="resize-sensor"
-                          style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-                        >
-                          
-  
-                          <div
-                            class="resize-sensor-expand"
-                            style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                          >
-                            
-    
-                            <div
-                              style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                            />
-                            
-  
-                          </div>
-                          
-  
-                          <div
-                            class="resize-sensor-shrink"
-                            style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                          >
-                            
-    
-                            <div
-                              style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                            />
-                            
-  
-                          </div>
-                          
-  
-                          <div
-                            class="resize-sensor-appear"
-                            style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
+                            style="position: absolute; width: 1px; white-space: nowrap; min-height: 100%; height: 7600px; top: 0px; visibility: hidden;"
                           />
                         </div>
                       </div>
@@ -5657,11 +5327,11 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                         style="overflow: auto; will-change: transform; height: 0px; width: 100%;"
                       >
                         <div
-                          style="position: relative; width: auto; white-space: nowrap; min-height: 100%; height: 352px;"
+                          style="position: relative; width: auto; white-space: nowrap; min-height: 100%; height: 418px;"
                         >
                           <div
                             class="cxd-Selections-item"
-                            style="position: absolute; top: 0px; left: 0px; width: 100%; height: 32px;"
+                            style="position: absolute; top: 0px; left: 0px; width: 100%; height: 38px;"
                           >
                             <label
                               class="cxd-Selections-label"
@@ -5685,7 +5355,7 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                           </div>
                           <div
                             class="cxd-Selections-item"
-                            style="position: absolute; top: 32px; left: 0px; width: 100%; height: 32px;"
+                            style="position: absolute; top: 38px; left: 0px; width: 100%; height: 38px;"
                           >
                             <label
                               class="cxd-Selections-label"
@@ -5709,7 +5379,7 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                           </div>
                           <div
                             class="cxd-Selections-item"
-                            style="position: absolute; top: 64px; left: 0px; width: 100%; height: 32px;"
+                            style="position: absolute; top: 76px; left: 0px; width: 100%; height: 38px;"
                           >
                             <label
                               class="cxd-Selections-label"
@@ -5733,7 +5403,7 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                           </div>
                           <div
                             class="cxd-Selections-item"
-                            style="position: absolute; top: 96px; left: 0px; width: 100%; height: 32px;"
+                            style="position: absolute; top: 114px; left: 0px; width: 100%; height: 38px;"
                           >
                             <label
                               class="cxd-Selections-label"
@@ -5756,45 +5426,6 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
                             </a>
                           </div>
                         </div>
-                      </div>
-                      <div
-                        class="resize-sensor"
-                        style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-                      >
-                        
-  
-                        <div
-                          class="resize-sensor-expand"
-                          style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                        >
-                          
-    
-                          <div
-                            style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                          />
-                          
-  
-                        </div>
-                        
-  
-                        <div
-                          class="resize-sensor-shrink"
-                          style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-                        >
-                          
-    
-                          <div
-                            style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                          />
-                          
-  
-                        </div>
-                        
-  
-                        <div
-                          class="resize-sensor-appear"
-                          style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-                        />
                       </div>
                     </div>
                   </div>
@@ -5821,45 +5452,6 @@ exports[`Renderer:transfer table mode with virtual: result virtual 1`] = `
         </button>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -5881,7 +5473,7 @@ exports[`Renderer:transfer tree 1`] = `
         >
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -5890,7 +5482,7 @@ exports[`Renderer:transfer tree 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -5911,6 +5503,7 @@ exports[`Renderer:transfer tree 1`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="transfer4"
                   data-role="form-item"
                 >
                   <label
@@ -5918,7 +5511,7 @@ exports[`Renderer:transfer tree 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           树型展示
@@ -5940,13 +5533,17 @@ exports[`Renderer:transfer tree 1`] = `
                         >
                           <span>
                             <label
-                              class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                              class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                               data-role="checkbox"
                             >
                               <input
                                 type="checkbox"
                               />
-                              <i />
+                              <i>
+                                <div
+                                  class="checkbox-icon icon"
+                                />
+                              </i>
                               <span
                                 class=""
                               />
@@ -5982,13 +5579,17 @@ exports[`Renderer:transfer tree 1`] = `
                                   />
                                 </div>
                                 <label
-                                  class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                  class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                   data-role="checkbox"
                                 >
                                   <input
                                     type="checkbox"
                                   />
-                                  <i />
+                                  <i>
+                                    <div
+                                      class="checkbox-icon icon"
+                                    />
+                                  </i>
                                   <span
                                     class=""
                                   />
@@ -6023,13 +5624,17 @@ exports[`Renderer:transfer tree 1`] = `
                                   class="cxd-Tree-itemArrowPlaceholder"
                                 />
                                 <label
-                                  class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                  class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                   data-role="checkbox"
                                 >
                                   <input
                                     type="checkbox"
                                   />
-                                  <i />
+                                  <i>
+                                    <div
+                                      class="checkbox-icon icon"
+                                    />
+                                  </i>
                                   <span
                                     class=""
                                   />
@@ -6069,13 +5674,17 @@ exports[`Renderer:transfer tree 1`] = `
                                   />
                                 </div>
                                 <label
-                                  class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                  class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                   data-role="checkbox"
                                 >
                                   <input
                                     type="checkbox"
                                   />
-                                  <i />
+                                  <i>
+                                    <div
+                                      class="checkbox-icon icon"
+                                    />
+                                  </i>
                                   <span
                                     class=""
                                   />
@@ -6110,13 +5719,17 @@ exports[`Renderer:transfer tree 1`] = `
                                   class="cxd-Tree-itemArrowPlaceholder"
                                 />
                                 <label
-                                  class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                  class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                   data-role="checkbox"
                                 >
                                   <input
                                     type="checkbox"
                                   />
-                                  <i />
+                                  <i>
+                                    <div
+                                      class="checkbox-icon icon"
+                                    />
+                                  </i>
                                   <span
                                     class=""
                                   />
@@ -6151,13 +5764,17 @@ exports[`Renderer:transfer tree 1`] = `
                                   class="cxd-Tree-itemArrowPlaceholder"
                                 />
                                 <label
-                                  class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                  class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                   data-role="checkbox"
                                 >
                                   <input
                                     type="checkbox"
                                   />
-                                  <i />
+                                  <i>
+                                    <div
+                                      class="checkbox-icon icon"
+                                    />
+                                  </i>
                                   <span
                                     class=""
                                   />
@@ -6197,13 +5814,17 @@ exports[`Renderer:transfer tree 1`] = `
                                   />
                                 </div>
                                 <label
-                                  class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                  class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                   data-role="checkbox"
                                 >
                                   <input
                                     type="checkbox"
                                   />
-                                  <i />
+                                  <i>
+                                    <div
+                                      class="checkbox-icon icon"
+                                    />
+                                  </i>
                                   <span
                                     class=""
                                   />
@@ -6238,13 +5859,17 @@ exports[`Renderer:transfer tree 1`] = `
                                   class="cxd-Tree-itemArrowPlaceholder"
                                 />
                                 <label
-                                  class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                  class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                   data-role="checkbox"
                                 >
                                   <input
                                     type="checkbox"
                                   />
-                                  <i />
+                                  <i>
+                                    <div
+                                      class="checkbox-icon icon"
+                                    />
+                                  </i>
                                   <span
                                     class=""
                                   />
@@ -6279,13 +5904,17 @@ exports[`Renderer:transfer tree 1`] = `
                                   class="cxd-Tree-itemArrowPlaceholder"
                                 />
                                 <label
-                                  class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                  class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                   data-role="checkbox"
                                 >
                                   <input
                                     type="checkbox"
                                   />
-                                  <i />
+                                  <i>
+                                    <div
+                                      class="checkbox-icon icon"
+                                    />
+                                  </i>
                                   <span
                                     class=""
                                   />
@@ -6320,13 +5949,17 @@ exports[`Renderer:transfer tree 1`] = `
                                   class="cxd-Tree-itemArrowPlaceholder"
                                 />
                                 <label
-                                  class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                                  class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                                   data-role="checkbox"
                                 >
                                   <input
                                     type="checkbox"
                                   />
-                                  <i />
+                                  <i>
+                                    <div
+                                      class="checkbox-icon icon"
+                                    />
+                                  </i>
                                   <span
                                     class=""
                                   />
@@ -6408,45 +6041,6 @@ exports[`Renderer:transfer tree 1`] = `
                 </button>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -6459,6 +6053,7 @@ exports[`Renderer:transfer with showInvalidMatch & unmatched do not add 1`] = `
 <div>
   <div
     class="cxd-Form-item cxd-Form-item--normal"
+    data-amis-name="transfer"
     data-role="form-item"
   >
     <label
@@ -6466,7 +6061,7 @@ exports[`Renderer:transfer with showInvalidMatch & unmatched do not add 1`] = `
     >
       <span>
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             默认
@@ -6488,13 +6083,17 @@ exports[`Renderer:transfer with showInvalidMatch & unmatched do not add 1`] = `
           >
             <span>
               <label
-                class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                 data-role="checkbox"
               >
                 <input
                   type="checkbox"
                 />
-                <i />
+                <i>
+                  <div
+                    class="checkbox-icon icon"
+                  />
+                </i>
                 <span
                   class=""
                 />
@@ -6525,13 +6124,17 @@ exports[`Renderer:transfer with showInvalidMatch & unmatched do not add 1`] = `
                     class="cxd-Tree-itemArrowPlaceholder"
                   />
                   <label
-                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                     data-role="checkbox"
                   >
                     <input
                       type="checkbox"
                     />
-                    <i />
+                    <i>
+                      <div
+                        class="checkbox-icon icon"
+                      />
+                    </i>
                     <span
                       class=""
                     />
@@ -6566,13 +6169,17 @@ exports[`Renderer:transfer with showInvalidMatch & unmatched do not add 1`] = `
                     class="cxd-Tree-itemArrowPlaceholder"
                   />
                   <label
-                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                     data-role="checkbox"
                   >
                     <input
                       type="checkbox"
                     />
-                    <i />
+                    <i>
+                      <div
+                        class="checkbox-icon icon"
+                      />
+                    </i>
                     <span
                       class=""
                     />
@@ -6607,13 +6214,17 @@ exports[`Renderer:transfer with showInvalidMatch & unmatched do not add 1`] = `
                     class="cxd-Tree-itemArrowPlaceholder"
                   />
                   <label
-                    class="cxd-Checkbox cxd-Checkbox--checkbox cxd-Checkbox--full cxd-Checkbox--sm"
+                    class="cxd-Checkbox cxd-Checkbox--checkbox--default cxd-Checkbox--sm"
                     data-role="checkbox"
                   >
                     <input
                       type="checkbox"
                     />
-                    <i />
+                    <i>
+                      <div
+                        class="checkbox-icon icon"
+                      />
+                    </i>
                     <span
                       class=""
                     />

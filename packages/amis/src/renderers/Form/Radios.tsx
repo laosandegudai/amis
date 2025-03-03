@@ -6,7 +6,12 @@ import {
   OptionsControlProps,
   Option,
   FormOptionsControl,
-  resolveEventData
+  resolveEventData,
+  TestIdBuilder,
+  getVariable,
+  setThemeClassName,
+  CustomStyle,
+  formateCheckThemeCss
 } from 'amis-core';
 import {autobind, isEmpty, createObject} from 'amis-core';
 import {ActionObject} from 'amis-core';
@@ -37,6 +42,7 @@ export interface RadiosProps extends OptionsControlProps {
   labelClassName?: string;
   /** 选项CSS类名 */
   optionClassName?: string;
+  testIdBuilder?: TestIdBuilder;
 }
 
 export default class RadiosControl extends React.Component<RadiosProps, any> {
@@ -45,13 +51,15 @@ export default class RadiosControl extends React.Component<RadiosProps, any> {
   };
 
   doAction(action: ActionObject, data: object, throwErrors: boolean) {
-    const {resetValue, onChange} = this.props;
+    const {resetValue, onChange, formStore, store, name} = this.props;
     const actionType = action?.actionType as string;
 
     if (actionType === 'clear') {
       onChange?.('');
     } else if (actionType === 'reset') {
-      onChange?.(resetValue ?? '');
+      const pristineVal =
+        getVariable(formStore?.pristine ?? store?.pristine, name) ?? resetValue;
+      onChange?.(pristineVal ?? '');
     }
   }
 
@@ -126,39 +134,156 @@ export default class RadiosControl extends React.Component<RadiosProps, any> {
       data,
       translate: __,
       optionType,
-      level
+      level,
+      testIdBuilder,
+      themeCss,
+      id,
+      env
     } = this.props;
 
+    const css = formateCheckThemeCss(themeCss, 'radios');
+
     return (
-      <Radios
-        inline={inline || formMode === 'inline'}
-        className={cx(`${ns}RadiosControl`, className)}
-        value={typeof value === 'undefined' || value === null ? '' : value}
-        disabled={disabled}
-        onChange={this.handleChange}
-        joinValues={joinValues}
-        extractValue={extractValue!}
-        delimiter={delimiter!}
-        /** 兼容一下错误的用法 */
-        labelClassName={optionClassName ?? labelClassName}
-        labelField={labelField}
-        valueField={valueField}
-        placeholder={__(placeholder)}
-        options={options}
-        renderLabel={this.renderLabel}
-        columnsCount={columnsCount}
-        classPrefix={classPrefix}
-        itemClassName={itemClassName}
-        optionType={optionType}
-        level={level}
-      />
+      <>
+        <Radios
+          inline={inline || formMode === 'inline'}
+          className={cx(
+            `${ns}RadiosControl`,
+            className,
+            setThemeClassName({
+              ...this.props,
+              name: [
+                'radiosControlClassName',
+                'radiosControlCheckedClassName',
+                'radiosClassName',
+                'radiosCheckedClassName',
+                'radiosCheckedInnerClassName',
+                'radiosShowClassName'
+              ],
+              id,
+              themeCss: css
+            })
+          )}
+          value={typeof value === 'undefined' || value === null ? '' : value}
+          disabled={disabled}
+          onChange={this.handleChange}
+          joinValues={joinValues}
+          extractValue={extractValue!}
+          delimiter={delimiter!}
+          /** 兼容一下错误的用法 */
+          labelClassName={optionClassName ?? labelClassName}
+          labelField={labelField}
+          valueField={valueField}
+          placeholder={__(placeholder)}
+          options={options}
+          renderLabel={this.renderLabel}
+          columnsCount={columnsCount}
+          classPrefix={classPrefix}
+          itemClassName={itemClassName}
+          optionType={optionType}
+          level={level}
+          testIdBuilder={testIdBuilder}
+        />
+        <CustomStyle
+          {...this.props}
+          config={{
+            themeCss: css,
+            classNames: [
+              {
+                key: 'radiosControlClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox:not(.checked):not(.disabled)`
+                  },
+                  hover: {
+                    suf: ` .${ns}Checkbox:not(.disabled):not(.checked)`
+                  },
+                  disabled: {
+                    inner: `.${ns}Checkbox.disabled:not(.checked)`
+                  }
+                }
+              },
+              {
+                key: 'radiosControlCheckedClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox.checked:not(.disabled)`
+                  },
+                  hover: {
+                    suf: ` .${ns}Checkbox.checked:not(.disabled)`
+                  },
+                  disabled: {
+                    inner: `.${ns}Checkbox.checked.disabled`
+                  }
+                }
+              },
+              {
+                key: 'radiosClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox:not(.checked):not(.disabled) > i`
+                  },
+                  hover: {
+                    suf: ` .${ns}Checkbox:not(.disabled):not(.checked)`,
+                    inner: '> i'
+                  },
+                  disabled: {
+                    inner: `.${ns}Checkbox.disabled:not(.checked) > i`
+                  }
+                }
+              },
+              {
+                key: 'radiosCheckedClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox:not(.disabled) > i`
+                  },
+                  hover: {
+                    suf: ` .${ns}Checkbox:not(.disabled)`,
+                    inner: '> i'
+                  },
+                  disabled: {
+                    inner: `.${ns}Checkbox.disabled > i`
+                  }
+                }
+              },
+              {
+                key: 'radiosCheckedInnerClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox:not(.disabled) > i .icon`
+                  },
+                  hover: {
+                    suf: ` .${ns}Checkbox:not(.disabled)`,
+                    inner: '> i .icon'
+                  },
+                  disabled: {
+                    inner: `.${ns}Checkbox.disabled > i:before`
+                  }
+                }
+              },
+              {
+                key: 'radiosShowClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox > i`
+                  }
+                }
+              }
+            ],
+            id: id
+          }}
+          env={env}
+        />
+      </>
     );
   }
 }
 
 @OptionsControl({
   type: 'radios',
-  sizeMutable: false
+  sizeMutable: false,
+  thin: true
 })
 export class RadiosControlRenderer extends RadiosControl {
   static defaultProps = {

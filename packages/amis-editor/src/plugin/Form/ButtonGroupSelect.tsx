@@ -1,16 +1,22 @@
-import {EditorNodeType, registerEditorPlugin} from 'amis-editor-core';
-import {BasePlugin, BaseEventContext} from 'amis-editor-core';
-
 import {
+  EditorManager,
+  EditorNodeType,
+  registerEditorPlugin,
+  BasePlugin,
+  BaseEventContext,
   RendererPluginAction,
   RendererPluginEvent,
-  tipedLabel
+  tipedLabel,
+  getSchemaTpl,
+  defaultValue
 } from 'amis-editor-core';
-import {getSchemaTpl, defaultValue} from 'amis-editor-core';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
-import {ValidatorTag} from '../../validator';
-import {resolveOptionType} from '../../util';
 import type {Schema} from 'amis';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../../renderer/event-control/helper';
+import {ValidatorTag} from '../../validator';
+import {resolveOptionEventDataSchame, resolveOptionType} from '../../util';
 
 export class ButtonGroupControlPlugin extends BasePlugin {
   static id = 'ButtonGroupControlPlugin';
@@ -65,23 +71,24 @@ export class ButtonGroupControlPlugin extends BasePlugin {
       eventName: 'change',
       eventLabel: '值变化',
       description: '选中值变化时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'string',
-                  title: '选中的值'
+      dataSchema: (manager: EditorManager) => {
+        const {value} = resolveOptionEventDataSchame(manager);
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     }
   ];
 
@@ -90,22 +97,26 @@ export class ButtonGroupControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除选中值'
+      description: '清除选中值',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '将值重置为resetValue，若没有配置resetValue，则清空'
+      description: '将值重置为初始值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'reload',
       actionLabel: '重新加载',
-      description: '触发组件数据刷新并重新渲染'
+      description: '触发组件数据刷新并重新渲染',
+      ...getActionCommonProps('reload')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -128,8 +139,7 @@ export class ButtonGroupControlPlugin extends BasePlugin {
                 getSchemaTpl('multiple'),
                 getSchemaTpl('valueFormula', {
                   rendererSchema: (schema: Schema) => schema,
-                  useSelectMode: true, // 改用 Select 设置模式
-                  visibleOn: 'this.options && this.options.length > 0'
+                  useSelectMode: true
                 }),
                 getSchemaTpl('description')
               ]
@@ -156,7 +166,7 @@ export class ButtonGroupControlPlugin extends BasePlugin {
                 getSchemaTpl('horizontal', {
                   label: '',
                   visibleOn:
-                    'data.mode == "horizontal" && data.label !== false && data.horizontal'
+                    'this.mode == "horizontal" && this.label !== false && this.horizontal'
                 }),
                 getSchemaTpl('switch', {
                   name: 'tiled',
@@ -165,7 +175,7 @@ export class ButtonGroupControlPlugin extends BasePlugin {
                     '使按钮宽度占满父容器，各按钮宽度自适应'
                   ),
                   pipeIn: defaultValue(false),
-                  visibleOn: 'data.mode !== "inline"'
+                  visibleOn: 'this.mode !== "inline"'
                 }),
                 getSchemaTpl('size'),
                 getSchemaTpl('buttonLevel', {
@@ -205,7 +215,7 @@ export class ButtonGroupControlPlugin extends BasePlugin {
   };
 
   buildDataSchemas(node: EditorNodeType, region: EditorNodeType) {
-    const type = resolveOptionType(node.schema?.options);
+    const type = resolveOptionType(node.schema);
     // todo:异步数据case
     let dataSchema: any = {
       type,

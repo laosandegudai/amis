@@ -13,7 +13,6 @@ import uniqBy from 'lodash/uniqBy';
 import isEqual from 'lodash/isEqual';
 import isPlainObject from 'lodash/isPlainObject';
 import get from 'lodash/get';
-import isNumber from 'lodash/isNumber';
 import {EvaluatorOptions, FilterContext, FilterMap, FunctionMap} from './types';
 import {FormulaEvalError} from './error';
 
@@ -26,14 +25,14 @@ export class Evaluator {
   contextStack: Array<(varname: string) => any> = [];
 
   static defaultFilters: FilterMap = {};
-  static setDefaultFilters(filters: FilterMap) {
+  static extendDefaultFilters(filters: FilterMap) {
     Evaluator.defaultFilters = {
       ...Evaluator.defaultFilters,
       ...filters
     };
   }
   static defaultFunctions: FunctionMap = {};
-  static setDefaultFunctions(funtions: FunctionMap) {
+  static extendDefaultFunctions(funtions: FunctionMap) {
     Evaluator.defaultFunctions = {
       ...Evaluator.defaultFunctions,
       ...funtions
@@ -150,15 +149,18 @@ export class Evaluator {
 
     // 只给简单的变量取值用法自动补fitler
     if (defaultFilter && ~['getter', 'variable'].indexOf(ast.body?.type)) {
-      ast.body = {
-        type: 'filter',
-        input: ast.body,
-        filters: [
-          {
-            name: defaultFilter.replace(/^\s*\|\s*/, ''),
-            args: []
-          }
-        ]
+      ast = {
+        ...ast,
+        body: {
+          type: 'filter',
+          input: ast.body,
+          filters: [
+            {
+              name: defaultFilter.replace(/^\s*\|\s*/, ''),
+              args: []
+            }
+          ]
+        }
       };
     }
 
@@ -214,10 +216,21 @@ export class Evaluator {
     return value ?? 0;
   }
 
+  // 判断是否是数字或者字符串数字
+  isValidValue(value: string | number) {
+    return (
+      typeof value === 'number' ||
+      (typeof value === 'string' && /^\d+(\.\d+)?$/.test(value as string))
+    );
+  }
+
   power(ast: {left: any; right: any}) {
     const left = this.evalute(ast.left);
     const right = this.evalute(ast.right);
-    return Math.pow(this.formatNumber(left), this.formatNumber(right));
+    if (!this.isValidValue(left) || !this.isValidValue(right)) {
+      return left;
+    }
+    return Math.pow(left, right);
   }
 
   multiply(ast: {left: any; right: any}) {
@@ -666,7 +679,7 @@ export class Evaluator {
   /**
    * 获取最大值，如果只有一个参数且是数组，则计算这个数组内的值。
    *
-   * @example MAX(num1, num2, ...numN)
+   * @example MAX(num1, num2, ...numN) or MAX([num1, num2, ...numN])
    * @param {...number} num - 数值
    * @namespace 数学函数
    *
@@ -683,7 +696,7 @@ export class Evaluator {
   /**
    * 获取最小值，如果只有一个参数且是数组，则计算这个数组内的值。
    *
-   * @example MIN(num1, num2, ...numN)
+   * @example MIN(num1, num2, ...numN) or MIN([num1, num2, ...numN])
    * @param {...number} num - 数值
    * @namespace 数学函数
    *
@@ -700,7 +713,7 @@ export class Evaluator {
   /**
    * 求和，如果只有一个参数且是数组，则计算这个数组内的值。
    *
-   * @example SUM(num1, num2, ...numN)
+   * @example SUM(num1, num2, ...numN) or SUM([num1, num2, ...numN])
    * @param {...number} num - 数值
    * @namespace 数学函数
    *
@@ -835,7 +848,7 @@ export class Evaluator {
   /**
    * 返回所有参数的平均值，如果只有一个参数且是数组，则计算这个数组内的值。
    *
-   * @example AVG(num1, num2, ...numN)
+   * @example AVG(num1, num2, ...numN) or AVG([num1, num2, ...numN])
    * @param {...number} num - 要处理的数字
    * @namespace 数学函数
    *
@@ -1040,11 +1053,11 @@ export class Evaluator {
    * @returns {number} 基数的指数次幂
    */
   fnPOW(base: number, exponent: number) {
-    if (!isNumber(base) || !isNumber(exponent)) {
+    if (!this.isValidValue(base) || !this.isValidValue(exponent)) {
       return base;
     }
 
-    return Math.pow(base, exponent);
+    return Math.pow(this.formatNumber(base), this.formatNumber(exponent));
   }
 
   // 文本函数
@@ -1097,6 +1110,9 @@ export class Evaluator {
    * @returns {number} 长度
    */
   fnLEN(text: string) {
+    if (text === undefined || text === null) {
+      return 0;
+    }
     text = this.normalizeText(text);
     return text?.length;
   }
@@ -1111,7 +1127,7 @@ export class Evaluator {
    * @returns {number[]} 长度集合
    */
   fnLENGTH(...args: any[]) {
-    return this.fnLEN.call(this, args);
+    return this.fnLEN.apply(this, args);
   }
 
   /**
@@ -1137,7 +1153,7 @@ export class Evaluator {
    * @returns {string} 连接后的文本
    */
   fnCONCATENATE(...args: Array<any>) {
-    return args.join('');
+    return args.map(this.normalizeText).join('');
   }
 
   /**
@@ -1365,7 +1381,7 @@ export class Evaluator {
    * @param {string} startString - 起始文本
    * @namespace 文本函数
    *
-   * @returns {string} 判断结果
+   * @returns {boolean} 判断结果
    */
   fnSTARTSWITH(text: string, search: string) {
     search = this.normalizeText(search);
@@ -1385,7 +1401,7 @@ export class Evaluator {
    * @param {string} endString - 结束文本
    * @namespace 文本函数
    *
-   * @returns {string} 判断结果
+   * @returns {boolean} 判断结果
    */
   fnENDSWITH(text: string, search: string) {
     search = this.normalizeText(search);
@@ -1405,7 +1421,7 @@ export class Evaluator {
    * @param {string} searchText - 搜索文本
    * @namespace 文本函数
    *
-   * @returns {string} 判断结果
+   * @returns {boolean} 判断结果
    */
   fnCONTAINS(text: string, search: string) {
     search = this.normalizeText(search);
@@ -1438,6 +1454,9 @@ export class Evaluator {
       return result;
     }
 
+    const shouldLoop = !(
+      typeof replace === 'string' && replace.includes(search)
+    );
     while (true) {
       const idx = result.indexOf(search);
 
@@ -1449,6 +1468,10 @@ export class Evaluator {
         result.substring(0, idx) +
         replace +
         result.substring(idx + search.length);
+
+      if (!shouldLoop) {
+        break;
+      }
     }
 
     return result;
@@ -1481,13 +1504,17 @@ export class Evaluator {
   /**
    * 返回文本字符串中从指定位置开始的特定数目的字符。
    *
+   * 示例：`MID("amis.baidu.com", 6, 3)`，
+   *
+   * 返回 `aid`。
+   *
    * @example MID(text, from, len)
    * @param {string} text - 要处理的文本
    * @param {number} from - 起始位置
    * @param {number} len - 处理长度
    * @namespace 文本函数
    *
-   * @returns {number} 命中的位置
+   * @returns {string} 命中的位置
    */
   fnMID(text: string, from: number, len: number) {
     text = this.normalizeText(text);
@@ -1501,7 +1528,7 @@ export class Evaluator {
    *
    * 示例：`/home/amis/a.json`，
    *
-   * 返回：a.json`。
+   * 返回：`a.json`。
    *
    * @example BASENAME(text)
    * @param {string} text - 要处理的文本
@@ -1512,6 +1539,21 @@ export class Evaluator {
   fnBASENAME(text: string) {
     text = this.normalizeText(text);
     return text.split(/[\\/]/).pop();
+  }
+
+  /**
+   * 生成UUID字符串
+   *
+   * @param {number} length - 生成的UUID字符串长度，默认为32位
+   * @example UUID()
+   * @example UUID(8)
+   * @namespace 文本函数
+   *
+   * @returns {string} 生成的UUID字符串
+   */
+  fnUUID(length: number = 36) {
+    const len = Math.min(Math.max(length, 0), 36);
+    return uuidv4().slice(0, len);
   }
 
   // 日期函数
@@ -1706,7 +1748,7 @@ export class Evaluator {
    * @param {date} date 日期对象
    * @param {string} unit 比如可以传入 'day'、'month'、'year' 或者 `week` 等等
    * @param {string} format 日期格式，可选
-   * @returns {date} 新的日期对象
+   * @returns {any} 新的日期对象, 如果传入 format 则返回格式化后的日期字符串
    */
   fnSTARTOF(date: Date, unit?: any, format?: string) {
     const md = moment(this.normalizeDate(date)).startOf(unit || 'day');
@@ -1721,7 +1763,7 @@ export class Evaluator {
    * @param {date} date 日期对象
    * @param {string} unit 比如可以传入 'day'、'month'、'year' 或者 `week` 等等
    * @param {string} format 日期格式，可选
-   * @returns {date} 新的日期对象
+   * @returns {any} 新的日期对象, 如果传入 format 则返回格式化后的日期字符串
    */
   fnENDOF(date: Date, unit?: any, format?: string) {
     const md = moment(this.normalizeDate(date)).endOf(unit || 'day');
@@ -2028,7 +2070,7 @@ export class Evaluator {
    * @param {Array<any>} arr 数组
    * @namespace 数组
    * @example COUNT(arr)
-   * @returns {boolean} 结果
+   * @returns {number} 结果
    */
   fnCOUNT(value: any) {
     return Array.isArray(value) ? value.length : value ? 1 : 0;
@@ -2037,11 +2079,17 @@ export class Evaluator {
   /**
    * 数组做数据转换，需要搭配箭头函数一起使用，注意箭头函数只支持单表达式用法。
    *
+   * 将数组中的每个元素转换成箭头函数返回的值。
+   *
+   * 示例：
+   *
+   * ARRAYMAP([1, 2, 3], item => item + 1) 得到 [2, 3, 4]。
+   *
    * @param {Array<any>} arr 数组
    * @param {Function<any>} iterator 箭头函数
    * @namespace 数组
    * @example ARRAYMAP(arr, item => item)
-   * @returns {boolean} 结果
+   * @returns {Array<any>} 返回转换后的数组
    */
   fnARRAYMAP(value: any, iterator: any) {
     if (!iterator || iterator.type !== 'anonymous_function') {
@@ -2057,11 +2105,15 @@ export class Evaluator {
    * 数据做数据过滤，需要搭配箭头函数一起使用，注意箭头函数只支持单表达式用法。
    * 将第二个箭头函数返回为 false 的成员过滤掉。
    *
+   * 示例：
+   *
+   * ARRAYFILTER([1, 2, 3], item => item > 1) 得到 [2, 3]。
+   *
    * @param {Array<any>} arr 数组
    * @param {Function<any>} iterator 箭头函数
    * @namespace 数组
    * @example ARRAYFILTER(arr, item => item)
-   * @returns {boolean} 结果
+   * @returns {Array<any>} 返回过滤后的数组
    */
   fnARRAYFILTER(value: any, iterator: any) {
     if (!iterator || iterator.type !== 'anonymous_function') {
@@ -2224,7 +2276,7 @@ export class Evaluator {
    * @param { String} separator 分隔符
    * @namespace 数组
    * @example JOIN(arr, string)
-   * @returns {String} 结果
+   * @returns {string} 结果
    */
   fnJOIN(arr: any[], separator = '') {
     if (Array.isArray(arr)) {
@@ -2258,7 +2310,7 @@ export class Evaluator {
    *
    * 示例：
    *
-   * UNIQ([{a: '1'}, {b: '2'}, {a: '1'}]， 'id')。
+   * UNIQ([{a: '1'}, {b: '2'}, {a: '1'}]) 得到 [{a: '1'}, {b: '2'}]。
    *
    * @param {Array<any>} arr 数组
    * @param {string} field 字段
@@ -2360,6 +2412,10 @@ export class Evaluator {
   }
 }
 
+// 兼容
+(Evaluator as any).setDefaultFilters = Evaluator.extendDefaultFilters;
+(Evaluator as any).setDefaultFunctions = Evaluator.extendDefaultFunctions;
+
 export function getCookie(name: string) {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
@@ -2413,4 +2469,26 @@ export function createObject(
   props && Object.keys(props).forEach(key => (obj[key] = props[key]));
 
   return obj;
+}
+
+export function createStr() {
+  return (
+    '00000000000000000' + (Math.random() * 0xffffffffffffffff).toString(16)
+  ).slice(-16);
+}
+
+export function uuidv4() {
+  const a = createStr();
+  const b = createStr();
+  return (
+    a.slice(0, 8) +
+    '-' +
+    a.slice(8, 12) +
+    '-4' +
+    a.slice(13) +
+    '-a' +
+    b.slice(1, 4) +
+    '-' +
+    b.slice(4)
+  );
 }

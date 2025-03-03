@@ -5,7 +5,10 @@ import {
   filter,
   isPureVariable,
   resolveVariableAndFilter,
-  createObject
+  createObject,
+  isEffectiveApi,
+  ApiObject,
+  autobind
 } from 'amis-core';
 import {RemoteOptionsProps, withRemoteConfig, Timeline} from 'amis-ui';
 
@@ -16,6 +19,17 @@ import type {
   SchemaTokenizeableString
 } from '../Schema';
 import type {IconCheckedSchema} from 'amis-ui';
+import {CardSchema} from './Card';
+
+type DotSize = 'sm' | 'md' | 'lg' | 'xl';
+
+enum DirectionMode {
+  left = 'left',
+  right = 'right',
+  top = 'top',
+  bottom = 'bottom',
+  alternate = 'alternate'
+}
 
 export interface TimelineItemSchema extends Omit<BaseSchema, 'type'> {
   /**
@@ -69,6 +83,19 @@ export interface TimelineItemSchema extends Omit<BaseSchema, 'type'> {
    * 节点详情的CSS类名（优先级高于统一配置的detailClassName）
    */
   detailClassName?: string;
+
+  // 节点大小，可选值为 sm md lg xl，默认为md
+  dotSize?: DotSize;
+
+  // 连线颜色，默认为空字符串（跟随主题色）
+  lineColor?: string;
+
+  // 隐藏当前节点的圆圈
+  hideDot?: boolean;
+  /**
+   * 卡片展示配置，如果传入则以卡片形式展示，传入对象转为卡片展示，传入的time、title、detail及相关属性将被忽略，只有连线配置和节点圆圈配置生效
+   */
+  cardSchema?: CardSchema;
 }
 
 export interface TimelineSchema extends BaseSchema {
@@ -90,7 +117,7 @@ export interface TimelineSchema extends BaseSchema {
   /**
    * 文字相对于时间轴展示方向
    */
-  mode?: 'left' | 'right' | 'alternate';
+  mode?: DirectionMode;
 
   /**
    * 展示方向
@@ -156,7 +183,8 @@ export function TimelineCmpt(props: TimelineProps) {
         title,
         timeClassName,
         titleClassName,
-        detailClassName
+        detailClassName,
+        cardSchema
       } = timelineItem;
 
       return {
@@ -172,7 +200,12 @@ export function TimelineCmpt(props: TimelineProps) {
           ? render(`${index}/body`, itemTitleSchema, {
               data: createObject(data, timelineItem)
             })
-          : resolveRender('title', title)
+          : resolveRender('title', title),
+        cardNode: cardSchema
+          ? render('card', cardSchema, {
+              data: createObject(data, cardSchema)
+            })
+          : undefined
       };
     }
   );
@@ -219,7 +252,37 @@ const TimelineWithRemoteConfig = withRemoteConfig({
   type: 'timeline'
 })
 export class TimelineRenderer extends React.Component<TimelineProps> {
+  remoteRef:
+    | {
+        loadConfig: (ctx?: any) => Promise<any> | void;
+        setConfig: (value: any) => void;
+        syncConfig: () => void;
+      }
+    | undefined = undefined;
+
+  @autobind
+  remoteConfigRef(ref: any) {
+    this.remoteRef = ref;
+  }
+
+  componentDidUpdate(prevProps: any) {
+    const {source, data} = this.props;
+    if (this.remoteRef && source !== prevProps.source) {
+      // 如果是变量，则同步配置。如果为api，则重新加载配置
+      (isPureVariable(source) && this.remoteRef.syncConfig()) ||
+        (isEffectiveApi(source, data)
+          ? (source as ApiObject).autoRefresh !== false &&
+            this.remoteRef.loadConfig()
+          : this.remoteRef.setConfig(undefined));
+    }
+  }
+
   render() {
-    return <TimelineWithRemoteConfig {...this.props} />;
+    return (
+      <TimelineWithRemoteConfig
+        {...this.props}
+        remoteConfigRef={this.remoteConfigRef}
+      />
+    );
   }
 }

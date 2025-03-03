@@ -1,6 +1,8 @@
-import {registerEditorPlugin} from 'amis-editor-core';
+import {RendererPluginAction, registerEditorPlugin} from 'amis-editor-core';
 import {BasePlugin} from 'amis-editor-core';
 import {defaultValue, getSchemaTpl} from 'amis-editor-core';
+import React from 'react';
+import {buildLinkActionDesc} from '../renderer/event-control';
 
 export class QRCodePlugin extends BasePlugin {
   static id = 'QRCodePlugin';
@@ -24,6 +26,22 @@ export class QRCodePlugin extends BasePlugin {
   previewSchema = {
     ...this.scaffold
   };
+
+  actions: RendererPluginAction[] = [
+    {
+      actionType: 'saveAs',
+      actionLabel: '下载',
+      description: '触发二维码下载',
+      descDetail: (info: any, context: any, props: any) => {
+        return (
+          <div className="action-desc">
+            下载二维码
+            {buildLinkActionDesc(props.manager, info)}
+          </div>
+        );
+      }
+    }
+  ];
 
   panelTitle = '二维码';
   panelBody = [

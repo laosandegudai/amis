@@ -1,9 +1,10 @@
 import React, {useEffect} from 'react';
 import {Modal, Button} from 'amis';
+import {FormControlProps, resolveVariableAndFilter} from 'amis-core';
 import cx from 'classnames';
-import FormulaEditor from 'amis-ui/lib/components/formula/Editor';
+import {FormulaEditor} from 'amis-ui';
 
-export interface FormulaPickerProps {
+export interface FormulaPickerProps extends FormControlProps {
   onConfirm: (data: string | undefined) => void;
   onClose: () => void;
   variables: any[];
@@ -15,6 +16,7 @@ export interface FormulaPickerProps {
    * 弹窗顶部标题，默认为 "表达式"
    */
   header: string;
+  simplifyMemberOprs?: boolean;
 }
 
 export interface CustomFormulaPickerProps extends FormulaPickerProps {
@@ -24,12 +26,17 @@ export interface CustomFormulaPickerProps extends FormulaPickerProps {
 const FormulaPicker: React.FC<FormulaPickerProps> = props => {
   const {variables, variableMode, evalMode = true} = props;
   const [formula, setFormula] = React.useState<string | undefined>(undefined);
+  const [header, setHeader] = React.useState<string>(props.header);
   useEffect(() => {
     const {initable, value} = props;
     if (initable) {
       setFormula(value);
     }
   }, [props.value]);
+
+  useEffect(() => {
+    setHeader(resolveVariableAndFilter(props.header, props.data));
+  }, [props.data]);
 
   const handleChange = (data: any) => {
     setFormula(data);
@@ -43,6 +50,9 @@ const FormulaPicker: React.FC<FormulaPickerProps> = props => {
     props.onConfirm && props.onConfirm(formula);
   };
 
+  // 自身字段
+  const selfName = props?.data?.name;
+
   return (
     <Modal
       className={cx('FormulaPicker-Modal')}
@@ -54,12 +64,13 @@ const FormulaPicker: React.FC<FormulaPickerProps> = props => {
       <Modal.Body>
         <FormulaEditor
           {...props}
-          header={props.header || '表达式'}
+          header={header || '表达式'}
           variables={variables}
           variableMode={variableMode}
           value={formula}
           evalMode={evalMode}
           onChange={handleChange}
+          selfVariableName={selfName}
         />
       </Modal.Body>
       <Modal.Footer>

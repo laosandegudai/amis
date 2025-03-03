@@ -121,6 +121,38 @@ order: 2
 }
 ```
 
+### 单一选项禁用
+
+如果需要禁用某个单独选项，让用户不可选。可以给`options`中某一项配置`disabled`属性为`true`。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "body": [
+        {
+            "label": "选项",
+            "type": "select",
+            "name": "select",
+            "options": [
+                {
+                    "label":"A",
+                    "value":"a",
+                    "disabled": true
+                },
+                {
+                    "label":"B",
+                    "value":"b"
+                },
+                {
+                    "label":"C",
+                    "value":"c"
+                }
+            ]
+        }
+    ]
+}
+```
+
 ## 静态选项组 options
 
 可以使用静态方式，配置一组选项组：
@@ -1558,6 +1590,16 @@ order: 2
 }
 ```
 
+**初始不填充**
+
+从 3.1.0 版本开始，表单初始化时，选项有值时也会执行「自动填充」逻辑，从版本 6.1.0 版本开始 可以通过 `initAutoFill` 配置成 `false` 来关闭。
+
+`initAutoFill` 有三种值分别如下，默认为 `fillIfNotSet`。
+
+- `fillIfNotSet` 如果目标值不存在则填充，如果目标值存在则不填充。
+- `true` 总是填充，如果目标值存在则覆盖。
+- `false` 总是不填充，如果目标值存在则不填充。
+
 ## 控制选项高度
 
 > 1.10.0 及以上版本
@@ -1593,6 +1635,7 @@ order: 2
 | multiple         | `boolean`                                                                         | `false`   | 是否支持多选                                                                 |
 | labelField       | `boolean`                                                                         | `"label"` | 标识选项中哪个字段是`label`值                                                |
 | valueField       | `boolean`                                                                         | `"value"` | 标识选项中哪个字段是`value`值                                                |
+| deferField       | `string`                                                                          | `"defer"` | 标识选项中哪个字段是`defer`值                                                |
 | joinValues       | `boolean`                                                                         | `true`    | 是否拼接`value`值                                                            |
 | extractValue     | `boolean`                                                                         | `false`   | 是否将`value`值抽取出来组成新的数组，只有在`joinValues`是`false`是生效       |
 | itemHeight       | `number`                                                                          | `32`      | 每个选项的高度，用于虚拟渲染                                                 |

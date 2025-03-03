@@ -1,17 +1,17 @@
 /**
  * @file input-excel 组件的素项目部
  */
-import {defaultValue, getSchemaTpl, valuePipeOut} from 'amis-editor-core';
-import {registerEditorPlugin} from 'amis-editor-core';
 import {
   BasePlugin,
   BaseEventContext,
-  BasicSubRenderInfo,
-  RendererEventContext,
-  SubRendererInfo
+  RendererPluginAction,
+  RendererPluginEvent,
+  defaultValue,
+  getSchemaTpl,
+  registerEditorPlugin
 } from 'amis-editor-core';
 import {formItemControl} from '../../component/BaseControl';
-import {RendererPluginAction, RendererPluginEvent} from 'amis-editor-core';
+import {getActionCommonProps} from '../../renderer/event-control/helper';
 
 export class ExcelControlPlugin extends BasePlugin {
   static id = 'ExcelControlPlugin';
@@ -44,6 +44,8 @@ export class ExcelControlPlugin extends BasePlugin {
     ]
   };
   panelTitle = '上传 Excel';
+
+  panelJustify = true;
 
   notRenderFormZone = true;
 
@@ -78,17 +80,20 @@ export class ExcelControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除选中值'
+      description: '清除选中值',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '将值重置为resetValue，若没有配置resetValue，则清空'
+      description: '将值重置为初始值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
   panelBodyCreator = (context: BaseEventContext) => {
@@ -123,7 +128,7 @@ export class ExcelControlPlugin extends BasePlugin {
             getSchemaTpl('switch', {
               name: 'includeEmpty',
               label: '是否包含空内容',
-              visibleOn: 'data.parseMode === "array"'
+              visibleOn: 'this.parseMode === "array"'
             })
           ]
         }

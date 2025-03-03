@@ -334,7 +334,8 @@ order: 67
 
 可以配置数字，用于设置列宽像素，例如下面例子我们给`Rendering engine`列宽设置为`100px`。
 
-> 如果希望精准的控制列宽，请设置表格的 `tableLayout` 为 `fixed` 模式，同时为了让表格标题不换行，标题文字的长短会影响列的最小宽度
+> - 如果希望精准的控制列宽，请设置表格的 `tableLayout` 为 `fixed` 模式，同时为了让表格标题不换行，标题文字的长短会影响列的最小宽度
+> - 注意：`resizable`开启后，固定宽度的列则无法拖动调整列宽
 
 ```schema: scope="body"
 {
@@ -350,6 +351,10 @@ order: 67
             "name": "engine",
             "label": "Rendering engine",
             "width": 150
+        },
+        {
+            "name": "browser",
+            "label": "Browser"
         }
     ]
 }
@@ -474,7 +479,7 @@ order: 67
 
 `classNameExpr` 可以根据数据动态添加 CSS 类，支持 [模板](../../docs/concepts/template) 语法。
 
-例如下例，`"<%= data.version > 5 ? "text-danger" : "" %>"` 表示当行数据的 `version` 数据大于 5 的时候添加 `text-danger` CSS 类名，使得文字颜色变红
+例如下例，`"${ version > 5 ? 'text-danger' : '' }"` 表示当行数据的 `version` 数据大于 5 的时候添加 `text-danger` CSS 类名，使得文字颜色变红
 
 ```schema: scope="body"
 {
@@ -493,7 +498,7 @@ order: 67
                 {
                     "name": "version",
                     "label": "Version",
-                    "classNameExpr": "<%= data.version > 5 ? 'text-danger' : '' %>",
+                    "classNameExpr": "${ version > 5 ? 'text-danger' : '' }",
                 },
                 {
                     "name": "grade",
@@ -1056,6 +1061,190 @@ popOver 的其它配置请参考 [popover](./popover)
 }
 ```
 
+## 显示序号
+
+通过配置 `showIndex` 为 true，开启展示序号。
+
+```schema: scope="body"
+{
+    "type": "service",
+    "data": {
+        "rows": [
+            {
+                "engine": "Trident",
+                "browser": "Internet Explorer 4.0",
+                "platform": "Win 95+",
+                "version": "4",
+                "grade": "X",
+                "id": 1,
+                "children": [
+                {
+                    "engine": "Trident",
+                    "browser": "Internet Explorer 4.0",
+                    "platform": "Win 95+",
+                    "version": "4",
+                    "grade": "X",
+                    "id": 1001
+                },
+                {
+                    "engine": "Trident",
+                    "browser": "Internet Explorer 5.0",
+                    "platform": "Win 95+",
+                    "version": "5",
+                    "grade": "C",
+                    "id": 1002
+                }
+                ]
+            },
+            {
+                "engine": "Trident",
+                "browser": "Internet Explorer 5.0",
+                "platform": "Win 95+",
+                "version": "5",
+                "grade": "C",
+                "id": 2,
+                "children": [
+                {
+                    "engine": "Trident",
+                    "browser": "Internet Explorer 4.0",
+                    "platform": "Win 95+",
+                    "version": "4",
+                    "grade": "X",
+                    "id": 2001
+                },
+                {
+                    "engine": "Trident",
+                    "browser": "Internet Explorer 5.0",
+                    "platform": "Win 95+",
+                    "version": "5",
+                    "grade": "C",
+                    "id": 2002
+                }
+                ]
+            },
+            {
+                "engine": "Trident",
+                "browser": "Internet Explorer 5.5",
+                "platform": "Win 95+",
+                "version": "5.5",
+                "grade": "A",
+                "id": 3,
+                "children": [
+                {
+                    "engine": "Trident",
+                    "browser": "Internet Explorer 4.0",
+                    "platform": "Win 95+",
+                    "version": "4",
+                    "grade": "X",
+                    "id": 3001
+                },
+                {
+                    "engine": "Trident",
+                    "browser": "Internet Explorer 5.0",
+                    "platform": "Win 95+",
+                    "version": "5",
+                    "grade": "C",
+                    "id": 3002
+                }
+                ]
+            },
+            {
+                "engine": "Trident",
+                "browser": "Internet Explorer 6",
+                "platform": "Win 98+",
+                "version": "6",
+                "grade": "A",
+                "id": 4,
+                "children": [
+                {
+                    "engine": "Trident",
+                    "browser": "Internet Explorer 4.0",
+                    "platform": "Win 95+",
+                    "version": "4",
+                    "grade": "X",
+                    "id": 4001
+                },
+                {
+                    "engine": "Trident",
+                    "browser": "Internet Explorer 5.0",
+                    "platform": "Win 95+",
+                    "version": "5",
+                    "grade": "C",
+                    "id": 4002
+                }
+                ]
+            },
+            {
+                "engine": "Trident",
+                "browser": "Internet Explorer 7",
+                "platform": "Win XP SP2+",
+                "version": "7",
+                "grade": "A",
+                "id": 5,
+                "children": [
+                {
+                    "engine": "Trident",
+                    "browser": "Internet Explorer 4.0",
+                    "platform": "Win 95+",
+                    "version": "4",
+                    "grade": "X",
+                    "id": 5001
+                },
+                {
+                    "engine": "Trident",
+                    "browser": "Internet Explorer 5.0",
+                    "platform": "Win 95+",
+                    "version": "5",
+                    "grade": "C",
+                    "id": 5002
+                }
+                ]
+            }
+        ]
+    },
+    "body": [
+        {
+            "type": "table",
+            "source": "$rows",
+            "className": "m-b-none",
+            "columnsTogglable": false,
+            "showIndex": true,
+            "columns": [
+                {
+                    "name": "engine",
+                    "label": "Engine"
+                },
+
+                {
+                    "name": "grade",
+                    "label": "Grade"
+                },
+
+                {
+                    "name": "version",
+                    "label": "Version"
+                },
+
+                {
+                    "name": "browser",
+                    "label": "Browser"
+                },
+
+                {
+                    "name": "id",
+                    "label": "ID"
+                },
+
+                {
+                    "name": "platform",
+                    "label": "Platform"
+                }
+            ]
+        }
+    ]
+}
+```
+
 ## 底部展示 (Footable)
 
 列太多时，内容没办法全部显示完，可以让部分信息在底部显示，可以让用户展开查看详情。配置很简单，只需要开启 `footable` 属性，同时将想在底部展示的列加个 `breakpoint` 属性为 `*` 即可。
@@ -1414,7 +1603,7 @@ popOver 的其它配置请参考 [popover](./popover)
 
 可以通过配置`rowClassNameExpr`来为行添加 CSS 类，支持 [模板](../../docs/concepts/template) 语法。
 
-例如下例，`"<%= data.id % 2 ? "bg-success" : "" %>"` 表示当行数据的 `id` 变量为 不能被 `2` 整除时，给当前行添加`bg-success` CSS 类名，即绿色背景色
+例如下例，`"${id % 2 ? "bg-success" : ""}"` 表示当行数据的 `id` 变量为 不能被 `2` 整除时，给当前行添加`bg-success` CSS 类名，即绿色背景色
 
 ```schema: scope="body"
 {
@@ -1424,7 +1613,7 @@ popOver 的其它配置请参考 [popover](./popover)
         {
             "type": "table",
             "source": "$rows",
-            "rowClassNameExpr": "<%= data.id % 2 ? 'bg-success' : 'bg-blue-50' %>",
+            "rowClassNameExpr": "${id % 2 ? 'bg-success' : 'bg-blue-50'}",
             "columns": [
                 {
                     "name": "engine",
@@ -1812,7 +2001,7 @@ popOver 的其它配置请参考 [popover](./popover)
 
 > 1.5.0 及以上版本
 
-通过 `autoFillHeight` 可以让表格内容区自适应高度，具体效果请看这个[示例](../../../examples/crud/auto-fill)。
+通过 `autoFillHeight` 可以让表格内容区自适应高度，具体效果请看这个[示例](../../examples/crud/auto-fill)。
 
 它的展现效果是整个内容区域高度自适应，表格内容较多时在内容区域内出滚动条，这样顶部筛选和底部翻页的位置都是固定的。
 
@@ -1820,67 +2009,75 @@ popOver 的其它配置请参考 [popover](./popover)
 
 ## 属性表
 
-| 属性名           | 类型                                                     | 默认值                    | 说明                                                                      | 版本                              |
-| ---------------- | -------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------- | --------------------------------- |
-| type             | `string`                                                 |                           | `"type"` 指定为 table 渲染器                                              |                                   |
-| title            | `string`                                                 |                           | 标题                                                                      |                                   |
-| source           | `string`                                                 | `${items}`                | 数据源, 绑定当前环境变量                                                  |                                   |
-| affixHeader      | `boolean`                                                | `true`                    | 是否固定表头                                                              |                                   |
-| columnsTogglable | `auto` 或者 `boolean`                                    | `auto`                    | 展示列显示开关, 自动即：列数量大于或等于 5 个时自动开启                   |                                   |
-| placeholder      | `string` 或者 `SchemaTpl`                                | `暂无数据`                | 当没数据的时候的文字提示                                                  |                                   |
-| className        | `string`                                                 | `panel-default`           | 外层 CSS 类名                                                             |                                   |
-| tableClassName   | `string`                                                 | `table-db table-striped`  | 表格 CSS 类名                                                             |                                   |
-| headerClassName  | `string`                                                 | `Action.md-table-header`  | 顶部外层 CSS 类名                                                         |                                   |
-| footerClassName  | `string`                                                 | `Action.md-table-footer`  | 底部外层 CSS 类名                                                         |                                   |
-| toolbarClassName | `string`                                                 | `Action.md-table-toolbar` | 工具栏 CSS 类名                                                           |                                   |
-| columns          | `Array<Column>`                                          |                           | 用来设置列信息                                                            |                                   |
-| combineNum       | `number`                                                 |                           | 自动合并单元格                                                            |                                   |
-| itemActions      | Array<[Action](./action-button)>                         |                           | 悬浮行操作按钮组                                                          |                                   |
-| itemCheckableOn  | [表达式](../../docs/concepts/expression)                 |                           | 配置当前行是否可勾选的条件，要用 [表达式](../../docs/concepts/expression) |                                   |
-| itemDraggableOn  | [表达式](../../docs/concepts/expression)                 |                           | 配置当前行是否可拖拽的条件，要用 [表达式](../../docs/concepts/expression) |                                   |
-| checkOnItemClick | `boolean`                                                | `false`                   | 点击数据行是否可以勾选当前行                                              |                                   |
-| rowClassName     | `string`                                                 |                           | 给行添加 CSS 类名                                                         |                                   |
-| rowClassNameExpr | [模板](../../docs/concepts/template)                     |                           | 通过模板给行添加 CSS 类名                                                 |                                   |
-| prefixRow        | `Array`                                                  |                           | 顶部总结行                                                                |                                   |
-| affixRow         | `Array`                                                  |                           | 底部总结行                                                                |                                   |
-| itemBadge        | [`BadgeSchema`](./badge)                                 |                           | 行角标配置                                                                |                                   |
-| autoFillHeight   | `boolean` 丨 `{height: number}` 丨 `{maxHeight: number}` |                           | 内容区域自适应高度，可选择自适应、固定高度和最大高度                      | `maxHeight` 需要 `2.8.0` 以上版本 |
-| resizable        | `boolean`                                                | `true`                    | 列宽度是否支持调整                                                        |                                   |
-| selectable       | `boolean`                                                | `false`                   | 支持勾选                                                                  |                                   |
-| multiple         | `boolean`                                                | `false`                   | 勾选 icon 是否为多选样式`checkbox`， 默认为`radio`                        |                                   |
-| lazyRenderAfter  | `number`                                                 | `100`                     | 用来控制从第几行开始懒渲染行，用来渲染大表格时有用                        |                                   |
-| tableLayout      | `auto` \| `fixed`                                        | `auto`                    | 当配置为 fixed 时，内容将不会撑开表格，自动换行                           |                                   |
+| 属性名           | 类型                                                     | 默认值                    | 说明                                                                                                                                                                                                   | 版本                              |
+| ---------------- | -------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- |
+| type             | `string`                                                 |                           | `"type"` 指定为 table 渲染器                                                                                                                                                                           |                                   |
+| title            | `string`                                                 |                           | 标题                                                                                                                                                                                                   |                                   |
+| source           | `string`                                                 | `${items}`                | 数据源, 绑定当前环境变量                                                                                                                                                                               |                                   |
+| deferApi         | [API](../../docs/types/api)                              |                           | 当行数据中有 defer 属性时，用此接口进一步加载内容                                                                                                                                                      |
+| affixHeader      | `boolean`                                                | `true`                    | 是否固定表头                                                                                                                                                                                           |                                   |
+| affixFooter      | `boolean`                                                | `false`                   | 是否固定表格底部工具栏                                                                                                                                                                                 |                                   |
+| columnsTogglable | `auto` 或者 `boolean`                                    | `auto`                    | 展示列显示开关, 自动即：列数量大于或等于 5 个时自动开启                                                                                                                                                |                                   |
+| placeholder      | `string` 或者 `SchemaTpl`                                | `暂无数据`                | 当没数据的时候的文字提示                                                                                                                                                                               |                                   |
+| className        | `string`                                                 | `panel-default`           | 外层 CSS 类名                                                                                                                                                                                          |                                   |
+| showIndex        | `boolean`                                                |                           | 是否展示序号                                                                                                                                                                                           | 6.11.0                            |
+| tableClassName   | `string`                                                 | `table-db table-striped`  | 表格 CSS 类名                                                                                                                                                                                          |                                   |
+| headerClassName  | `string`                                                 | `Action.md-table-header`  | 顶部外层 CSS 类名                                                                                                                                                                                      |                                   |
+| footerClassName  | `string`                                                 | `Action.md-table-footer`  | 底部外层 CSS 类名                                                                                                                                                                                      |                                   |
+| toolbarClassName | `string`                                                 | `Action.md-table-toolbar` | 工具栏 CSS 类名                                                                                                                                                                                        |                                   |
+| columns          | `Array<Column>`                                          |                           | 用来设置列信息                                                                                                                                                                                         |                                   |
+| combineNum       | `number`                                                 |                           | 自动合并单元格                                                                                                                                                                                         |                                   |
+| itemActions      | Array<[Action](./action-button)>                         |                           | 悬浮行操作按钮组                                                                                                                                                                                       |                                   |
+| itemCheckableOn  | [表达式](../../docs/concepts/expression)                 |                           | 配置当前行是否可勾选的条件，要用 [表达式](../../docs/concepts/expression)                                                                                                                              |                                   |
+| itemDraggableOn  | [表达式](../../docs/concepts/expression)                 |                           | 配置当前行是否可拖拽的条件，要用 [表达式](../../docs/concepts/expression)                                                                                                                              |                                   |
+| checkOnItemClick | `boolean`                                                | `false`                   | 点击数据行是否可以勾选当前行                                                                                                                                                                           |                                   |
+| rowClassName     | `string`                                                 |                           | 给行添加 CSS 类名                                                                                                                                                                                      |                                   |
+| rowClassNameExpr | [模板](../../docs/concepts/template)                     |                           | 通过模板给行添加 CSS 类名                                                                                                                                                                              |                                   |
+| prefixRow        | `Array`                                                  |                           | 顶部总结行                                                                                                                                                                                             |                                   |
+| affixRow         | `Array`                                                  |                           | 底部总结行                                                                                                                                                                                             |                                   |
+| itemBadge        | [`BadgeSchema`](./badge)                                 |                           | 行角标配置                                                                                                                                                                                             |                                   |
+| autoFillHeight   | `boolean` 丨 `{height: number}` 丨 `{maxHeight: number}` |                           | 内容区域自适应高度，可选择自适应、固定高度和最大高度                                                                                                                                                   | `maxHeight` 需要 `2.8.0` 以上版本 |
+| resizable        | `boolean`                                                | `true`                    | 列宽度是否支持调整                                                                                                                                                                                     |                                   |
+| selectable       | `boolean`                                                | `false`                   | 支持勾选                                                                                                                                                                                               |                                   |
+| multiple         | `boolean`                                                | `false`                   | 勾选 icon 是否为多选样式`checkbox`， 默认为`radio`                                                                                                                                                     |                                   |
+| lazyRenderAfter  | `number`                                                 | `100`                     | 用来控制从第几行开始懒渲染行，用来渲染大表格时有用                                                                                                                                                     |                                   |
+| tableLayout      | `auto` \| `fixed`                                        | `auto`                    | 当配置为 fixed 时，内容将不会撑开表格，自动换行                                                                                                                                                        |                                   |
+| reUseRow         | `false` \| `match`                                       |                           | 默认，当 API 返回数据与当前一致时，不会触发表格行重渲染（省性能但可能导致数据渲染不同步）；为 false，则总会触发重渲染；为 match，尽量复用返回数据中 id 一致的对象，性能可认为是默认和 false 两者的折中 |                                   |
 
 ### 列配置属性表
 
-| 属性名     | 类型                                          | 默认值 | 说明                     | 版本    |
-| ---------- | --------------------------------------------- | ------ | ------------------------ | ------- |
-| label      | [模板](../../docs/concepts/template)          |        | 表头文本内容             |         |
-| name       | `string`                                      |        | 通过名称关联数据         |         |
-| width      | `number` \| `string`                          |        | 列宽                     |         |
-| remark     |                                               |        | 提示信息                 |         |
-| fixed      | `left` \| `right` \| `none`                   |        | 是否固定当前列           |         |
-| popOver    |                                               |        | 弹出框                   |         |
-| copyable   | `boolean` 或 `{icon: string, content:string}` |        | 是否可复制               |         |
-| style      | `object`                                      |        | 单元格自定义样式         |         |
-| innerStyle | `object`                                      |        | 单元格内部组件自定义样式 | `2.8.1` |
+| 属性名       | 类型                                          | 默认值    | 说明                                                                                                           | 版本     |
+| ------------ | --------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------- | -------- |
+| label        | [模板](../../docs/concepts/template)          |           | 表头文本内容                                                                                                   |          |
+| name         | `string`                                      |           | 通过名称关联数据                                                                                               |          |
+| width        | `number` \| `string`                          |           | 列宽                                                                                                           |          |
+| remark       |                                               |           | 提示信息                                                                                                       |          |
+| fixed        | `left` \| `right` \| `none`                   |           | 是否固定当前列                                                                                                 |          |
+| popOver      |                                               |           | 弹出框                                                                                                         |          |
+| copyable     | `boolean` 或 `{icon: string, content:string}` |           | 是否可复制                                                                                                     |          |
+| style        | `object`                                      |           | 单元格自定义样式                                                                                               |          |
+| innerStyle   | `object`                                      |           | 单元格内部组件自定义样式                                                                                       | `2.8.1`  |
+| align        | `left` \| `right` \| `center` \| `justify`    |           | 单元格对齐方式                                                                                                 | ` 1.4.0` |
+| headerAlign  | `left` \| `right` \| `center` \| `justify`    |           | 表头单元格对齐方式                                                                                             | `6.7.0`  |
+| vAlign       | `top` \| `middle` \| `bottom`                 |           | 单元格垂直对齐方式                                                                                             | `6.7.0`  |
+| textOverflow | `string`                                      | `default` | 文本溢出后展示形式，默认换行处理。可选值 `ellipsis` 溢出隐藏展示， `noWrap` 不换行展示(仅在列为静态文本时生效) | `6.10.0` |
 
 ## 事件表
 
 当前组件会对外派发以下事件，可以通过`onEvent`来监听这些事件，并通过`actions`来配置执行的动作，在`actions`中可以通过`${事件参数名}`或`${event.data.[事件参数名]}`来获取事件产生的数据，详细查看[事件动作](../../docs/concepts/event-action)。
 
-| 事件名称       | 事件参数                                                                | 说明                 |
-| -------------- | ----------------------------------------------------------------------- | -------------------- |
-| selectedChange | `selectedItems: item[]` 已选择行<br/>`unSelectedItems: item[]` 未选择行 | 手动选择表格项时触发 |
-| columnSort     | `orderBy: string` 列排序列名<br/>`orderDir: string` 列排序值            | 点击列排序时触发     |
-| columnFilter   | `filterName: string` 列筛选列名<br/>`filterValue: string` 列筛选值      | 点击列筛选时触发     |
-| columnSearch   | `searchName: string` 列搜索列名<br/>`searchValue: string` 列搜索数据    | 点击列搜索时触发     |
-| orderChange    | `movedItems: item[]` 已排序数据                                         | 手动拖拽行排序时触发 |
-| columnToggled  | `columns: item[]` 当前显示的列配置数据                                  | 点击自定义列时触发   |
-| rowClick       | `item: object` 行点击数据<br/>`index: number` 行索引                    | 单击整行时触发       |
-| rowDbClick     | `item: object` 行点击数据<br/>`index: number` 行索引                    | 双击整行时触发       |
-| rowMouseEnter  | `item: object` 行移入数据<br/>`index: number` 行索引                    | 移入整行时触发       |
-| rowMouseLeave  | `item: object` 行移出数据<br/>`index: number` 行索引                    | 移出整行时触发       |
+| 事件名称       | 事件参数                                                                                                             | 说明                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| selectedChange | `selectedItems: item[]` 已选择行<br/>`selectedIndexes: string[]` 已选择行索引<br/>`unSelectedItems: item[]` 未选择行 | 手动选择表格项时触发 |
+| columnSort     | `orderBy: string` 列排序列名<br/>`orderDir: string` 列排序值                                                         | 点击列排序时触发     |
+| columnFilter   | `filterName: string` 列筛选列名<br/>`filterValue: string` 列筛选值                                                   | 点击列筛选时触发     |
+| columnSearch   | `searchName: string` 列搜索列名<br/>`searchValue: string` 列搜索数据                                                 | 点击列搜索时触发     |
+| orderChange    | `movedItems: item[]` 已排序数据                                                                                      | 手动拖拽行排序时触发 |
+| columnToggled  | `columns: item[]` 当前显示的列配置数据                                                                               | 点击自定义列时触发   |
+| rowClick       | `item: object` 行点击数据<br/>`index: number` 行索引 <br />`indexPath: string` 行索引路径                            | 单击整行时触发       |
+| rowDbClick     | `item: object` 行点击数据<br/>`index: number` 行索引 <br />`indexPath: string` 行索引路径                            | 双击整行时触发       |
+| rowMouseEnter  | `item: object` 行移入数据<br/>`index: number` 行索引 <br />`indexPath: string` 行索引路径                            | 移入整行时触发       |
+| rowMouseLeave  | `item: object` 行移出数据<br/>`index: number` 行索引 <br />`indexPath: string` 行索引路径                            | 移出整行时触发       |
 
 ### selectedChange
 
@@ -2271,6 +2468,7 @@ popOver 的其它配置请参考 [popover](./popover)
         {
             "type": "table",
             "source": "$rows",
+            "selectable": true,
             "onEvent": {
                 "rowClick": {
                     "actions": [
@@ -2279,6 +2477,70 @@ popOver 的其它配置请参考 [popover](./popover)
                             "args": {
                                 "msgType": "info",
                                 "msg": "行单击数据：${event.data.item|json}；行索引：${event.data.index}"
+                            }
+                        }
+                    ]
+                }
+            },
+            "columns": [
+                {
+                    "name": "id",
+                    "label": "ID",
+                    "searchable": true
+                },
+                {
+                    "name": "engine",
+                    "label": "Rendering engine",
+                    "filterable": {
+                        "options": [
+                            "Internet Explorer 4.0",
+                            "Internet Explorer 5.0"
+                        ]
+                    }
+                },
+                {
+                    "name": "browser",
+                    "label": "Browser",
+                    "sortable": true
+                },
+                {
+                    "name": "platform",
+                    "label": "Platform(s)"
+                },
+                {
+                    "name": "version",
+                    "label": "Engine version"
+                },
+                {
+                    "name": "grade",
+                    "label": "CSS grade"
+                }
+            ]
+        }
+    ]
+}
+```
+
+### rowDbClick
+
+双击整行时触发。
+
+```schema: scope="body"
+{
+    "type": "service",
+    "api": "/api/mock2/sample?perPage=10",
+    "body": [
+        {
+            "type": "table",
+            "source": "$rows",
+            "onEvent": {
+                "rowDbClick": {
+                    "actions": [
+                        {
+                            "actionType": "toast",
+                            "args": {
+                                "msgType": "info",
+                                "msg": "行双击数据：${event.data.item|json}；行索引：${event.data.index}"
                             }
                         }
                     ]
@@ -2551,13 +2813,17 @@ popOver 的其它配置请参考 [popover](./popover)
 
 当前组件对外暴露以下特性动作，其他组件可以通过指定`actionType: 动作名称`、`componentId: 该组件id`来触发这些动作，动作配置可以通过`args: {动作配置项名称: xxx}`来配置具体的参数，详细请查看[事件动作](../../docs/concepts/event-action#触发其他组件的动作)。
 
-| 动作名称  | 动作配置                                                                                                         | 说明                 |
-| --------- | ---------------------------------------------------------------------------------------------------------------- | -------------------- |
-| select    | `selected: string` 条件表达式，表达式中可以访问变量`record:行数据`和`rowIndex:行索引`，例如: data.rowIndex === 1 | 设置表格的选中项     |
-| selectAll | -                                                                                                                | 设置表格全部项选中   |
-| clearAll  | -                                                                                                                | 清空表格所有选中项   |
-| initDrag  | -                                                                                                                | 开启表格拖拽排序功能 |
-| setValue  | `value: object`                                                                                                  | 更新列表记录         |
+| 动作名称        | 动作配置                                                                                                                                                                                                                                                                                                                                                                                                | 说明                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| select          | `args.selected`: string 条件表达式，**不推荐，建议用 `args.index` 或者 `args.condition`** 表达式中可以访问变量`record:行数据`和`rowIndex:行索引`，例如: data.rowIndex === 1 <br /> `args.index` 可选，指定行数，支持表达式，支持树形路径（当为树形表格的时候使用）表达式上下文为对应行数据，跟 `args.select` 的上下文不同。 <br /> `args.condition` 可选，通过表达式指定更新哪些行，支持条件组合 index` | 设置表格的选中项           |
+| selectAll       | -                                                                                                                                                                                                                                                                                                                                                                                                       | 设置表格全部项选中         |
+| clearAll        | -                                                                                                                                                                                                                                                                                                                                                                                                       | 清空表格所有选中项         |
+| initDrag        | -                                                                                                                                                                                                                                                                                                                                                                                                       | 开启表格拖拽排序功能       |
+| cancelDrag      | -                                                                                                                                                                                                                                                                                                                                                                                                       | 放弃表格拖拽排序功能       |
+| setValue        | `args.value`: object <br />`args.index` 可选，指定行数，支持表达式，支持树形路径（当为树形表格的时候使用） <br /> `args.condition` 可选，通过表达式指定更新哪些行，支持条件组合                                                                                                                                                                                                                         | 更新列表记录               |
+| submitQuickEdit |                                                                                                                                                                                                                                                                                                                                                                                                         | 快速编辑数据提交           |
+| toggleExpanded  | `args.index` 可选，指定行数，支持表达式，支持树形路径（当为树形表格的时候使用） <br /> `args.condition` 可选，通过表达式指定更新哪些行，支持条件组合                                                                                                                                                                                                                                                    | 切换某行数据是展开还是收起 |
+| setExpanded     | `args.index` 可选，指定行数，支持表达式，支持树形路径（当为树形表格的时候使用） <br /> `args.condition` 可选，通过表达式指定更新哪些行，支持条件组合 <br /> `args.value` 展开还是收起                                                                                                                                                                                                                   | 设置某行数据展开还是收起   |
 
 value 结构说明：
 
@@ -2566,6 +2832,14 @@ value 结构说明：
 | items 或 rows | `item[]` |        | 列表记录 |
 
 ### select
+
+> 6.3.0 或更高版本
+
+- `args.index` 可选，指定行数，支持表达式，支持树形路径（当为树形表格的时候使用）
+- `args.condition` 可选，通过表达式指定更新哪些行，支持条件组合
+- `args.selected` 不推荐使用，请使用以上两者替代
+
+> 注意 6.3.0 版本开始用法变动，通过 `args.index` 和 `args.condition` 来代替 `args.selected`, 同时表达式上下文为对应行数据，跟 `args.select` 的上下文不同。
 
 ```schema: scope="body"
 [
@@ -2577,16 +2851,15 @@ value 结构说明：
         "name": "trigger1",
         "id": "trigger1",
         "type": "action",
-        "label": "设置表格第一项选中",
+        "label": "选中前两个",
         "onEvent": {
         "click": {
             "actions": [
             {
                 "actionType": "select",
                 "componentId": "table-select",
-                "description": "点击设置指定表格第一项内容选中",
                 "args": {
-                "selected": "data.rowIndex === 0"
+                    "index": "0,1"
                 }
             }
             ]
@@ -2739,7 +3012,7 @@ value 结构说明：
 ]
 ```
 
-### initDrag
+### initDrag & cancelDrag
 
 ```schema: scope="body"
 [
@@ -2763,6 +3036,23 @@ value 结构说明：
             ]
         }
         }
+    },
+    {
+        "name": "trigger5",
+        "id": "trigger5",
+        "type": "action",
+        "label": "取消表格行排序",
+        "onEvent": {
+        "click": {
+            "actions": [
+            {
+                "actionType": "cancelDrag",
+                "componentId": "table-select",
+                "description": "点击取消表格行排序功能"
+            }
+            ]
+        }
+        }
     }
     ]
 },
@@ -2774,8 +3064,6 @@ value 结构说明：
         "id": "table-select",
         "type": "table",
         "source": "$rows",
-        "selectable": true,
-        "multiple": true,
         "columns": [
         {
             "name": "id",
@@ -2887,9 +3175,7 @@ value 结构说明：
               "inline": true,
               "tpl": "v${version}"
             }
-          ],
-          "selectable": true,
-          "multiple": true
+          ]
         }
       ]
     }
@@ -3046,9 +3332,7 @@ value 结构说明：
               "inline": true,
               "tpl": "${version}"
             }
-          ],
-          "selectable": true,
-          "multiple": true
+          ]
         }
       ]
     }

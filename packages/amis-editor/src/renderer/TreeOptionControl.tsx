@@ -60,8 +60,9 @@ export default class TreeOptionControl extends React.Component<
 
   constructor(props: OptionControlProps) {
     super(props);
-    const {source, labelField, valueField, showIconField, iconField} =
-      props.data || {};
+    const {source, labelField, valueField, showIconField, iconField} = {
+      ...props.data
+    } as any;
     this.state = {
       options: this.transformOptions(props),
       api: source,
@@ -589,7 +590,7 @@ export default class TreeOptionControl extends React.Component<
         label: '接口',
         name: 'source',
         className: 'ae-ExtendMore',
-        visibleOn: 'data.autoComplete !== false',
+        visibleOn: 'this.autoComplete !== false',
         value: api,
         onChange: this.handleAPIChange,
         sourceType: source,

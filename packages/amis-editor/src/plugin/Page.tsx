@@ -6,12 +6,17 @@ import {
   getSchemaTpl,
   defaultValue
 } from 'amis-editor-core';
-import {getEventControlConfig} from '../renderer/event-control/helper';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../renderer/event-control/helper';
 import {RendererPluginAction, RendererPluginEvent} from 'amis-editor-core';
 import type {SchemaObject} from 'amis';
 import {tipedLabel} from 'amis-editor-core';
 import {jsonToJsonSchema, EditorNodeType} from 'amis-editor-core';
 import omit from 'lodash/omit';
+import {generateId} from '../util';
+import {InlineEditableElement} from 'amis-editor-core';
 
 export class PagePlugin extends BasePlugin {
   static id = 'PagePlugin';
@@ -36,7 +41,8 @@ export class PagePlugin extends BasePlugin {
     body: [
       {
         type: 'tpl',
-        tpl: '内容'
+        tpl: '内容',
+        id: generateId()
       }
     ]
   };
@@ -110,12 +116,14 @@ export class PagePlugin extends BasePlugin {
     {
       actionType: 'reload',
       actionLabel: '重新加载',
-      description: '触发组件数据刷新并重新渲染'
+      description: '触发组件数据刷新并重新渲染',
+      ...getActionCommonProps('reload')
     },
     {
       actionType: 'setValue',
       actionLabel: '变量赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -125,6 +133,19 @@ export class PagePlugin extends BasePlugin {
     {key: 'aside', label: '边栏', placeholder: '边栏内容'},
     {key: 'body', label: '内容区', placeholder: '页面内容'}
   ];
+
+  // 定义可以内联编辑的元素
+  inlineEditableElements: Array<InlineEditableElement> = [
+    {
+      match: '.cxd-Page-title',
+      key: 'title'
+    },
+    {
+      match: '.cxd-Page-subTitle',
+      key: 'subTitle'
+    }
+  ];
+
   wrapper = ContainerWrapper;
 
   panelTitle = '页面';
@@ -180,14 +201,14 @@ export class PagePlugin extends BasePlugin {
                   getSchemaTpl('remark', {
                     label: '标题提示',
                     hiddenOn:
-                      'data.regions && !data.regions.includes("header") || !data.title'
+                      'this.regions && !this.regions.includes("header") || !this.title'
                   }),
                   {
                     type: 'ae-Switch-More',
                     name: 'asideResizor',
                     mode: 'normal',
                     label: '边栏宽度可调节',
-                    hiddenOn: 'data.regions && !data.regions.includes("aside")',
+                    hiddenOn: 'this.regions && !this.regions.includes("aside")',
                     value: false,
                     hiddenOnDefault: true,
                     formType: 'extend',
@@ -221,20 +242,32 @@ export class PagePlugin extends BasePlugin {
                     name: 'asideSticky',
                     inputClassName: 'is-inline',
                     pipeIn: defaultValue(true),
-                    hiddenOn: 'data.regions && !data.regions.includes("aside")'
+                    hiddenOn: 'this.regions && !this.regions.includes("aside")'
+                  },
+                  {
+                    type: 'button-group-select',
+                    name: 'asidePosition',
+                    size: 'sm',
+                    label: '边栏位置',
+                    pipeIn: defaultValue('left'),
+                    options: [
+                      {
+                        label: '左',
+                        value: 'left'
+                      },
+                      {
+                        label: '右',
+                        value: 'right'
+                      }
+                    ],
+                    hiddenOn: 'this.regions && !this.regions.includes("aside")'
                   }
                 ]
               },
               {
                 title: '数据',
                 body: [
-                  // page组件下掉组件静态数据配置项，可通过页面变量来定义页面中的变量
-                  // getSchemaTpl('combo-container', {
-                  //   type: 'input-kv',
-                  //   mode: 'normal',
-                  //   name: 'data',
-                  //   label: '组件静态数据'
-                  // }),
+                  getSchemaTpl('pageData'),
                   getSchemaTpl('apiControl', {
                     name: 'initApi',
                     mode: 'row',
@@ -294,14 +327,14 @@ export class PagePlugin extends BasePlugin {
           body: [
             getSchemaTpl('collapseGroup', [
               ...getSchemaTpl('theme:common', {
-                exclude: ['layout'],
+                exclude: ['layout', 'theme-css-code'],
                 classname: 'baseControlClassName',
                 baseTitle: '基本样式',
                 extra: [
                   getSchemaTpl('theme:base', {
                     classname: 'bodyControlClassName',
                     title: '内容区样式',
-                    hiddenOn: 'data.regions && !data.regions.includes("body")'
+                    hiddenOn: 'this.regions && !this.regions.includes("body")'
                   }),
                   getSchemaTpl('theme:base', {
                     classname: 'headerControlClassName',
@@ -312,19 +345,44 @@ export class PagePlugin extends BasePlugin {
                         name: 'themeCss.titleControlClassName.font'
                       })
                     ],
-                    hiddenOn: 'data.regions && !data.regions.includes("header")'
+                    hiddenOn: 'this.regions && !this.regions.includes("header")'
                   }),
                   getSchemaTpl('theme:base', {
                     classname: 'toolbarControlClassName',
                     title: '工具栏样式',
                     hiddenOn:
-                      'data.regions && !data.regions.includes("toolbar")'
+                      'this.regions && !this.regions.includes("toolbar")'
                   }),
                   getSchemaTpl('theme:base', {
                     classname: 'asideControlClassName',
                     title: '边栏样式',
-                    hiddenOn: 'data.regions && !data.regions.includes("aside")'
+                    hiddenOn: 'this.regions && !this.regions.includes("aside")'
                   })
+                ]
+              }),
+              getSchemaTpl('theme:singleCssCode', {
+                selectors: [
+                  {
+                    label: '页面基本样式',
+                    isRoot: true,
+                    selector: '.cxd-Page'
+                  },
+                  {
+                    label: '页面内容区样式',
+                    selector: '.cxd-Page-body'
+                  },
+                  {
+                    label: '页面标题栏样式',
+                    selector: '.cxd-Page-title'
+                  },
+                  {
+                    label: '页面工具栏样式',
+                    selector: '.cxd-Page-toolbar'
+                  },
+                  {
+                    label: '页面边栏样式',
+                    selector: '.cxd-Page-aside'
+                  }
                 ]
               })
             ])
@@ -414,13 +472,16 @@ export class PagePlugin extends BasePlugin {
       const schema = current.schema;
 
       if (current.rendererConfig?.isFormItem && schema?.name) {
-        jsonschema.properties[schema.name] =
-          await current.info.plugin.buildDataSchemas?.(
-            current,
-            undefined,
-            trigger,
-            node
-          );
+        const tmpSchema = await current.info.plugin.buildDataSchemas?.(
+          current,
+          undefined,
+          trigger,
+          node
+        );
+        jsonschema.properties[schema.name] = {
+          ...tmpSchema,
+          ...(tmpSchema?.$id ? {} : {$id: `${current.id}-${current.type}`})
+        };
       } else if (!current.rendererConfig?.storeType) {
         pool.push(...current.children);
       }

@@ -1,10 +1,13 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "types": ["node"],
     "rootDir": "./",
     "outDir": "./dist",
     "baseUrl": "./",
     "allowSyntheticDefaultImports": true,
+    "strictPropertyInitialization": false,
+    "strictNullChecks": true,
     "typeRoots": [
       "../../types",
       "./node_modules/@types",
@@ -12,6 +15,6 @@
     ],
     "paths": {}
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "tools/functionCount.ts"],
   "references": []
 }

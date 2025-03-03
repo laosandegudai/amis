@@ -3,12 +3,13 @@
  * @description
  * @author fex
  */
-import React, {useState, useEffect, useRef} from 'react';
+import React, {createElement, useEffect, useMemo} from 'react';
 import cxClass from 'classnames';
 import CloseIcon from '../icons/close.svg';
 import CloseSmallIcon from '../icons/close-small.svg';
 import StatusCloseIcon from '../icons/status-close.svg';
 import UnDoIcon from '../icons/undo.svg';
+import UnDoNormalIcon from '../icons/undo-normal.svg';
 import ReDoIcon from '../icons/redo.svg';
 import EnterIcon from '../icons/enter.svg';
 import VolumeIcon from '../icons/volume.svg';
@@ -17,8 +18,11 @@ import PlayIcon from '../icons/play.svg';
 import PauseIcon from '../icons/pause.svg';
 import LeftArrowIcon from '../icons/left-arrow.svg';
 import RightArrowIcon from '../icons/right-arrow.svg';
+import ArrowDoubleLeftIcon from '../icons/arrow-double-left.svg';
+import ArrowDoubleRightIcon from '../icons/arrow-double-right.svg';
 import CheckIcon from '../icons/check.svg';
 import PlusIcon from '../icons/plus.svg';
+import SubPlusIcon from '../icons/sub-plus.svg';
 import MinusIcon from '../icons/minus.svg';
 import PencilIcon from '../icons/pencil.svg';
 import ViewIcon from '../icons/view.svg';
@@ -47,6 +51,8 @@ import RefreshIcon from '../icons/refresh.svg';
 import DragIcon from '../icons/drag.svg';
 import EditIcon from '../icons/edit.svg';
 import DeskEmptyIcon from '../icons/desk-empty.svg';
+import FullScreen from '../icons/fullscreen.svg';
+import UnFullscreen from '../icons/unfullscreen.svg';
 
 import CopyIcon from '../icons/copy.svg';
 import FilterIcon from '../icons/filter.svg';
@@ -102,8 +108,14 @@ import RotateLeft from '../icons/rotate-left.svg';
 import RotateRight from '../icons/rotate-right.svg';
 import ScaleOrigin from '../icons/scale-origin.svg';
 import If from '../icons/if.svg';
+import RotateScreen from '../icons/rotate-screen.svg';
 
 import isObject from 'lodash/isObject';
+import {
+  type CustomVendorFn,
+  getCustomVendor,
+  type TestIdBuilder
+} from 'amis-core';
 
 // 兼容原来的用法，后续不直接试用。
 
@@ -141,6 +153,9 @@ registerIcon('close', CloseIcon);
 registerIcon('close-small', CloseSmallIcon);
 registerIcon('status-close', StatusCloseIcon);
 registerIcon('undo', UnDoIcon);
+registerIcon('undo-normal', UnDoNormalIcon);
+registerIcon('full-screen', FullScreen);
+registerIcon('un-fullscreen', UnFullscreen);
 registerIcon('redo', ReDoIcon);
 registerIcon('enter', EnterIcon);
 registerIcon('volume', VolumeIcon);
@@ -153,6 +168,7 @@ registerIcon('prev', LeftArrowIcon);
 registerIcon('next', RightArrowIcon);
 registerIcon('check', CheckIcon);
 registerIcon('plus', PlusIcon);
+registerIcon('sub-plus', SubPlusIcon);
 registerIcon('add', PlusIcon);
 registerIcon('minus', MinusIcon);
 registerIcon('pencil', PencilIcon);
@@ -233,11 +249,14 @@ registerIcon('remove', RemoveIcon);
 registerIcon('invisible', InvisibleIcon);
 registerIcon('down', DownIcon);
 registerIcon('right-double-arrow', RightDoubleArrowIcon);
+registerIcon('arrow-double-left', ArrowDoubleLeftIcon);
+registerIcon('arrow-double-right', ArrowDoubleRightIcon);
 registerIcon('new-edit', NewEdit);
 registerIcon('rotate-left', RotateLeft);
 registerIcon('rotate-right', RotateRight);
 registerIcon('scale-origin', ScaleOrigin);
 registerIcon('if', If);
+registerIcon('rotate-screen', RotateScreen);
 
 export interface IconCheckedSchema {
   id: string;
@@ -250,6 +269,104 @@ export interface IconCheckedSchemaNew {
   icon: IconCheckedSchema;
 }
 
+function svgString2Dom(
+  icon: string,
+  {
+    className,
+    classNameProp,
+    style,
+    cx,
+    events,
+    extra
+  }: {
+    [propName: string]: any;
+  },
+  vendorFn?: CustomVendorFn
+) {
+  icon = icon.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+  if (vendorFn) {
+    const {icon: newIcon, style: newStyle} = vendorFn(icon, {
+      ...extra,
+      width: style?.width,
+      height: style?.height
+    });
+    icon = newIcon;
+    style = {
+      ...(style || {}),
+      ...newStyle
+    };
+  }
+  const svgStr = /<svg .*?>(.*?)<\/svg>/.exec(icon);
+  const viewBox = /viewBox="(.*?)"/.exec(icon);
+  const svgHTML = createElement('svg', {
+    ...events,
+    className: cx('icon', className, classNameProp),
+    style,
+    dangerouslySetInnerHTML: {__html: svgStr ? svgStr[1] : ''},
+    viewBox: viewBox?.[1] || '0 0 16 16'
+  });
+  return svgHTML;
+}
+
+function LinkIcon({
+  icon,
+  vendorFn,
+  options: {className, classNameProp, style, cx, classPrefix, events, extra}
+}: {
+  icon: string;
+  vendorFn?: CustomVendorFn;
+  options: {
+    [propName: string]: any;
+  };
+}) {
+  const [svgIcon, setSvgIcon] = React.useState<string>(icon);
+  const [svgType, setSvgType] = React.useState<string>('img');
+
+  useEffect(() => {
+    if (icon.endsWith('.svg') && vendorFn) {
+      try {
+        fetch(icon)
+          .then(res => res.text())
+          .then(svg => {
+            setSvgType('svg');
+            setSvgIcon(svg);
+          })
+          .catch(e => {
+            console.warn(e);
+            setSvgType('img');
+            setSvgIcon(icon);
+          });
+      } catch (warn) {
+        console.warn(warn);
+        setSvgType('img');
+        setSvgIcon(icon);
+      }
+    }
+  }, [icon, vendorFn]);
+
+  return svgType === 'img' ? (
+    <img
+      {...events}
+      className={cx(`${classPrefix}Icon`, className, classNameProp)}
+      src={icon}
+      style={style}
+    />
+  ) : (
+    svgString2Dom(
+      svgIcon,
+      {
+        className,
+        classNameProp,
+        style,
+        cx,
+        events,
+        extra
+      },
+      vendorFn
+    )
+  );
+}
+
 export function Icon({
   icon,
   className,
@@ -258,32 +375,88 @@ export function Icon({
   iconContent,
   vendor,
   cx: iconCx,
-  onClick = () => {},
-  style
+  onClick,
+  onMouseEnter,
+  onMouseLeave,
+  onMouseOver,
+  onMouseOut,
+  onMouseDown,
+  onMouseUp,
+  onMouseMove,
+  onBlur,
+  onFocus,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onTouchCancel,
+  style,
+  width,
+  height,
+  extra,
+  testIdBuilder
 }: {
   icon: string;
   iconContent?: string;
+  testIdBuilder?: TestIdBuilder;
 } & React.ComponentProps<any>) {
   let cx = iconCx || cxClass;
+  const vendorFn = useMemo(() => getCustomVendor(vendor), [vendor]);
+
+  // style = {
+  //   ...(style || {}),
+  //   width: width || style?.width,
+  //   height: height || style?.height
+  // };
+
+  if (width !== undefined) {
+    style = {
+      ...style,
+      width
+    };
+  }
+  if (height !== undefined) {
+    style = {
+      ...style,
+      height
+    };
+  }
 
   if (typeof jest !== 'undefined' && icon) {
     iconContent = '';
   }
 
-  if (!icon) {
+  if (!icon && !iconContent) {
     return null;
   }
+
+  // 支持的事件
+  let events: any = {
+    onClick,
+    onMouseEnter,
+    onMouseLeave,
+    onMouseOver,
+    onMouseOut,
+    onMouseDown,
+    onMouseUp,
+    onMouseMove,
+    onBlur,
+    onFocus,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
+    onTouchCancel
+  };
 
   // 直接的icon dom
   if (React.isValidElement(icon)) {
     return React.cloneElement(icon, {
+      ...events,
       ...((icon.props as any) || {}),
       className: cxClass(
         cx(className, classNameProp),
         (icon.props as any).className
       ),
-      style,
-      onClick
+      style
     });
   }
 
@@ -309,10 +482,11 @@ export function Icon({
 
     return (
       <div
-        onClick={onClick}
+        {...events}
         className={cx(iconContent, className, classNameProp)}
         ref={refFn}
         style={style}
+        {...testIdBuilder?.getTestId()}
       ></div>
     );
   }
@@ -322,11 +496,12 @@ export function Icon({
   if (Component) {
     return (
       <Component
-        onClick={onClick}
+        {...events}
         className={cx(className, `icon-${icon}`, classNameProp)}
         // @ts-ignore
         icon={icon}
         style={style}
+        {...testIdBuilder?.getTestId()}
       />
     );
   }
@@ -346,33 +521,56 @@ export function Icon({
     typeof (icon as IconCheckedSchema).id === 'string' &&
     (icon as IconCheckedSchema).id.startsWith('svg-')
   ) {
-    return (
-      <svg
-        onClick={onClick}
-        className={cx('icon', 'icon-object', className, classNameProp)}
-        style={style}
-      >
-        <use
-          xlinkHref={`#${(icon as IconCheckedSchema).id.replace(/^svg-/, '')}`}
-        ></use>
-      </svg>
-    );
+    const svg = icon as IconCheckedSchema;
+    const id = `${svg.id.replace(/^svg-/, '')}`;
+    if (!document.getElementById(id)) {
+      // 如果svg symbol不存在，则尝试将svg字符串赋值给icon，走svg字符串的逻辑
+      icon = svg.svg?.replace(/'/g, '');
+    } else {
+      return (
+        <svg
+          {...events}
+          className={cx('icon', 'icon-object', className, classNameProp)}
+          style={style}
+        >
+          <use xlinkHref={'#' + id}></use>
+        </svg>
+      );
+    }
   }
 
   // 直接传入svg字符串
   if (typeof icon === 'string' && icon.startsWith('<svg')) {
-    return <i dangerouslySetInnerHTML={{__html: icon}} />;
+    return svgString2Dom(
+      icon,
+      {
+        className,
+        classNameProp,
+        style,
+        cx,
+        events,
+        extra
+      },
+      vendorFn
+    );
   }
 
   // icon是链接
   const isURLIcon = typeof icon === 'string' && icon?.indexOf('.') !== -1;
   if (isURLIcon) {
     return (
-      <img
-        onClick={onClick}
-        className={cx(`${classPrefix}Icon`, className, classNameProp)}
-        src={icon}
-        style={style}
+      <LinkIcon
+        icon={icon}
+        vendorFn={vendorFn}
+        options={{
+          className,
+          classNameProp,
+          style,
+          cx,
+          classPrefix,
+          events,
+          extra
+        }}
       />
     );
   }
@@ -394,7 +592,7 @@ export function Icon({
   if (isIconfont) {
     return (
       <i
-        onClick={onClick}
+        {...events}
         className={cx(icon, className, classNameProp, iconPrefix)}
         style={style}
       />
@@ -404,6 +602,8 @@ export function Icon({
   // 没有合适的图标
   return <span className="text-danger">没有 icon {icon}</span>;
 }
+
+export default Icon;
 
 export {
   InputClearIcon,

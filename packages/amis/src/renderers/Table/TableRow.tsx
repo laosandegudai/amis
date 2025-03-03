@@ -5,14 +5,17 @@ import {
   ITableStore,
   RendererEvent,
   RendererProps,
+  TestIdBuilder,
   autobind,
+  keyToPath,
+  setVariable,
   traceProps
 } from 'amis-core';
 import {Action} from '../Action';
 import {isClickOnInput} from 'amis-core';
 import {useInView} from 'react-intersection-observer';
 
-interface TableRowProps extends Pick<RendererProps, 'render'> {
+export interface TableRowProps extends Pick<RendererProps, 'render'> {
   store: ITableStore;
   onCheck: (item: IRow, value: boolean, shift?: boolean) => Promise<void>;
   onRowClick: (item: IRow, index: number) => Promise<RendererEvent<any> | void>;
@@ -43,11 +46,15 @@ interface TableRowProps extends Pick<RendererProps, 'render'> {
   regionPrefix?: string;
   checkOnItemClick?: boolean;
   ignoreFootableContent?: boolean;
+  testIdBuilder?: (key: string) => TestIdBuilder;
+  rowPath: string; // 整体行的路径，树形时需要父行序号/当前展开层级下的行序号
   [propName: string]: any;
 }
 
-export class TableRow extends React.PureComponent<
-  TableRowProps & {
+export class TableRow<
+  T extends TableRowProps = TableRowProps
+> extends React.PureComponent<
+  T & {
     // 这些属性纯粹是为了监控变化，不要在 render 里面使用
     expanded: boolean;
     parentExpanded?: boolean;
@@ -55,11 +62,14 @@ export class TableRow extends React.PureComponent<
     newIndex: number;
     isHover: boolean;
     checked: boolean;
+    partial?: boolean;
     modified: boolean;
     moved: boolean;
     depth: number;
     expandable: boolean;
     appeard?: boolean;
+    loading?: boolean;
+    error?: string;
     checkdisable: boolean;
     trRef?: React.Ref<any>;
     isNested?: boolean;
@@ -68,13 +78,13 @@ export class TableRow extends React.PureComponent<
   @autobind
   handleMouseEnter(e: React.MouseEvent<HTMLTableRowElement>) {
     const {item, itemIndex, onRowMouseEnter} = this.props;
-    onRowMouseEnter?.(item?.data, itemIndex);
+    onRowMouseEnter?.(item, itemIndex);
   }
 
   @autobind
   handleMouseLeave(e: React.MouseEvent<HTMLTableRowElement>) {
     const {item, itemIndex, onRowMouseLeave} = this.props;
-    onRowMouseLeave?.(item?.data, itemIndex);
+    onRowMouseLeave?.(item, itemIndex);
   }
 
   // 定义点击一行的行为，通过 itemAction配置
@@ -89,10 +99,17 @@ export class TableRow extends React.PureComponent<
     e.preventDefault();
     e.stopPropagation();
 
-    const {itemAction, onAction, item, itemIndex, onCheck, onRowClick} =
-      this.props;
+    const {
+      itemAction,
+      onAction,
+      item,
+      itemIndex,
+      onCheck,
+      onRowClick,
+      checkOnItemClick
+    } = this.props;
 
-    const rendererEvent = await onRowClick?.(item?.data, itemIndex);
+    const rendererEvent = await onRowClick?.(item, itemIndex);
 
     if (rendererEvent?.prevented) {
       return;
@@ -102,7 +119,7 @@ export class TableRow extends React.PureComponent<
       onAction && onAction(e, itemAction, item?.locals);
       // item.toggle();
     } else {
-      if (item.checkable && item.isCheckAvaiableOnClick) {
+      if (item.checkable && item.isCheckAvaiableOnClick && checkOnItemClick) {
         onCheck?.(item, !item.checked, shiftKey);
       }
     }
@@ -111,13 +128,13 @@ export class TableRow extends React.PureComponent<
   @autobind
   handleDbClick(e: React.MouseEvent<HTMLTableRowElement>) {
     const {item, itemIndex, onRowDbClick} = this.props;
-    onRowDbClick?.(item?.data, itemIndex);
+    onRowDbClick?.(item, itemIndex);
   }
 
   @autobind
   handleAction(e: React.UIEvent<any>, action: Action, ctx: any) {
     const {onAction, item} = this.props;
-    onAction && onAction(e, action, ctx || item.locals);
+    return onAction && onAction(e, action, ctx || item.locals);
   }
 
   @autobind
@@ -147,15 +164,15 @@ export class TableRow extends React.PureComponent<
     }
 
     const {item, onQuickChange} = this.props;
+    const data: any = {};
+    const keyPath = keyToPath(name);
+    // 如果是带路径的值变化，最好是能保留原来的对象的其他属性
+    if (keyPath.length > 1) {
+      data[keyPath[0]] = {...item.data[keyPath[0]]};
+    }
+    setVariable(data, name, value);
 
-    onQuickChange?.(
-      item,
-      {
-        [name]: value
-      },
-      submit,
-      changePristine
-    );
+    onQuickChange?.(item, data, submit, changePristine);
   }
 
   render() {
@@ -192,7 +209,8 @@ export class TableRow extends React.PureComponent<
       checkdisable,
       trRef,
       isNested,
-
+      testIdBuilder,
+      rowPath,
       ...rest
     } = this.props;
 
@@ -229,13 +247,13 @@ export class TableRow extends React.PureComponent<
               <tbody>
                 {ignoreFootableContent
                   ? columns.map(column => (
-                      <tr key={column.index}>
+                      <tr key={column.id}>
                         {column.label !== false ? <th></th> : null}
                         <td></td>
                       </tr>
                     ))
                   : columns.map(column => (
-                      <tr key={column.index}>
+                      <tr key={column.id}>
                         {column.label !== false ? (
                           <th>
                             {render(
@@ -254,15 +272,17 @@ export class TableRow extends React.PureComponent<
                               ...rest,
                               width: null,
                               rowIndex: itemIndex,
+                              rowIndexPath: item.path,
                               colIndex: column.index,
-                              key: column.index,
+                              rowPath,
+                              key: column.id,
                               onAction: this.handleAction,
                               onQuickChange: this.handleQuickChange,
                               onChange: this.handleChange
                             }
                           )
                         ) : (
-                          <td key={column.index}>
+                          <td key={column.id}>
                             <div className={cx('Table-emptyBlock')}>&nbsp;</div>
                           </td>
                         )}
@@ -308,6 +328,7 @@ export class TableRow extends React.PureComponent<
           },
           `Table-tr--${depth}th`
         )}
+        {...testIdBuilder?.(rowPath)?.getTestId()}
       >
         {columns.map(column =>
           appeard ? (
@@ -315,12 +336,14 @@ export class TableRow extends React.PureComponent<
               ...rest,
               rowIndex: itemIndex,
               colIndex: column.index,
+              rowIndexPath: item.path,
+              rowPath,
               key: column.id,
               onAction: this.handleAction,
               onQuickChange: this.handleQuickChange,
               onChange: this.handleChange
             })
-          ) : (
+          ) : column.name && item.rowSpans[column.name] === 0 ? null : (
             <td key={column.id}>
               <div className={cx('Table-emptyBlock')}>&nbsp;</div>
             </td>
@@ -356,12 +379,15 @@ export default observer((props: TableRowProps) => {
       id={item.id}
       newIndex={item.newIndex}
       isHover={item.isHover}
+      partial={item.partial}
       checked={item.checked}
       modified={item.modified}
       moved={item.moved}
       depth={item.depth}
       expandable={item.expandable}
       checkdisable={item.checkdisable}
+      loading={item.loading}
+      error={item.error}
       // data 在 TableRow 里面没有使用，这里写上是为了当列数据变化的时候 TableRow 重新渲染，
       // 不是 item.locals 的原因是 item.locals 会变化多次，比如父级上下文变化也会进来，但是 item.data 只会变化一次。
       data={canAccessSuperData ? item.locals : item.data}

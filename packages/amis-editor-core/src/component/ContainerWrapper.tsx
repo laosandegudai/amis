@@ -26,7 +26,13 @@ export class ContainerWrapper extends React.Component<ContainerWrapperProps> {
    */
   @autobind
   renderChild(region: string, node: Schema, props: any) {
-    const {render, $$editor, $$node} = this.props;
+    const {render, $$editor, $$node, $schema} = this.props;
+
+    if (
+      $$editor.regions?.find(item => item.key === region)?.hiddenOn?.($schema)
+    ) {
+      return null;
+    }
 
     const child = render(region, node, props);
 
@@ -100,13 +106,14 @@ export class ContainerWrapper extends React.Component<ContainerWrapperProps> {
           ];
         }
 
-        const region = Array.isArray(rest[key])
-          ? rest[key].concat()
+        let region = Array.isArray(rest[key])
+          ? rest[key]
           : rest[key]
           ? [rest[key]]
           : defaultRegion;
 
         if (!region.length) {
+          region = region.concat();
           region.push({children: () => null});
         }
 

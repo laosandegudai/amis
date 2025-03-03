@@ -44,7 +44,7 @@
 
     .#{$ns}LocationPicker-toggler {
       svg {
-        top: 0.125rem;
+        top: px2rem(2px);
       }
     }
   }
@@ -89,6 +89,8 @@
     height: px2rem(460px);
 
     &-inner {
+      min-width: 0;
+      min-height: 0;
       flex: 1;
       padding: 0 px2rem(16px);
 
@@ -116,6 +118,8 @@
   }
 
   &.is-mobile {
+    min-width: 0;
+    min-height: 0;
     flex: 1;
     text-align: right;
     overflow: hidden;
@@ -132,6 +136,13 @@
   max-width: 100%;
   margin-top: -1px;
   border-color: var(--Form-input-onFocused-borderColor);
+
+  &.#{$ns}PopOver--v-top {
+    margin-top: px2rem(4px);
+  }
+  &.#{$ns}PopOver--v-bottom {
+    margin-bottom: px2rem(4px);
+  }
 }
 
 .#{$ns}MapPicker {
@@ -185,4 +196,15 @@
 
 .tangram-suggestion-main {
   display: none !important;
+}
+
+@media screen and (min-width: 768px) {
+  .#{$ns}LocationPicker {
+    &-value {
+      margin-right: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
 }

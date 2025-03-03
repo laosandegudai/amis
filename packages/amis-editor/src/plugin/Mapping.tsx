@@ -58,6 +58,7 @@ export class MappingPlugin extends BasePlugin {
           body: getSchemaTpl('collapseGroup', [
             {
               title: '基本',
+              id: 'properties-basic',
               body: [
                 isUnderField
                   ? {
@@ -75,6 +76,7 @@ export class MappingPlugin extends BasePlugin {
                   bulk: false,
                   name: 'itemSchema',
                   formType: 'extend',
+                  defaultData: this.scaffold.itemSchema,
                   form: {
                     body: [
                       {
@@ -144,12 +146,6 @@ export class MappingPlugin extends BasePlugin {
       return data.labelField ?? 'label';
     }
     return 'item';
-  }
-
-  filterProps(props: any) {
-    // 禁止选中子节点
-    props = JSONPipeOut(props);
-    return props;
   }
 
   buildEditorToolbar(

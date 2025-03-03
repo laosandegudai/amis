@@ -17,6 +17,7 @@ import cx from 'classnames';
 import {current, addModal, removeModal} from './ModalManager';
 import {ClassNamesFn, themeable} from 'amis-core';
 import {noop, autobind, getScrollbarWidth} from 'amis-core';
+import {getContainerWithFullscreen} from './Modal';
 
 type DrawerPosition = 'top' | 'right' | 'bottom' | 'left';
 
@@ -43,6 +44,7 @@ export interface DrawerProps {
   onEntered?: () => void;
   drawerClassName?: string;
   drawerMaskClassName?: string;
+  mobileUI?: boolean;
 }
 export interface DrawerState {}
 const fadeStyles: {
@@ -167,7 +169,7 @@ export class Drawer extends React.Component<DrawerProps, DrawerState> {
   @autobind
   handleRootMouseDownCapture(e: MouseEvent) {
     const target = e.target as HTMLElement;
-    const {closeOnOutside, classPrefix: ns} = this.props;
+    const {closeOnOutside, classPrefix: ns, mobileUI} = this.props;
     const isLeftButton =
       (e.button === 1 && window.event !== null) || e.button === 0;
 
@@ -176,7 +178,9 @@ export class Drawer extends React.Component<DrawerProps, DrawerState> {
       closeOnOutside &&
       target &&
       this.modalDom &&
-      ((!this.modalDom.contains(target) && !target.closest('[role=dialog]')) ||
+      ((!mobileUI &&
+        !this.modalDom.contains(target) &&
+        !target.closest('[role=dialog]')) ||
         (target.matches(`.${ns}Drawer-overlay`) &&
           target.parentElement === this.modalDom))
     ); // 干脆过滤掉来自弹框里面的点击
@@ -318,7 +322,7 @@ export class Drawer extends React.Component<DrawerProps, DrawerState> {
     const bodyStyle = this.getDrawerStyle();
 
     return (
-      <Portal container={container}>
+      <Portal container={getContainerWithFullscreen(container)}>
         <Transition
           mountOnEnter
           unmountOnExit

@@ -1,4 +1,6 @@
 import React from 'react';
+import DeepDiff from 'deep-diff';
+import pick from 'lodash/pick';
 import {render as amisRender} from 'amis';
 import flattenDeep from 'lodash/flattenDeep';
 import {
@@ -14,8 +16,13 @@ import {
 } from 'amis-editor-core';
 import {DSBuilderManager} from '../builder/DSBuilderManager';
 import {DSFeatureEnum, ModelDSBuilderKey, ApiDSBuilderKey} from '../builder';
-import {getEventControlConfig} from '../renderer/event-control/helper';
+import {
+  getEventControlConfig,
+  getActionCommonProps,
+  buildLinkActionDesc
+} from '../renderer/event-control/helper';
 
+import type {Schema} from 'amis-core';
 import type {
   EditorManager,
   RendererPluginAction,
@@ -45,6 +52,8 @@ export class ServicePlugin extends BasePlugin {
 
   description =
     '功能性容器，可以用来加载数据或者加载渲染器配置。加载到的数据在容器可以使用。';
+
+  searchKeywords = '功能型容器';
 
   docLink = '/amis/zh-CN/components/service';
 
@@ -163,17 +172,28 @@ export class ServicePlugin extends BasePlugin {
     {
       actionType: 'reload',
       actionLabel: '重新加载',
-      description: '触发组件数据刷新并重新渲染'
+      description: '触发组件数据刷新并重新渲染',
+      ...getActionCommonProps('reload')
     },
     {
       actionType: 'rebuild',
       actionLabel: '重新构建',
-      description: '触发schemaApi刷新，重新构建Schema'
+      description: '触发schemaApi刷新，重新构建Schema',
+      descDetail: (info: any, context: any, props: any) => {
+        return (
+          <div className="action-desc">
+            重新构建
+            {buildLinkActionDesc(props.manager, info)}
+            Schema
+          </div>
+        );
+      }
     },
     {
       actionType: 'setValue',
       actionLabel: '变量赋值',
-      description: '更新数据域数据'
+      description: '更新数据域数据',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -270,10 +290,6 @@ export class ServicePlugin extends BasePlugin {
               ]
             },
             {
-              title: '状态',
-              body: [getSchemaTpl('hidden')]
-            },
-            {
               title: '高级',
               body: [
                 getSchemaTpl('combo-container', {
@@ -315,6 +331,10 @@ export class ServicePlugin extends BasePlugin {
                     '/**\n * @param data 上下文数据\n * @param setData 更新数据的函数\n * @param env 环境变量\n */\ninterface DataProvider {\n   (data: any, setData: (data: any) => void, env: any): void;\n}\n'
                 }
               ]
+            },
+            {
+              title: '状态',
+              body: [getSchemaTpl('visible'), getSchemaTpl('hidden')]
             }
           ])
         ]
@@ -336,7 +356,7 @@ export class ServicePlugin extends BasePlugin {
     ]);
   };
 
-  panelFormPipeOut = async (schema: any) => {
+  panelFormPipeOut = async (schema: any, oldSchema: any) => {
     const entity = schema?.api?.entity;
 
     if (!entity || schema?.dsType !== ModelDSBuilderKey) {
@@ -344,12 +364,27 @@ export class ServicePlugin extends BasePlugin {
     }
 
     const builder = this.dsManager.getBuilderBySchema(schema);
+    const observedFields = ['api'];
+    const diff = DeepDiff.diff(
+      pick(oldSchema, observedFields),
+      pick(schema, observedFields)
+    );
+
+    if (!diff) {
+      return schema;
+    }
 
     try {
       const updatedSchema = await builder.buildApiSchema({
         schema,
         renderer: 'service',
-        sourceKey: 'api'
+        sourceKey: 'api',
+        apiSettings: {
+          diffConfig: {
+            enable: true,
+            schemaDiff: diff
+          }
+        }
       });
       return updatedSchema;
     } catch (e) {
@@ -358,6 +393,14 @@ export class ServicePlugin extends BasePlugin {
 
     return schema;
   };
+
+  patchSchema(schema: Schema) {
+    return schema.hasOwnProperty('dsType') &&
+      schema.dsType != null &&
+      typeof schema.dsType === 'string'
+      ? schema
+      : {...schema, dsType: ApiDSBuilderKey};
+  }
 
   async buildDataSchemas(
     node: EditorNodeType,
@@ -374,13 +417,16 @@ export class ServicePlugin extends BasePlugin {
       const schema = current.schema;
 
       if (current.rendererConfig?.isFormItem && schema?.name) {
-        jsonschema.properties[schema.name] =
-          await current.info.plugin.buildDataSchemas?.(
-            current,
-            undefined,
-            trigger,
-            node
-          );
+        const tmpSchema = await current.info.plugin.buildDataSchemas?.(
+          current,
+          undefined,
+          trigger,
+          node
+        );
+        jsonschema.properties[schema.name] = {
+          ...tmpSchema,
+          ...(tmpSchema?.$id ? {} : {$id: `${current.id}-${current.type}`})
+        };
       } else if (!current.rendererConfig?.storeType) {
         pool.push(...current.children);
       }

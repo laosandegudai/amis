@@ -31,15 +31,15 @@ export class DataDebugPlugin extends BasePlugin {
     // if (!renderInfo || !renderInfo.storeType) {
     //   return;
     // }
-    const store = comp.props.store;
-
-    toolbars.push({
-      icon: 'fa fa-bug',
-      order: -1000,
-      placement: 'bottom',
-      tooltip: '上下文数据',
-      onClick: () => this.openDebugForm(comp.props.data)
-    });
+    if (this.manager.store.toolbarMode === 'default') {
+      toolbars.push({
+        icon: 'fa fa-bug',
+        order: -1000,
+        placement: 'bottom',
+        tooltip: '上下文数据',
+        onClick: () => this.openDebugForm(comp.props.data)
+      });
+    }
   }
 
   dataViewer = {

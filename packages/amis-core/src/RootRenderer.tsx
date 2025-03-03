@@ -4,13 +4,16 @@ import type {RootProps} from './Root';
 import {IScopedContext, ScopedContext, filterTarget} from './Scoped';
 import {IRootStore, RootStore} from './store/root';
 import {ActionObject} from './types';
-import {bulkBindFunctions, guid, isVisible} from './utils/helper';
+import {bulkBindFunctions, guid, isVisible, JSONTraverse} from './utils/helper';
 import {filter} from './utils/tpl';
 import qs from 'qs';
 import pick from 'lodash/pick';
 import mapValues from 'lodash/mapValues';
 import {saveAs} from 'file-saver';
 import {normalizeApi} from './utils/api';
+import {findDOMNode} from 'react-dom';
+import LazyComponent from './components/LazyComponent';
+import {hasAsyncRenderers, loadAsyncRenderersByType} from './factory';
 
 export interface RootRendererProps extends RootProps {
   location?: any;
@@ -35,6 +38,7 @@ export class RootRenderer extends React.Component<RootRendererProps> {
     this.store.updateContext(props.context);
     this.store.initData(props.data);
     this.store.updateLocation(props.location, this.props.env?.parseLocation);
+    this.store.setGlobalVars(props.globalVars);
 
     // 将数据里面的函数批量的绑定到 this 上
     bulkBindFunctions<RootRenderer /*为毛 this 的类型自动识别不出来？*/>(this, [
@@ -45,6 +49,27 @@ export class RootRenderer extends React.Component<RootRendererProps> {
       'handleDrawerClose',
       'handlePageVisibilityChange'
     ]);
+
+    this.store.init(() => {
+      if (!hasAsyncRenderers()) {
+        return;
+      }
+      const schema = props.schema;
+      const types: Array<string> = ['tpl', 'dialog', 'drawer'];
+      JSONTraverse(schema, (value: any, key: string) => {
+        if (key === 'type') {
+          types.push(value);
+
+          // form 依赖 panel
+          if (value === 'form') {
+            types.push('panel');
+          }
+        }
+      });
+      return hasAsyncRenderers(types)
+        ? loadAsyncRenderersByType(types, true)
+        : undefined;
+    });
   }
 
   componentDidMount() {
@@ -52,21 +77,46 @@ export class RootRenderer extends React.Component<RootRendererProps> {
       'visibilitychange',
       this.handlePageVisibilityChange
     );
+
+    // 兼容 affixOffsetTop 和 affixOffsetBottom
+    if (
+      typeof this.props.env.affixOffsetTop !== 'undefined' ||
+      typeof this.props.env.affixOffsetBottom !== 'undefined'
+    ) {
+      // top: var(--affix-offset-top);
+      const dom = findDOMNode(this);
+      if (dom?.parentElement) {
+        dom.parentElement.style.cssText += `--affix-offset-top: ${
+          this.props.env.affixOffsetTop || 0
+        }px; --affix-offset-bottom: ${
+          this.props.env.affixOffsetBottom || 0
+        }px;`;
+      }
+    }
   }
 
   componentDidUpdate(prevProps: RootRendererProps) {
     const props = this.props;
 
-    if (props.data !== prevProps.data) {
-      this.store.initData(props.data);
+    // 更新全局变量
+    if (props.globalVars !== prevProps.globalVars) {
+      this.store.setGlobalVars(props.globalVars);
     }
 
     if (props.location !== prevProps.location) {
-      this.store.updateLocation(props.location);
+      this.store.updateLocation(props.location, this.props.env?.parseLocation);
     }
 
+    let contextChanged = false;
     if (props.context !== prevProps.context) {
+      contextChanged = true;
       this.store.updateContext(props.context);
+    }
+
+    // 一定要最后处理，否则 downStream 里面的上层数据 context 还是老的。
+    if (props.data !== prevProps.data || contextChanged) {
+      // context 依赖 data 变化才能触发变动，所以不管 data 变没变都更新一下
+      this.store.initData(props.data);
     }
   }
 
@@ -102,7 +152,7 @@ export class RootRenderer extends React.Component<RootRendererProps> {
     ctx: object,
     throwErrors: boolean = false,
     delegate?: IScopedContext
-  ) {
+  ): any {
     const {env, messages, onAction, mobileUI, render} = this.props;
     const store = this.store;
 
@@ -158,22 +208,43 @@ export class RootRenderer extends React.Component<RootRendererProps> {
 
       window.open(mailto);
     } else if (action.actionType === 'dialog') {
-      store.setCurrentAction(action);
-      store.openDialog(
-        ctx,
-        undefined,
-        action.callback,
-        delegate || (this.context as any)
-      );
+      store.setCurrentAction(action, this.props.resolveDefinitions);
+      return new Promise<any>(resolve => {
+        store.openDialog(
+          ctx,
+          undefined,
+          (confirmed: any, value: any) => {
+            action.callback?.(confirmed, value);
+            resolve({
+              confirmed,
+              value
+            });
+          },
+          delegate || (this.context as any)
+        );
+      });
     } else if (action.actionType === 'drawer') {
-      store.setCurrentAction(action);
-      store.openDrawer(ctx, undefined, undefined, delegate);
+      store.setCurrentAction(action, this.props.resolveDefinitions);
+      return new Promise<any>(resolve => {
+        store.openDrawer(
+          ctx,
+          undefined,
+          (confirmed: any, value: any) => {
+            action.callback?.(confirmed, value);
+            resolve({
+              confirmed,
+              value
+            });
+          },
+          delegate
+        );
+      });
     } else if (action.actionType === 'toast') {
-      action.toast?.items?.forEach((item: any) => {
+      action.toast?.items?.forEach(({level, body, title, ...item}: any) => {
         env.notify(
-          item.level || 'info',
-          item.body
-            ? render('body', item.body, {
+          level || 'info',
+          body
+            ? render('body', body, {
                 ...this.props,
                 data: ctx,
                 context: store.context
@@ -182,8 +253,8 @@ export class RootRenderer extends React.Component<RootRendererProps> {
           {
             ...action.toast,
             ...item,
-            title: item.title
-              ? render('title', item.title, {
+            title: title
+              ? render('title', title, {
                   ...this.props,
                   data: ctx,
                   context: store.context
@@ -194,7 +265,7 @@ export class RootRenderer extends React.Component<RootRendererProps> {
         );
       });
     } else if (action.actionType === 'ajax') {
-      store.setCurrentAction(action);
+      store.setCurrentAction(action, this.props.resolveDefinitions);
       store
         .saveRemote(action.api as string, ctx, {
           successMessage:
@@ -211,7 +282,7 @@ export class RootRenderer extends React.Component<RootRendererProps> {
 
           const redirect =
             action.redirect && filter(action.redirect, store.data);
-          redirect && env.jumpTo(redirect, action);
+          redirect && env.jumpTo(redirect, action, store.data);
           action.reload &&
             this.reloadTarget(
               delegate || (this.context as IScopedContext),
@@ -270,7 +341,7 @@ export class RootRenderer extends React.Component<RootRendererProps> {
     const reload = action.reload ?? dialogAction.reload;
     const scoped = store.getDialogScoped() || (this.context as IScopedContext);
 
-    store.closeDialog(true);
+    store.closeDialog(true, values);
 
     if (reload) {
       scoped.reload(reload, store.data);
@@ -306,7 +377,7 @@ export class RootRenderer extends React.Component<RootRendererProps> {
     const reload = action.reload ?? drawerAction.reload;
     const scoped = store.getDrawerScoped() || (this.context as IScopedContext);
 
-    store.closeDrawer();
+    store.closeDrawer(true, values);
 
     // 稍等会，等动画结束。
     setTimeout(() => {
@@ -318,17 +389,20 @@ export class RootRenderer extends React.Component<RootRendererProps> {
 
   handleDrawerClose() {
     const store = this.store;
-    store.closeDrawer();
+    store.closeDrawer(false);
   }
 
   openFeedback(dialog: any, ctx: any) {
     return new Promise(resolve => {
       const store = this.store;
-      store.setCurrentAction({
-        type: 'button',
-        actionType: 'dialog',
-        dialog: dialog
-      });
+      store.setCurrentAction(
+        {
+          type: 'button',
+          actionType: 'dialog',
+          dialog: dialog
+        },
+        this.props.resolveDefinitions
+      );
       store.openDialog(
         ctx,
         undefined,
@@ -453,11 +527,13 @@ export class RootRenderer extends React.Component<RootRendererProps> {
   }
 
   render() {
-    const {pathPrefix, schema, render, ...rest} = this.props;
+    const {pathPrefix, schema, render, globalVars, ...rest} = this.props;
     const store = this.store;
 
     if (store.runtimeError) {
-      this.renderRuntimeError();
+      return this.renderRuntimeError();
+    } else if (!store.ready) {
+      return <LazyComponent className="RootLoader" />;
     }
 
     return (

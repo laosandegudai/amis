@@ -43,7 +43,7 @@ export class CommonConfigWrapper extends NodeWrapper {
     let {$$editor, $$node, $schema, store, ...rest} = this.props;
     const renderer = $$editor.renderer;
 
-    rest = JSONPipeOut(rest);
+    rest = JSONPipeOut(rest, false);
 
     if ($$editor.filterProps) {
       rest = $$editor.filterProps.call($$editor.plugin, rest, $$node);
@@ -63,9 +63,10 @@ export class CommonConfigWrapper extends NodeWrapper {
         $$editor
       );
     }
+    const Component = renderer.component!;
 
     return (
-      <renderer.component
+      <Component
         {...rest}
         store={store}
         $schema={$schema}

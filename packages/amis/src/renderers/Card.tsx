@@ -18,6 +18,7 @@ import Copyable, {SchemaCopyable} from './Copyable';
 import {
   BaseSchema,
   SchemaClassName,
+  SchemaCollection,
   SchemaExpression,
   SchemaObject,
   SchemaTpl,
@@ -86,7 +87,7 @@ export interface CardSchema extends BaseSchema {
     /**
      * 副标题
      */
-    subTitle?: SchemaTpl;
+    subTitle?: SchemaCollection;
     subTitleClassName?: SchemaClassName;
     subTitlePlaceholder?: string;
 
@@ -302,16 +303,21 @@ export class CardRenderer extends React.Component<CardProps> {
       itemAction,
       onAction,
       onCheck,
+      onClick,
       selectable,
       checkOnItemClick
     } = this.props;
 
     if (href) {
-      env.jumpTo(filter(href, data), {
-        type: 'button',
-        actionType: 'url',
-        blank
-      });
+      env.jumpTo(
+        filter(href, data),
+        {
+          type: 'button',
+          actionType: 'url',
+          blank
+        },
+        data
+      );
       return;
     }
 
@@ -321,6 +327,7 @@ export class CardRenderer extends React.Component<CardProps> {
     }
 
     selectable && checkOnItemClick && onCheck?.(item);
+    onClick && onClick(item);
   }
 
   handleAction(e: React.UIEvent<any>, action: ActionObject, ctx: object) {
@@ -409,7 +416,8 @@ export class CardRenderer extends React.Component<CardProps> {
               ...(action as any)
             },
             {
-              key: index
+              key: index,
+              onClick: undefined
             }
           )
         )
@@ -455,6 +463,7 @@ export class CardRenderer extends React.Component<CardProps> {
                 level: 'link',
                 type: 'button',
                 ...action,
+                testid: action.testid ? filter(action.testid, data) : index,
                 size
               },
               {
@@ -467,10 +476,14 @@ export class CardRenderer extends React.Component<CardProps> {
                   filterClassNameObject(
                     action.className || `${size ? `Card-action--${size}` : ''}`,
                     data
-                  )
+                  ),
+                  {
+                    'is-disabled': isDisabled(action, data)
+                  }
                 ),
                 componentClass: 'a',
-                onAction: this.handleAction
+                onAction: this.handleAction,
+                onClick: undefined
               }
             );
           })}
@@ -500,14 +513,14 @@ export class CardRenderer extends React.Component<CardProps> {
       }) as JSX.Element;
     }
 
-    return this.renderFeild(region, childNode, key, this.props);
+    return this.renderField(region, childNode, key, this.props);
   }
 
   itemRender(field: any, index: number, props: any) {
-    return this.renderFeild(`column/${index}`, field, index, props);
+    return this.renderField(`column/${index}`, field, index, props);
   }
 
-  renderFeild(region: string, field: Schema, key: any, props: any) {
+  renderField(region: string, field: Schema, key: any, props: any) {
     const {render, classnames: cx, itemIndex} = props;
     const useCardLabel = props?.useCardLabel !== false;
     const data = this.props.data;
@@ -542,7 +555,8 @@ export class CardRenderer extends React.Component<CardProps> {
               ),
               rowIndex: itemIndex,
               colIndex: key,
-              value: field.name ? resolveVariable(field.name, data) : undefined,
+              // 同 cell 里面逻辑一样，不要下发 value
+              // value: field.name ? resolveVariable(field.name, data) : undefined,
               popOverContainer: this.getPopOverContainer,
               onAction: this.handleAction,
               onQuickChange: this.handleQuickChange
@@ -584,8 +598,12 @@ export class CardRenderer extends React.Component<CardProps> {
     if (header) {
       const {subTitle: subTitleTpl} = header || {};
 
-      const subTitle = filter(subTitleTpl, data);
-      return subTitle ? render('sub-title', subTitleTpl!) : undefined;
+      // const subTitle = filter(subTitleTpl, data);
+      return subTitleTpl
+        ? render('sub-title', subTitleTpl, {
+            data
+          })
+        : undefined;
     }
     return;
   }

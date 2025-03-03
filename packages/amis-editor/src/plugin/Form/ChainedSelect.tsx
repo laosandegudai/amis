@@ -1,19 +1,23 @@
-import {EditorNodeType, registerEditorPlugin} from 'amis-editor-core';
 import {
+  EditorManager,
+  EditorNodeType,
+  registerEditorPlugin,
   BasePlugin,
   BaseEventContext,
-  BasicSubRenderInfo,
-  RendererEventContext,
-  SubRendererInfo,
   RendererPluginAction,
   RendererPluginEvent,
   tipedLabel,
   getSchemaTpl,
   defaultValue
 } from 'amis-editor-core';
-import {ValidatorTag} from '../../validator';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
 import type {Schema} from 'amis';
+import {ValidatorTag} from '../../validator';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../../renderer/event-control/helper';
+import {resolveOptionEventDataSchame} from '../../util';
+import {inputStateTpl} from '../../renderer/style-control/helper';
 
 export class ChainedSelectControlPlugin extends BasePlugin {
   static id = 'ChainedSelectControlPlugin';
@@ -52,23 +56,24 @@ export class ChainedSelectControlPlugin extends BasePlugin {
       eventName: 'change',
       eventLabel: '值变化',
       description: '选中值变化时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'string',
-                  title: '选中的值'
+      dataSchema: (manager: EditorManager) => {
+        const {value} = resolveOptionEventDataSchame(manager);
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     }
   ];
 
@@ -77,22 +82,26 @@ export class ChainedSelectControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除选中值'
+      description: '清除选中值',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '将值重置为resetValue，若没有配置resetValue，则清空'
+      description: '将值重置为初始值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'reload',
       actionLabel: '重新加载',
-      description: '触发组件数据刷新并重新渲染'
+      description: '触发组件数据刷新并重新渲染',
+      ...getActionCommonProps('reload')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -131,12 +140,12 @@ export class ChainedSelectControlPlugin extends BasePlugin {
               }),
 
               getSchemaTpl('delimiter', {
-                visibleOn: 'data.joinValues !== false',
+                visibleOn: 'this.joinValues !== false',
                 clearValueOnHidden: true
               }),
 
               getSchemaTpl('extractValue', {
-                visibleOn: 'data.joinValues === false',
+                visibleOn: 'this.joinValues === false',
                 clearValueOnHidden: true
               }),
 
@@ -204,15 +213,36 @@ export class ChainedSelectControlPlugin extends BasePlugin {
         title: '外观',
         body: [
           getSchemaTpl('collapseGroup', [
-            getSchemaTpl('style:formItem', {renderer: context.info.renderer}),
-            getSchemaTpl('style:classNames', {
-              schema: [
-                getSchemaTpl('className', {
-                  name: 'descriptionClassName',
-                  label: '描述'
-                })
+            getSchemaTpl('theme:formItem'),
+            getSchemaTpl('theme:form-label'),
+            getSchemaTpl('theme:form-description'),
+            {
+              title: '选择框样式',
+              body: [
+                ...inputStateTpl(
+                  'themeCss.chainedSelectControlClassName',
+                  '--select-base'
+                )
               ]
-            })
+            },
+            {
+              title: '下拉框样式',
+              body: [
+                ...inputStateTpl(
+                  'themeCss.chainedSelectPopoverClassName',
+                  '--select-base-${state}-option',
+                  {
+                    state: [
+                      {label: '常规', value: 'default'},
+                      {label: '悬浮', value: 'hover'},
+                      {label: '选中', value: 'focused'}
+                    ]
+                  }
+                )
+              ]
+            },
+            getSchemaTpl('theme:cssCode'),
+            getSchemaTpl('style:classNames')
           ])
         ]
       },

@@ -5,7 +5,13 @@ import toPairs from 'lodash/toPairs';
 import pick from 'lodash/pick';
 import {ServiceStore} from './service';
 import type {IFormItemStore} from './formItem';
-import {Api, ApiObject, fetchOptions, Payload} from '../types';
+import {
+  Api,
+  ApiObject,
+  DataChangeReason,
+  fetchOptions,
+  Payload
+} from '../types';
 import {ServerError} from '../utils/errors';
 import {
   getVariable,
@@ -164,8 +170,14 @@ export const FormStore = ServiceStore.named('FormStore')
     };
   })
   .actions(self => {
-    function setValues(values: object, tag?: object, replace?: boolean) {
-      self.updateData(values, tag, replace);
+    function setValues(
+      values: object,
+      tag?: object,
+      replace?: boolean,
+      concatFields?: string | string[],
+      changeReason?: DataChangeReason
+    ) {
+      self.updateData(values, tag, replace, concatFields, changeReason);
 
       // 如果数据域中有数据变化，就都reset一下，去掉之前残留的验证消息
       self.items.forEach(item => {
@@ -204,7 +216,8 @@ export const FormStore = ServiceStore.named('FormStore')
       name: string,
       value: any,
       isPristine: boolean = false,
-      force: boolean = false
+      force: boolean = false,
+      changeReason?: DataChangeReason
     ) {
       // 没有变化就不跑了。
       const origin = getVariable(self.data, name, false);
@@ -252,13 +265,23 @@ export const FormStore = ServiceStore.named('FormStore')
         });
       }
 
+      changeReason &&
+        Object.isExtensible(data) &&
+        !data.__changeReason &&
+        Object.defineProperty(data, '__changeReason', {
+          value: changeReason,
+          enumerable: false,
+          configurable: false,
+          writable: false
+        });
+
       self.data = data;
 
       // 同步 options
       syncOptions();
     }
 
-    function deleteValueByName(name: string) {
+    function deleteValueByName(name: string, changeReason?: DataChangeReason) {
       const prev = self.data;
       const data = cloneObject(self.data);
 
@@ -282,6 +305,16 @@ export const FormStore = ServiceStore.named('FormStore')
       }
 
       deleteVariable(data, name);
+
+      changeReason &&
+        Object.isExtensible(data) &&
+        !data.__changeReason &&
+        Object.defineProperty(data, '__changeReason', {
+          value: changeReason,
+          enumerable: false,
+          configurable: false,
+          writable: false
+        });
       self.data = data;
     }
 
@@ -368,7 +401,11 @@ export const FormStore = ServiceStore.named('FormStore')
                   __saved: Date.now()
                 }
               : undefined,
-            !!(api as ApiObject).replaceData
+            !!(api as ApiObject).replaceData,
+            (api as ApiObject).concatDataFields,
+            {
+              type: 'api'
+            }
           );
         }
 
@@ -514,9 +551,11 @@ export const FormStore = ServiceStore.named('FormStore')
 
     // 10s 内不要重复弹同一个错误
     const toastValidateError = throttle(
-      msg => {
+      (msg, validateError?: ValidateError) => {
         const env = getEnv(self);
-        env.notify('error', msg);
+        env.notify('error', msg, {
+          validateError
+        });
       },
       10000,
       {
@@ -542,11 +581,17 @@ export const FormStore = ServiceStore.named('FormStore')
       self.submiting = true;
 
       try {
-        yield validate(hooks, undefined, true, failedMessage, validateErrCb);
+        const valid = yield validate(
+          hooks,
+          true,
+          true,
+          failedMessage,
+          validateErrCb
+        );
 
         if (fn) {
           const diff = difference(self.data, self.pristine);
-          const result = yield fn(
+          const result: any = yield fn(
             createObject(
               createObject(self.data.__super, {
                 diff: diff,
@@ -572,7 +617,7 @@ export const FormStore = ServiceStore.named('FormStore')
       failedMessage?: string,
       validateErrCb?: () => void
     ) => Promise<boolean> = flow(function* validate(
-      hooks?: Array<() => Promise<any>>,
+      hooks?: Array<(data: any) => Promise<any>>,
       forceValidate?: boolean,
       throwErrors?: boolean,
       failedMessage?: string,
@@ -618,10 +663,30 @@ export const FormStore = ServiceStore.named('FormStore')
         }
       }
 
-      if (hooks && hooks.length) {
-        for (let i = 0, len = hooks.length; i < len; i++) {
-          yield hooks[i]();
+      try {
+        if (hooks && hooks.length) {
+          for (let i = 0, len = hooks.length; i < len; i++) {
+            const msg = yield hooks[i](self.data);
+
+            if (typeof msg == 'string' && msg) {
+              throw new Error(msg);
+            } else if (msg === false) {
+              // 不提示直接不通过校验
+              throw new ValidateError(
+                failedMessage || self.__('Form.validateFailed'),
+                self.errors
+              );
+            }
+          }
         }
+      } catch (e) {
+        if (throwErrors) {
+          throw e;
+        } else {
+          toastValidateError(e.message);
+        }
+
+        return false;
       }
 
       if (!self.valid) {
@@ -638,7 +703,18 @@ export const FormStore = ServiceStore.named('FormStore')
             dispatcher = yield dispatcher;
           }
           if (!dispatcher?.prevented) {
-            msg && toastValidateError(msg);
+            const validateError = new ValidateError(
+              failedMessage || self.__('Form.validateFailed'),
+              self.errors,
+              {
+                items: self.items,
+                msg: {
+                  customMsg: failedMessage,
+                  defaultMsg: self.__('Form.validateFailed')
+                }
+              }
+            );
+            msg && toastValidateError(msg, validateError);
           }
         }
 
@@ -678,6 +754,10 @@ export const FormStore = ServiceStore.named('FormStore')
     function clearErrors() {
       const items = self.items.concat();
       items.forEach(item => item.reset());
+    }
+
+    function setPristine(data: object) {
+      self.pristine = data;
     }
 
     function reset(cb?: (data: any) => void, resetData: boolean = true) {
@@ -765,6 +845,7 @@ export const FormStore = ServiceStore.named('FormStore')
       getLocalPersistData,
       setLocalPersistData,
       clearLocalPersistData,
+      setPristine,
       setPersistData,
       clear,
       updateSavedData,

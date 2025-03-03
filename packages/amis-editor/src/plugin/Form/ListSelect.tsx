@@ -2,14 +2,25 @@ import {
   EditorNodeType,
   JSONPipeIn,
   JSONPipeOut,
-  getSchemaTpl
+  getSchemaTpl,
+  registerEditorPlugin,
+  BasePlugin,
+  BaseEventContext,
+  diff
 } from 'amis-editor-core';
-import {registerEditorPlugin} from 'amis-editor-core';
-import {BasePlugin, BaseEventContext, diff} from 'amis-editor-core';
-import {formItemControl} from '../../component/BaseControl';
-import type {RendererPluginAction, RendererPluginEvent} from 'amis-editor-core';
+import type {
+  EditorManager,
+  RendererPluginAction,
+  RendererPluginEvent
+} from 'amis-editor-core';
 import type {Schema} from 'amis';
-import {resolveOptionType, schemaArrayFormat, schemaToArray} from '../../util';
+import {formItemControl} from '../../component/BaseControl';
+import {
+  resolveOptionEventDataSchame,
+  resolveOptionType,
+  schemaArrayFormat
+} from '../../util';
+import {getActionCommonProps} from '../../renderer/event-control/helper';
 
 export class ListControlPlugin extends BasePlugin {
   static id = 'ListControlPlugin';
@@ -59,29 +70,32 @@ export class ListControlPlugin extends BasePlugin {
 
   panelTitle = '列表选择';
 
+  panelJustify = true;
+
   // 事件定义
   events: RendererPluginEvent[] = [
     {
       eventName: 'change',
       eventLabel: '值变化',
       description: '选中值变化时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'string',
-                  title: '选中的值'
+      dataSchema: (manager: EditorManager) => {
+        const {value} = resolveOptionEventDataSchame(manager);
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     }
   ];
 
@@ -90,40 +104,49 @@ export class ListControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除选中值'
+      description: '清除选中值',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '将值重置为resetValue，若没有配置resetValue，则清空'
+      description: '将值重置为初始值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'reload',
       actionLabel: '重新加载',
-      description: '触发组件数据刷新并重新渲染'
+      description: '触发组件数据刷新并重新渲染',
+      ...getActionCommonProps('reload')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
-  subEditorVariable: Array<{label: string; children: any}> = [
-    {
-      label: '当前选项',
-      children: [
-        {
-          label: '选项名称',
-          value: 'label'
-        },
-        {
-          label: '选项值',
-          value: 'value'
-        }
-      ]
-    }
-  ];
+  getSubEditorVariable(schema: any): Array<{label: string; children: any}> {
+    let labelField = schema?.labelField || 'label';
+    let valueField = schema?.valueField || 'value';
+
+    return [
+      {
+        label: '当前选项',
+        children: [
+          {
+            label: '选项名称',
+            value: labelField
+          },
+          {
+            label: '选项值',
+            value: valueField
+          }
+        ]
+      }
+    ];
+  }
 
   panelBodyCreator = (context: BaseEventContext) => {
     return formItemControl(
@@ -144,7 +167,6 @@ export class ListControlPlugin extends BasePlugin {
                 ...(schema || {}),
                 itemSchema: null
               }),
-              mode: 'vertical',
               useSelectMode: true, // 改用 Select 设置模式
               visibleOn: 'this.options && this.options.length > 0'
             })
@@ -157,8 +179,6 @@ export class ListControlPlugin extends BasePlugin {
               type: 'ae-switch-more',
               mode: 'normal',
               label: '自定义显示模板',
-              bulk: false,
-              name: 'itemSchema',
               formType: 'extend',
               form: {
                 body: [
@@ -201,7 +221,7 @@ export class ListControlPlugin extends BasePlugin {
                     body: [
                       {
                         type: 'tpl',
-                        tpl: `\${${this.getDisplayField(value)}}`,
+                        tpl: `\${${this.getDisplayField(data)}}`,
                         wrapperComponent: '',
                         inline: true
                       }
@@ -220,7 +240,7 @@ export class ListControlPlugin extends BasePlugin {
   };
 
   buildDataSchemas(node: EditorNodeType, region: EditorNodeType) {
-    const type = resolveOptionType(node.schema?.options);
+    const type = resolveOptionType(node.schema);
     // todo:异步数据case
     let dataSchema: any = {
       type,
@@ -275,16 +295,7 @@ export class ListControlPlugin extends BasePlugin {
   }
 
   getDisplayField(data: any) {
-    if (
-      data.source ||
-      (data.map &&
-        Array.isArray(data.map) &&
-        data.map[0] &&
-        Object.keys(data.map[0]).length > 1)
-    ) {
-      return data.labelField ?? 'label';
-    }
-    return 'label';
+    return data?.labelField ?? 'label';
   }
 
   editDetail(id: string, field: string) {

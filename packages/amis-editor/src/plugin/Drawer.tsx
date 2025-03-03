@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   registerEditorPlugin,
   BaseEventContext,
@@ -9,9 +10,13 @@ import {
   noop,
   EditorNodeType,
   isEmpty,
-  getI18nEnabled
+  getI18nEnabled,
+  JSONPipeOut
 } from 'amis-editor-core';
-import {getEventControlConfig} from '../renderer/event-control/helper';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../renderer/event-control/helper';
 import {tipedLabel} from 'amis-editor-core';
 import omit from 'lodash/omit';
 import {InlineModal} from './Dialog';
@@ -99,7 +104,8 @@ export class DrawerPlugin extends BasePlugin {
     {
       actionType: 'confirm',
       actionLabel: '确认',
-      description: '触发抽屉确认操作'
+      description: '触发抽屉确认操作',
+      descDetail: (info: any) => <div>触发确认操作</div>
     },
     {
       actionType: 'cancel',
@@ -109,7 +115,8 @@ export class DrawerPlugin extends BasePlugin {
     {
       actionType: 'setValue',
       actionLabel: '变量赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -124,6 +131,35 @@ export class DrawerPlugin extends BasePlugin {
           {
             title: '基本',
             body: [
+              {
+                type: 'input-text',
+                label: '组件名称',
+                name: 'editorSetting.displayName'
+              },
+
+              {
+                type: 'radios',
+                label: '弹出方式',
+                name: 'actionType',
+                pipeIn: (value: any, store: any, data: any) =>
+                  value ?? data.type,
+                inline: false,
+                options: [
+                  {
+                    label: '弹窗',
+                    value: 'dialog'
+                  },
+                  {
+                    label: '抽屉',
+                    value: 'drawer'
+                  },
+                  {
+                    label: '确认对话框',
+                    value: 'confirmDialog'
+                  }
+                ]
+              },
+
               getSchemaTpl('layout:originPosition', {value: 'left-top'}),
               {
                 label: '标题',
@@ -135,6 +171,7 @@ export class DrawerPlugin extends BasePlugin {
                 label: '显示蒙层',
                 pipeIn: defaultValue(true)
               }),
+              getSchemaTpl('button-manager'),
               getSchemaTpl('switch', {
                 name: 'showCloseButton',
                 label: '展示关闭按钮',
@@ -348,6 +385,13 @@ export class DrawerPlugin extends BasePlugin {
 
   buildSubRenderers() {}
 
+  /**
+   * drawer 高亮区域应该是里面的内容
+   */
+  wrapperResolve(dom: HTMLElement): HTMLElement | Array<HTMLElement> {
+    return dom.lastChild as HTMLElement;
+  }
+
   async buildDataSchemas(
     node: EditorNodeType,
     region?: EditorNodeType,
@@ -355,7 +399,10 @@ export class DrawerPlugin extends BasePlugin {
   ) {
     const renderer = this.manager.store.getNodeById(node.id)?.getComponent();
     const data = omit(renderer.props.$schema.data, '$$id');
-    let dataSchema: any = {};
+    const inputParams = JSONPipeOut(renderer.props.$schema.inputParams);
+    let dataSchema: any = {
+      ...inputParams?.properties
+    };
 
     if (renderer.props.$schema.data === undefined || !isEmpty(data)) {
       // 静态数据
@@ -387,6 +434,7 @@ export class DrawerPlugin extends BasePlugin {
     return {
       $id: 'drawer',
       type: 'object',
+      ...inputParams,
       title: node.schema?.label || node.schema?.name,
       properties: dataSchema
     };

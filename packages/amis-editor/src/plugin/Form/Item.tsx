@@ -1,4 +1,7 @@
-import {registerEditorPlugin} from 'amis-editor-core';
+import {
+  registerEditorPlugin,
+  RendererInfoResolveEventContext
+} from 'amis-editor-core';
 import {
   BasePlugin,
   BaseEventContext,
@@ -15,7 +18,12 @@ import {
 import {defaultValue, getSchemaTpl} from 'amis-editor-core';
 import find from 'lodash/find';
 import {JSONDelete, JSONPipeIn, JSONUpdate} from 'amis-editor-core';
-import {SUPPORT_STATIC_FORMITEM_CMPTS} from '../../renderer/event-control/helper';
+import {NO_SUPPORT_STATIC_FORMITEM_CMPTS} from '../../renderer/event-control/constants';
+import {
+  isExpression,
+  resolveVariableAndFilter,
+  getRendererByName
+} from 'amis-core';
 
 export class ItemPlugin extends BasePlugin {
   static id = 'ItemPlugin';
@@ -23,6 +31,30 @@ export class ItemPlugin extends BasePlugin {
   panelTitle = '表单项';
   order = -990;
   pluginIcon = 'form-plugin';
+
+  afterResolveEditorInfo(event: PluginEvent<RendererInfoResolveEventContext>) {
+    if (event.data && event.context.renderer.isFormItem) {
+      // 给表单项目 label， description 添加快速内联编辑功能
+      let inlineEditableElements =
+        event.data.inlineEditableElements?.concat() || [];
+
+      inlineEditableElements.push(
+        {
+          match: '.cxd-Form-label',
+          key: 'label'
+        },
+        {
+          match: '.cxd-Form-description',
+          key: 'description'
+        }
+      );
+
+      event.setData({
+        ...event.data,
+        inlineEditableElements
+      });
+    }
+  }
 
   buildEditorPanel(
     context: BuildPanelEventContext,
@@ -58,7 +90,10 @@ export class ItemPlugin extends BasePlugin {
   }
   panelBodyCreator = (context: BaseEventContext) => {
     const type = context.schema.type || '';
-    const supportStatic = SUPPORT_STATIC_FORMITEM_CMPTS.includes(type);
+    const render = getRendererByName(type);
+    // 支持静态表单项条件：是表单项组件，切不在不支持静态列表组件中
+    const supportStatic =
+      !!render?.isFormItem && !NO_SUPPORT_STATIC_FORMITEM_CMPTS.includes(type);
     const ignoreName = ~['button', 'submit', 'reset'].indexOf(type);
     const notRequiredName = ~[
       'button-toobar',
@@ -128,7 +163,7 @@ export class ItemPlugin extends BasePlugin {
             getSchemaTpl('horizontal', {
               label: '',
               visibleOn:
-                'data.mode == "horizontal" && data.label !== false && data.horizontal'
+                'this.mode == "horizontal" && this.label !== false && this.horizontal'
             }),
 
             renderer.sizeMutable !== false
@@ -203,7 +238,7 @@ export class ItemPlugin extends BasePlugin {
                 getSchemaTpl('validationErrors'),
                 getSchemaTpl('validateOnChange'),
                 getSchemaTpl('submitOnChange'),
-                getSchemaTpl('api', {
+                getSchemaTpl('apiControl', {
                   name: 'validateApi',
                   label: '校验接口',
                   description: '单独校验这个表单项的接口'
@@ -221,15 +256,14 @@ export class ItemPlugin extends BasePlugin {
       context.info.renderer.isFormItem &&
       context.diff?.some(change => change.path?.join('.') === 'value')
     ) {
-      const change: any = find(
-        context.diff,
-        change => change.path?.join('.') === 'value'
-      )!;
-      const component = this.manager.store
-        .getNodeById(context.id)
-        ?.getComponent();
+      let value = context.value.value;
+      const component = context.node?.getComponent();
 
-      component?.props.onChange(change?.rhs);
+      if (typeof value === 'string' && isExpression(value)) {
+        const data = component?.props.data || {};
+        value = resolveVariableAndFilter(value, data, '| raw');
+      }
+      component?.props.onChange(value);
     }
   }
 
@@ -261,6 +295,9 @@ export class ItemPlugin extends BasePlugin {
     {id, schema, region, selections}: ContextMenuEventContext,
     menus: Array<ContextMenuItem>
   ) {
+    if (this.manager.store.toolbarMode === 'mini') {
+      return;
+    }
     if (!selections.length || selections.length > 3) {
       // 单选或者超过3个选中态时直接返回
       return;

@@ -18,6 +18,7 @@ import {
   normalizeApi
 } from 'amis-core';
 import {Button, toast} from 'amis-ui';
+import {DSFeatureEnum} from '../builder/constants';
 
 import type {IReactionDisposer} from 'mobx';
 import type {InputTableColumnProps} from 'amis-ui';
@@ -144,10 +145,7 @@ export class FieldSetting extends React.Component<
       (prevValue?.length !== value?.length || !isEqual(prevValue, value)) &&
       !isEqual(value, prevState?.fields)
     ) {
-      this.setState({
-        loading: true,
-        fields: Array.isArray(value) ? value : []
-      });
+      this.setState({fields: Array.isArray(value) ? value : []});
     }
   }
 
@@ -211,7 +209,12 @@ export class FieldSetting extends React.Component<
         ? scaffoldData?.listApi
         : '';
 
-    if (!api || (renderer === 'form' && feat !== 'Edit')) {
+    if (
+      !api ||
+      (renderer === 'form' &&
+        feat !== DSFeatureEnum.Edit &&
+        feat !== DSFeatureEnum.View)
+    ) {
       return;
     }
 
@@ -346,15 +349,21 @@ export class FieldSetting extends React.Component<
     const scaffoldData = store?.data;
     const {initApi, listApi} = scaffoldData || {};
     const {loading} = this.state;
-    const fieldApi =
-      renderer === 'form' ? initApi : renderer === 'crud' ? listApi : '';
+    const isForm = renderer === 'form';
+    const isCRUD = renderer === 'crud';
+    const fieldApi = isForm ? initApi : isCRUD ? listApi : '';
     const isApiValid = isValidApi(normalizeApi(fieldApi)?.url);
     const showAutoGenBtn =
-      (renderer === 'form' && feat === 'Edit') ||
-      (renderer === 'crud' && feat === 'List' && ctx?.__step === 0);
+      (isForm &&
+        (feat === DSFeatureEnum.Edit || feat === DSFeatureEnum.View)) ||
+      (isCRUD && feat === DSFeatureEnum.List && ctx?.__step === 0);
 
     return showAutoGenBtn ? (
-      <div className={cx('ae-FieldSetting-footer', 'flex flex-row-reverse')}>
+      <div
+        className={cx('ae-FieldSetting-footer', {
+          ['ae-FieldSetting-footer--form']: isForm
+        })}
+      >
         <Button
           size="sm"
           level="link"
@@ -363,7 +372,7 @@ export class FieldSetting extends React.Component<
           disabledTip={{
             content: loading
               ? '数据处理中...'
-              : renderer === 'form'
+              : isForm
               ? '请先填写初始化接口'
               : '请先填写接口',
             tooltipTheme: 'dark'
@@ -401,8 +410,9 @@ export class FieldSetting extends React.Component<
               'ae-FieldSetting-Table',
               'mb-0'
             ) /** 底部有操作区，干掉默认的 margin-bottom */,
+            toolbarClassName: 'w-1/2',
             showIndex: true,
-            showFooterAddBtn: false,
+            showFooterAddBtn: true,
             addable: true,
             addBtnLabel: '新增',
             addBtnIcon: false,
@@ -426,6 +436,7 @@ export class FieldSetting extends React.Component<
               level: 'link',
               label: '添加字段'
             },
+            placeholder: '暂无字段',
             scaffold: this.scaffold,
             columns: [
               {

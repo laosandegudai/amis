@@ -1,24 +1,21 @@
 import {
+  BasePlugin,
+  BaseEventContext,
+  RendererPluginAction,
+  RendererPluginEvent,
+  registerEditorPlugin,
+  EditorManager,
   EditorNodeType,
   defaultValue,
-  getSchemaTpl,
-  valuePipeOut
-} from 'amis-editor-core';
-import {registerEditorPlugin} from 'amis-editor-core';
-import {
-  BasePlugin,
-  BasicSubRenderInfo,
-  RendererEventContext,
-  SubRendererInfo,
-  BaseEventContext
+  getSchemaTpl
 } from 'amis-editor-core';
 import cloneDeep from 'lodash/cloneDeep';
 import type {Schema} from 'amis';
-
-import {formItemControl} from '../../component/BaseControl';
-import {RendererPluginAction, RendererPluginEvent} from 'amis-editor-core';
 import {ValidatorTag} from '../../validator';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../../renderer/event-control/helper';
 
 export class CityControlPlugin extends BasePlugin {
   static id = 'CityControlPlugin';
@@ -33,6 +30,7 @@ export class CityControlPlugin extends BasePlugin {
   icon = 'fa fa-building-o';
   pluginIcon = 'input-city-plugin';
   description = '可配置是否选择区域或者城市';
+  searchKeywords = '城市选择器';
   docLink = '/amis/zh-CN/components/form/input-city';
   tags = ['表单项'];
   scaffold = {
@@ -65,23 +63,33 @@ export class CityControlPlugin extends BasePlugin {
       eventName: 'change',
       eventLabel: '值变化',
       description: '选中值变化',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'string',
-                  title: '当前城市'
+      dataSchema: (manager: EditorManager) => {
+        const node = manager.store.getNodeById(manager.store.activeId);
+        const schemas = manager.dataSchema.current.schemas;
+        const dataSchema = schemas.find(
+          item => item.properties?.[node!.schema.name]
+        );
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value: {
+                    type: 'string',
+                    ...((dataSchema?.properties?.[node!.schema.name] as any) ??
+                      {}),
+                    title: '当前城市'
+                  }
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     }
   ];
 
@@ -90,17 +98,20 @@ export class CityControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除选中值'
+      description: '清除选中值',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '重置为默认值'
+      description: '重置为默认值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -155,7 +166,7 @@ export class CityControlPlugin extends BasePlugin {
               getSchemaTpl('switch', {
                 name: 'allowDistrict',
                 label: '可选区域',
-                visibleOn: 'data.allowCity',
+                visibleOn: 'this.allowCity',
                 pipeIn: defaultValue(true),
                 onChange: (
                   value: string,

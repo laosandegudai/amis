@@ -108,6 +108,13 @@ export interface PageSchema extends BaseSchema, SpinnerExtraProps {
   asideSticky?: boolean;
 
   /**
+   * 边栏位置
+   *
+   * @default 'left'
+   */
+  asidePosition?: 'left' | 'right';
+
+  /**
    * 边栏最小宽度
    */
   asideMinWidth?: number;
@@ -243,7 +250,6 @@ export default class Page extends React.Component<PageProps> {
   startX: number;
   startWidth: number;
   codeWrap: HTMLElement;
-  asideInner = React.createRef<HTMLDivElement>();
 
   static defaultProps = {
     asideClassName: '',
@@ -254,6 +260,7 @@ export default class Page extends React.Component<PageProps> {
     toolbarClassName: '',
     messages: {},
     asideSticky: true,
+    asidePosition: 'left',
     pullRefresh: {
       disabled: true
     }
@@ -393,20 +400,12 @@ export default class Page extends React.Component<PageProps> {
       initFetchOn,
       store,
       messages,
-      asideSticky,
       data,
       dispatchEvent,
       env
     } = this.props;
 
     this.mounted = true;
-
-    if (asideSticky && this.asideInner.current) {
-      const dom = this.asideInner.current!;
-      dom.style.cssText += `position: sticky; top: ${
-        scrollPosition(dom).top
-      }px;`;
-    }
 
     const rendererEvent = await dispatchEvent('init', data, this);
 
@@ -489,18 +488,39 @@ export default class Page extends React.Component<PageProps> {
     const {env, store, messages, onAction} = this.props;
 
     if (action.actionType === 'dialog') {
-      store.setCurrentAction(action);
-      store.openDialog(
-        ctx,
-        undefined,
-        action.callback,
-        delegate || (this.context as any)
-      );
+      store.setCurrentAction(action, this.props.resolveDefinitions);
+      return new Promise<any>(resolve => {
+        store.openDialog(
+          ctx,
+          undefined,
+          (confirmed: any, value: any) => {
+            action.callback?.(confirmed, value);
+            resolve({
+              confirmed,
+              value
+            });
+          },
+          delegate || (this.context as any)
+        );
+      });
     } else if (action.actionType === 'drawer') {
-      store.setCurrentAction(action);
-      store.openDrawer(ctx, undefined, undefined, delegate);
+      store.setCurrentAction(action, this.props.resolveDefinitions);
+      return new Promise<any>(resolve => {
+        store.openDrawer(
+          ctx,
+          undefined,
+          (confirmed: any, value: any) => {
+            action.callback?.(confirmed, value);
+            resolve({
+              confirmed,
+              value
+            });
+          },
+          delegate
+        );
+      });
     } else if (action.actionType === 'ajax') {
-      store.setCurrentAction(action);
+      store.setCurrentAction(action, this.props.resolveDefinitions);
 
       if (!isEffectiveApi(action.api, ctx)) {
         return;
@@ -522,7 +542,7 @@ export default class Page extends React.Component<PageProps> {
 
           const redirect =
             action.redirect && filter(action.redirect, store.data);
-          redirect && env.jumpTo(redirect, action);
+          redirect && env.jumpTo(redirect, action, store.data);
           action.reload &&
             this.reloadTarget(
               filterTarget(action.reload, store.data),
@@ -586,7 +606,7 @@ export default class Page extends React.Component<PageProps> {
       return;
     }
 
-    store.closeDialog(true);
+    store.closeDialog(true, values);
   }
 
   handleDialogClose(confirmed = false) {
@@ -614,12 +634,12 @@ export default class Page extends React.Component<PageProps> {
       return;
     }
 
-    store.closeDrawer();
+    store.closeDrawer(true, values);
   }
 
   handleDrawerClose() {
     const {store} = this.props;
-    store.closeDrawer();
+    store.closeDrawer(false);
   }
 
   handleClick(e: any) {
@@ -631,7 +651,7 @@ export default class Page extends React.Component<PageProps> {
         : target.closest('a[data-link]')?.getAttribute('data-link');
 
     if (env && link) {
-      env.jumpTo(link);
+      env.jumpTo(link, undefined, this.props.data);
       e.preventDefault();
     }
   }
@@ -654,9 +674,14 @@ export default class Page extends React.Component<PageProps> {
 
   @autobind
   handleResizeMouseMove(e: MouseEvent) {
-    const {asideMinWidth = 160, asideMaxWidth = 350} = this.props;
+    const {
+      asideMinWidth = 160,
+      asideMaxWidth = 350,
+      asidePosition
+    } = this.props;
     const dx = e.clientX - this.startX;
-    const mx = this.startWidth + dx;
+    const mx =
+      asidePosition === 'right' ? this.startWidth - dx : this.startWidth + dx;
     const width = Math.min(Math.max(mx, asideMinWidth), asideMaxWidth);
     this.codeWrap.style.cssText += `width: ${width}px`;
   }
@@ -670,11 +695,14 @@ export default class Page extends React.Component<PageProps> {
   openFeedback(dialog: any, ctx: any) {
     return new Promise(resolve => {
       const {store} = this.props;
-      store.setCurrentAction({
-        type: 'button',
-        actionType: 'dialog',
-        dialog: dialog
-      });
+      store.setCurrentAction(
+        {
+          type: 'button',
+          actionType: 'dialog',
+          dialog: dialog
+        },
+        this.props.resolveDefinitions
+      );
       store.openDialog(
         ctx,
         undefined,
@@ -686,7 +714,7 @@ export default class Page extends React.Component<PageProps> {
     });
   }
 
-  reload(
+  async reload(
     subpath?: any,
     query?: any,
     ctx?: any,
@@ -700,12 +728,14 @@ export default class Page extends React.Component<PageProps> {
     const {store, initApi} = this.props;
 
     clearTimeout(this.timer);
-    isEffectiveApi(initApi, store.data) &&
-      store
-        .fetchData(initApi, store.data, {
-          silent
-        })
-        .then(this.initInterval);
+    if (isEffectiveApi(initApi, store.data)) {
+      const value = await store.fetchData(initApi, store.data, {
+        silent
+      });
+      this.initInterval(value);
+    }
+
+    return store.data;
   }
 
   receive(values: object, subPath?: string, replace?: boolean) {
@@ -803,7 +833,10 @@ export default class Page extends React.Component<PageProps> {
 
     const subProps = {
       onAction: this.handleAction,
-      onQuery: initApi ? this.handleQuery : undefined
+      onQuery: initApi ? this.handleQuery : undefined,
+      onChange: this.handleChange,
+      onBulkChange: this.handleBulkChange,
+      pageLoading: store.loading
     };
     let header, right;
 
@@ -815,14 +848,24 @@ export default class Page extends React.Component<PageProps> {
           className={cx(
             `Page-header`,
             headerClassName,
-            setThemeClassName('headerControlClassName', id, themeCss)
+            setThemeClassName({
+              ...this.props,
+              name: 'headerControlClassName',
+              id,
+              themeCss
+            })
           )}
         >
           {title ? (
             <h2
               className={cx(
                 'Page-title',
-                setThemeClassName('titleControlClassName', id, themeCss)
+                setThemeClassName({
+                  ...this.props,
+                  name: 'titleControlClassName',
+                  id,
+                  themeCss
+                })
               )}
             >
               {render('title', title, subProps)}
@@ -851,7 +894,12 @@ export default class Page extends React.Component<PageProps> {
           className={cx(
             `Page-toolbar`,
             toolbarClassName,
-            setThemeClassName('toolbarControlClassName', id, themeCss)
+            setThemeClassName({
+              ...this.props,
+              name: 'toolbarControlClassName',
+              id,
+              themeCss
+            })
           )}
         >
           {render('toolbar', toolbar || '', subProps)}
@@ -871,47 +919,24 @@ export default class Page extends React.Component<PageProps> {
     return header || right;
   }
 
-  render() {
+  renderContent(subProps: any) {
     const {
-      className,
       store,
       body,
       bodyClassName,
       render,
-      aside,
-      asideClassName,
       classnames: cx,
       showErrorMsg,
-      initApi,
       regions,
-      style,
-      data,
-      asideResizor,
-      pullRefresh,
-      mobileUI,
       translate: __,
       loadingConfig,
+      initApi,
       id,
-      wrapperCustomStyle,
       env,
       themeCss
     } = this.props;
 
-    const subProps = {
-      onAction: this.handleAction,
-      onQuery: initApi ? this.handleQuery : undefined,
-      onChange: this.handleChange,
-      onBulkChange: this.handleBulkChange,
-      pageLoading: store.loading
-    };
-
-    const hasAside = Array.isArray(regions)
-      ? ~regions.indexOf('aside')
-      : aside && (!Array.isArray(aside) || aside.length);
-
-    const styleVar = buildStyle(style, data);
-
-    const pageContent = (
+    return (
       <div className={cx('Page-content')}>
         <div className={cx('Page-main')}>
           {this.renderHeader()}
@@ -920,7 +945,12 @@ export default class Page extends React.Component<PageProps> {
             className={cx(
               `Page-body`,
               bodyClassName,
-              setThemeClassName('bodyControlClassName', id, themeCss)
+              setThemeClassName({
+                ...this.props,
+                name: 'bodyControlClassName',
+                id,
+                themeCss
+              })
             )}
             role="page-body"
           >
@@ -932,7 +962,9 @@ export default class Page extends React.Component<PageProps> {
               loadingConfig={loadingConfig}
             />
 
-            {store.error && showErrorMsg !== false ? (
+            {!env.forceSilenceInsideError &&
+            store.error &&
+            showErrorMsg !== false ? (
               <Alert
                 level="danger"
                 showCloseButton
@@ -949,15 +981,71 @@ export default class Page extends React.Component<PageProps> {
         </div>
       </div>
     );
+  }
+
+  render() {
+    const {
+      className,
+      store,
+      body,
+      bodyClassName,
+      render,
+      aside,
+      asideClassName,
+      classnames: cx,
+      showErrorMsg,
+      initApi,
+      regions,
+      style,
+      data,
+      asideResizor,
+      asideSticky,
+      pullRefresh,
+      mobileUI,
+      translate: __,
+      loadingConfig,
+      id,
+      wrapperCustomStyle,
+      env,
+      themeCss,
+      asidePosition
+    } = this.props;
+
+    const subProps = {
+      onAction: this.handleAction,
+      onQuery: initApi ? this.handleQuery : undefined,
+      onChange: this.handleChange,
+      onBulkChange: this.handleBulkChange,
+      pageLoading: store.loading
+    };
+
+    const hasAside = Array.isArray(regions)
+      ? ~regions.indexOf('aside')
+      : aside && (!Array.isArray(aside) || aside.length);
+
+    const styleVar = buildStyle(style, data);
+    const pageContent = this.renderContent(subProps);
 
     return (
       <div
         className={cx(
           `Page`,
           hasAside ? `Page--withSidebar` : '',
+          hasAside && asideSticky ? `Page--asideSticky` : '',
+          hasAside && asidePosition ? `Page--${asidePosition}Aside` : '',
           className,
-          setThemeClassName('baseControlClassName', id, themeCss),
-          setThemeClassName('wrapperCustomStyle', id, wrapperCustomStyle)
+          setThemeClassName({
+            name: 'baseControlClassName',
+            id,
+            themeCss,
+            ...this.props
+          }),
+          setThemeClassName({
+            name: 'wrapperCustomStyle',
+            id,
+            themeCss: wrapperCustomStyle,
+            ...this.props
+          })
         )}
         onClick={this.handleClick}
         style={styleVar}
@@ -968,20 +1056,23 @@ export default class Page extends React.Component<PageProps> {
               `Page-aside`,
               asideResizor ? 'relative' : 'Page-aside--withWidth',
               asideClassName,
-              setThemeClassName('asideControlClassName', id, themeCss)
+              setThemeClassName({
+                ...this.props,
+                name: 'asideControlClassName',
+                id,
+                themeCss
+              })
             )}
           >
-            <div className={cx(`Page-asideInner`)} ref={this.asideInner}>
-              {render('aside', aside || '', {
-                ...subProps,
-                ...(typeof aside === 'string'
-                  ? {
-                      inline: false,
-                      className: `Page-asideTplWrapper`
-                    }
-                  : null)
-              })}
-            </div>
+            {render('aside', aside || '', {
+              ...subProps,
+              ...(typeof aside === 'string'
+                ? {
+                    inline: false,
+                    className: `Page-asideTplWrapper`
+                  }
+                : null)
+            })}
             {asideResizor ? (
               <div
                 onMouseDown={this.handleResizeMouseDown}
@@ -1039,6 +1130,7 @@ export default class Page extends React.Component<PageProps> {
           }
         )}
         <CustomStyle
+          {...this.props}
           config={{
             wrapperCustomStyle,
             id,
@@ -1082,12 +1174,7 @@ export default class Page extends React.Component<PageProps> {
   }
 }
 
-@Renderer({
-  type: 'page',
-  storeType: ServiceStore.name,
-  isolateScope: true
-})
-export class PageRenderer extends Page {
+export class PageRendererBase extends Page {
   static contextType = ScopedContext;
 
   constructor(props: PageProps, context: IScopedContext) {
@@ -1108,7 +1195,7 @@ export class PageRenderer extends Page {
     scoped.reload(target, data);
   }
 
-  handleAction(
+  async handleAction(
     e: React.UIEvent<any>,
     action: ActionObject,
     ctx: object,
@@ -1133,7 +1220,13 @@ export class PageRenderer extends Page {
           );
       });
     } else {
-      super.handleAction(e, action, ctx, throwErrors, delegate);
+      const ret = await super.handleAction(
+        e,
+        action,
+        ctx,
+        throwErrors,
+        delegate
+      );
 
       if (
         action.reload &&
@@ -1141,6 +1234,8 @@ export class PageRenderer extends Page {
       ) {
         scoped.reload(action.reload, ctx);
       }
+
+      return ret;
     }
   }
 
@@ -1205,3 +1300,10 @@ export class PageRenderer extends Page {
     return store.data;
   }
 }
+
+@Renderer({
+  type: 'page',
+  storeType: ServiceStore.name,
+  isolateScope: true
+})
+export class PageRenderer extends PageRendererBase {}

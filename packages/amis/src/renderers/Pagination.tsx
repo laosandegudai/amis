@@ -2,7 +2,10 @@ import React from 'react';
 import {
   Renderer,
   RendererProps,
+  autobind,
+  createObject,
   isPureVariable,
+  resolveEventData,
   resolveVariableAndFilter
 } from 'amis-core';
 import {BaseSchema} from '../Schema';
@@ -100,14 +103,35 @@ export default class Pagination extends React.Component<PaginationProps> {
     } else if (typeof num === 'number') {
       result = num;
     }
-    return result ?? defaultValue;
+    return typeof result === 'number' && !isNaN(result) ? result : defaultValue;
+  }
+
+  @autobind
+  async onPageChange(page: number, perPage?: number, dir?: string) {
+    const {onPageChange, dispatchEvent, data} = this.props;
+
+    const rendererEvent = await dispatchEvent?.(
+      'change',
+      createObject(data, {
+        page: page,
+        perPage: perPage
+      })
+    );
+
+    if (rendererEvent?.prevented) {
+      return;
+    }
+
+    onPageChange?.(page, perPage, dir);
   }
 
   render() {
     const {maxButtons, activePage, total, perPage} = this.props;
+
     return (
       <BasicPagination
         {...this.props}
+        onPageChange={this.onPageChange}
         maxButtons={this.formatNumber(maxButtons)}
         activePage={this.formatNumber(activePage)}
         total={this.formatNumber(total)}
@@ -118,7 +142,8 @@ export default class Pagination extends React.Component<PaginationProps> {
 }
 
 @Renderer({
-  test: /(^|\/)(?:pagination|pager)$/,
+  type: 'pagination',
+  alias: ['pager'],
   name: 'pagination'
 })
 export class PaginationRenderer extends Pagination {}

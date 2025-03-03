@@ -19,6 +19,8 @@ export interface AutoFilterFormProps extends RendererProps {
   onToggleExpanded?: () => void;
   query?: any;
 
+  canAccessSuperData?: boolean;
+
   popOverContainer?: any;
   onSearchableFromReset?: any;
   onSearchableFromSubmit?: any;
@@ -39,7 +41,9 @@ export function AutoFilterForm({
   onSearchableFromReset,
   onSearchableFromSubmit,
   onSearchableFromInit,
-  popOverContainer
+  popOverContainer,
+  testIdBuilder,
+  canAccessSuperData
 }: AutoFilterFormProps) {
   const schema = React.useMemo(() => {
     const {columnsNum, showBtnToolbar} =
@@ -58,11 +62,13 @@ export function AutoFilterForm({
             ? {
                 type: 'input-text',
                 name: column.name,
-                label: column.label
+                label: column.label,
+                testIdBuilder: testIdBuilder?.getChild(column.name)
               }
             : {
                 type: 'input-text',
                 name: column.name,
+                testIdBuilder: testIdBuilder?.getChild(column.name),
                 ...column.searchable
               }),
           name: column.searchable?.name ?? column.name,
@@ -71,7 +77,7 @@ export function AutoFilterForm({
       })
     );
 
-    let showExpander = searchableColumns.length >= columnsNum;
+    let showExpander = activedSearchableColumns.length >= columnsNum;
 
     // todo 以后做动画
     if (!searchFormExpanded && body.length) {
@@ -98,9 +104,11 @@ export function AutoFilterForm({
         tpl: ''
       });
     }
+
+    const moreTestIdBuilder = testIdBuilder?.getChild('more');
     lastGroup.body.push({
       type: 'container',
-      className: 'ButtonToolbar text-right block',
+      className: 'AutoFilterToolbar',
       wrapperBody: false,
       body: [
         {
@@ -112,34 +120,37 @@ export function AutoFilterForm({
           size: 'sm',
           align: 'right',
           visible: showBtnToolbar,
+          testIdBuilder: moreTestIdBuilder,
           buttons: searchableColumns.map(column => {
             return {
-              type: 'checkbox',
-              label: false,
-              className: cx('Table-searchableForm-checkbox'),
-              inputClassName: cx('Table-searchableForm-checkbox-inner'),
-              name: `${
-                column.searchable.strategy === 'jsonql' ? '' : '__search_'
-              }${column.searchable?.name ?? column.name}`,
-              option: column.searchable?.label ?? column.label,
-              /**
-               * syncLocation开启后，参数值会从地址栏Query中二次同步到数据域中，其中布尔(boolean)类型的值被转化为字符串
-               * eg:
-               *     true ==> "true"
-               *     false ==> "false"
-               * 所以这里将真值和假值转化成字符串格式规避
-               */
-              trueValue: '1',
-              falseValue: '0',
-              value: !!column.enableSearch ? '1' : '0',
-              badge: {
-                offset: [-10, 5],
-                visibleOn: `${
-                  column.toggable && !column.toggled && column.enableSearch
-                }`
-              },
-              onChange: (value: '1' | '0') =>
-                onItemToggleExpanded?.(column, value === '1' ? true : false)
+              children: ({render}: any) =>
+                render(
+                  `column-search-toggler-${column.id}`,
+                  {
+                    type: 'checkbox',
+                    label: false,
+                    className: cx('Table-searchableForm-checkbox'),
+                    inputClassName: cx('Table-searchableForm-checkbox-inner'),
+                    name: `__whatever_name`,
+                    option: column.searchable?.label ?? column.label,
+                    testIdBuilder: moreTestIdBuilder?.getChild(
+                      column.name + ''
+                    ),
+                    badge: {
+                      offset: [-10, 5],
+                      visibleOn: `${
+                        column.toggable &&
+                        !column.toggled &&
+                        column.enableSearch
+                      }`
+                    }
+                  },
+                  {
+                    value: activedSearchableColumns.includes(column),
+                    onChange: (value: any) =>
+                      onItemToggleExpanded?.(column, value)
+                  }
+                )
             };
           })
         },
@@ -147,34 +158,36 @@ export function AutoFilterForm({
         {
           type: 'submit',
           label: __('search'),
+          size: 'sm',
           level: 'primary',
-          className: 'w-18'
+          className: 'w-18 mr-2'
         },
         {
           type: 'reset',
           label: __('reset'),
-          className: 'w-18'
+          size: 'sm',
+          className: 'w-18',
+          actionType: 'clear-and-submit'
         },
 
-        showExpander
-          ? {
-              children: () => (
-                <a
-                  className={cx(
-                    'Table-SFToggler',
-                    searchFormExpanded ? 'is-expanded' : ''
-                  )}
-                  onClick={onToggleExpanded}
-                >
-                  {__(searchFormExpanded ? 'collapse' : 'expand')}
-                  <span className={cx('Table-SFToggler-arrow')}>
-                    <Icon icon="right-arrow-bold" className="icon" />
-                  </span>
-                </a>
-              )
-            }
-          : null
-      ].filter(item => item)
+        {
+          children: () =>
+            showExpander ? (
+              <a
+                className={cx(
+                  'Table-SFToggler',
+                  searchFormExpanded ? 'is-expanded' : ''
+                )}
+                onClick={onToggleExpanded}
+              >
+                {__(searchFormExpanded ? 'collapse' : 'expand')}
+                <span className={cx('Table-SFToggler-arrow')}>
+                  <Icon icon="right-arrow-bold" className="icon" />
+                </span>
+              </a>
+            ) : null
+        }
+      ]
     });
 
     return {
@@ -185,13 +198,15 @@ export function AutoFilterForm({
       submitText: __('search'),
       body: body,
       actions: [],
-      canAccessSuperData: false
+      canAccessSuperData: canAccessSuperData
     };
   }, [
     autoGenerateFilter,
     activedSearchableColumns,
     searchableColumns,
-    searchFormExpanded
+    searchFormExpanded,
+    canAccessSuperData,
+    __ // 保证语言更新后能重新渲染
   ]);
 
   return render('searchable-form', schema, {
@@ -227,7 +242,7 @@ export default observer(
     const onItemToggleExpanded = React.useCallback(
       (column: IColumn, value: boolean) => {
         column.setEnableSearch(value);
-        store.setSearchFormExpanded(true);
+        value && store.setSearchFormExpanded(true);
       },
       []
     );

@@ -1,4 +1,9 @@
-import {OptionsControlProps, OptionsControl, resolveEventData} from 'amis-core';
+import {
+  OptionsControlProps,
+  OptionsControl,
+  resolveEventData,
+  getVariable
+} from 'amis-core';
 import React from 'react';
 import {Spinner, SpinnerExtraProps} from 'amis-ui';
 import {BaseTabsTransferRenderer} from './TabsTransfer';
@@ -73,13 +78,17 @@ export class TabsTransferPickerRenderer extends BaseTabsTransferRenderer<TabsTra
 
   // 动作
   doAction(action: ActionObject) {
-    const {resetValue, onChange} = this.props;
+    const {resetValue, onChange, formStore, store, name} = this.props;
     switch (action.actionType) {
       case 'clear':
         onChange?.('');
         break;
       case 'reset':
-        onChange?.(resetValue ?? '');
+        onChange?.(
+          getVariable(formStore?.pristine ?? store?.pristine, name) ??
+            resetValue ??
+            ''
+        );
         break;
     }
   }
@@ -108,10 +117,13 @@ export class TabsTransferPickerRenderer extends BaseTabsTransferRenderer<TabsTra
       loadingConfig,
       labelField = 'label',
       valueField = 'value',
+      deferField = 'defer',
       mobileUI,
       env,
       maxTagCount,
-      overflowTagPopover
+      overflowTagPopover,
+      placeholder,
+      initiallyOpen = true
     } = this.props;
 
     return (
@@ -119,6 +131,7 @@ export class TabsTransferPickerRenderer extends BaseTabsTransferRenderer<TabsTra
         <TabsTransferPicker
           activeKey={this.state.activeKey}
           onTabChange={this.onTabChange}
+          placeholder={placeholder}
           value={selectedOptions}
           disabled={disabled}
           options={options}
@@ -144,10 +157,12 @@ export class TabsTransferPickerRenderer extends BaseTabsTransferRenderer<TabsTra
           virtualThreshold={virtualThreshold}
           labelField={labelField}
           valueField={valueField}
+          deferField={deferField}
           mobileUI={mobileUI}
           popOverContainer={env?.getModalContainer}
           maxTagCount={maxTagCount}
           overflowTagPopover={overflowTagPopover}
+          initiallyOpen={initiallyOpen}
         />
 
         <Spinner

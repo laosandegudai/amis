@@ -4,6 +4,7 @@ import debounce from 'lodash/debounce';
 import cx from 'classnames';
 import {matchSorter} from 'match-sorter';
 import {SpinnerExtraProps, Tree as TreeSelector} from 'amis-ui';
+import {value2array} from 'amis-ui/lib/components/Select';
 import {
   Option,
   OptionsControl,
@@ -14,12 +15,29 @@ import {
   isPureVariable,
   resolveVariableAndFilter,
   resolveEventData,
-  toNumber
+  toNumber,
+  findTreeIndex,
+  hasAbility,
+  findTree,
+  isEffectiveApi,
+  BaseApiObject,
+  getVariable,
+  setThemeClassName,
+  CustomStyle,
+  resizeSensor,
+  anyChanged
 } from 'amis-core';
 import {Spinner, SearchBox} from 'amis-ui';
-import {FormOptionsSchema, SchemaApi} from '../../Schema';
+import {
+  FormOptionsSchema,
+  SchemaApi,
+  SchemaCollection,
+  SchemaClassName
+} from '../../Schema';
 import {supportStatic} from './StaticHoc';
 import type {ItemRenderStates} from 'amis-ui/lib/components/Selection';
+
+type NodeBehaviorType = 'unfold' | 'check';
 
 /**
  * Tree 下拉选择框。
@@ -63,6 +81,16 @@ export interface TreeControlSchema extends FormOptionsSchema {
   cascade?: boolean;
 
   /**
+   * 节点行为配置，默认为选中
+   */
+  nodeBehavior?: NodeBehaviorType[];
+
+  /**
+   * 子节点取消时自动取消父节点的值，默认为false
+   */
+  autoCancelParent?: boolean;
+
+  /**
    * 选父级的时候是否把子节点的值也包含在内。
    */
   withChildren?: boolean;
@@ -97,6 +125,9 @@ export interface TreeControlSchema extends FormOptionsSchema {
    */
   showOutline?: boolean;
 
+  /**
+   * 懒加载接口
+   */
   deferApi?: SchemaApi;
 
   /**
@@ -113,6 +144,16 @@ export interface TreeControlSchema extends FormOptionsSchema {
    * 是否开启搜索
    */
   searchable?: boolean;
+
+  /**
+   * 搜索 API
+   */
+  searchApi?: SchemaApi;
+
+  /**
+   * 自定义节点操作栏区域
+   */
+  itemActions?: SchemaCollection;
 
   /**
    * 搜索框的配置
@@ -179,6 +220,9 @@ export interface TreeProps
 interface TreeState {
   filteredOptions: Option[];
   keyword: string;
+  allowSearch: boolean;
+  virtualListHeight: number;
+  othersHeight: number;
 }
 
 export default class TreeControl extends React.Component<TreeProps, TreeState> {
@@ -192,12 +236,17 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
     pathSeparator: '/'
   };
   treeRef: any;
+  readonly rootRef = React.createRef<HTMLDivElement>();
+  unSensor?: () => void;
 
   constructor(props: TreeProps) {
     super(props);
     this.state = {
       keyword: '',
-      filteredOptions: this.props.options ?? []
+      filteredOptions: this.props.options ?? [],
+      allowSearch: false,
+      virtualListHeight: 0,
+      othersHeight: 0
     };
     this.handleSearch = debounce(this.handleSearch.bind(this), 250, {
       trailing: true,
@@ -205,8 +254,24 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
     });
   }
 
-  componentDidUpdate(prevProps: TreeProps) {
+  componentDidMount() {
+    if (this.props.heightAuto) {
+      this.initOthersHeight();
+      this.handleVirtualListHeight();
+      this.unSensor = resizeSensor(
+        this.rootRef.current?.parentElement!,
+        () => {
+          this.handleVirtualListHeight();
+        },
+        false,
+        'height'
+      );
+    }
+  }
+
+  componentDidUpdate(prevProps: TreeProps, preState: TreeState) {
     const props = this.props;
+    const state = this.state;
     const keyword = this.state.keyword;
 
     if (
@@ -220,6 +285,95 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
           searchable && keyword ? this.filterOptions(options, keyword) : options
       });
     }
+
+    if (
+      anyChanged(
+        [
+          'label',
+          'searchable',
+          'creatable',
+          'hideRoot',
+          'themeCss',
+          'wrapperCustomStyle',
+          'heightAuto'
+        ],
+        prevProps,
+        props
+      ) &&
+      props.heightAuto
+    ) {
+      this.initOthersHeight();
+    }
+
+    if (preState.othersHeight !== state.othersHeight && props.heightAuto) {
+      this.handleVirtualListHeight();
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.unSensor) {
+      this.unSensor();
+      delete this.unSensor;
+    }
+  }
+
+  initOthersHeight() {
+    const treeElement = this.rootRef.current;
+    const treeParentElement = this.rootRef.current?.parentElement;
+    const virtualElement = this.treeRef.virtualListRef.current;
+    const virtualParentElement: HTMLElement | null | undefined =
+      this.treeRef.virtualListRef.current?.parentElement;
+
+    if (
+      !treeParentElement ||
+      !virtualParentElement ||
+      !virtualElement ||
+      !treeElement
+    )
+      return;
+
+    const calculateHeight = (
+      element: HTMLElement,
+      excludeElement: HTMLElement
+    ) => {
+      return Array.from(element.children)
+        .filter(item => item !== excludeElement)
+        .reduce((prev, current: HTMLElement) => {
+          return (
+            prev + current.offsetHeight + this.getElementVerticalMargin(current)
+          );
+        }, 0);
+    };
+
+    // 计算元素的高度+padding+margin等值
+    const othersHeight =
+      calculateHeight(treeParentElement, treeElement) +
+      this.getElementVerticalMargin(treeElement) +
+      calculateHeight(virtualParentElement, virtualElement) +
+      treeElement.offsetHeight -
+      virtualParentElement.offsetHeight;
+
+    this.setState({othersHeight});
+  }
+
+  handleVirtualListHeight() {
+    const {othersHeight} = this.state;
+    const parentElement = this.rootRef.current?.parentElement;
+    if (!parentElement) return;
+
+    const virtualListHeight = parentElement.offsetHeight - othersHeight;
+
+    this.setState({
+      virtualListHeight: virtualListHeight > 0 ? virtualListHeight : 0
+    });
+  }
+
+  // 获取边距高度
+  getElementVerticalMargin(element: HTMLElement) {
+    const styles: any = window.getComputedStyle(element, null);
+    return (
+      parseInt(styles.marginTop || '0') + parseInt(styles.marginBottom || '0')
+    );
   }
 
   reload() {
@@ -229,17 +383,74 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
 
   doAction(action: ActionObject, data: any, throwErrors: boolean) {
     const actionType = action?.actionType as string;
-    const {resetValue, onChange} = this.props;
+    const {resetValue, onChange, formStore, store, name} = this.props;
 
     if (actionType === 'clear') {
       onChange?.('');
     } else if (actionType === 'reset') {
-      onChange?.(resetValue ?? '');
+      const pristineVal =
+        getVariable(formStore?.pristine ?? store?.pristine, name) ?? resetValue;
+      onChange?.(pristineVal ?? '');
     } else if (action.actionType === 'expand') {
       this.treeRef.syncUnFolded(this.props, action.args?.openLevel);
     } else if (action.actionType === 'collapse') {
-      this.treeRef.syncUnFolded(this.props, 1);
+      this.treeRef.syncUnFolded(this.props, action.args?.closeLevel || 0);
+    } else if (action.actionType === 'add') {
+      this.addItemFromAction(action.args?.item, action.args?.parentValue);
+    } else if (action.actionType === 'edit') {
+      this.editItemFromAction(action.args?.item, action.args?.originValue);
+    } else if (action.actionType === 'delete') {
+      this.deleteItemFromAction(action.args?.value);
+    } else if (action.actionType === 'reload') {
+      this.reload();
+    } else if (actionType === 'search') {
+      this.setState({
+        allowSearch: !!action.args?.keyword
+      });
+      this.handleSearch(action.args?.keyword);
     }
+  }
+
+  /**
+   * @deprecated 不推荐使用，没考虑 jointValues false，没考虑多选
+   * @param options
+   * @param value
+   * @returns
+   */
+  resolveOption(options: Array<Option>, value: any) {
+    return findTree(options, item => {
+      const valueAbility = this.props.valueField || 'value';
+      const itemValue = hasAbility(item, valueAbility)
+        ? item[valueAbility]
+        : '';
+      return itemValue === value;
+    });
+  }
+
+  @autobind
+  addItemFromAction(item: Option, parentValue?: any) {
+    const {onAdd, options, valueField} = this.props;
+    const idxes =
+      findTreeIndex(options, item => {
+        const valueAbility = valueField || 'value';
+        const value = hasAbility(item, valueAbility) ? item[valueAbility] : '';
+        return value === parentValue;
+      }) || [];
+    onAdd && onAdd(idxes.concat(0), item, true);
+  }
+
+  @autobind
+  editItemFromAction(item: Option, originValue: any) {
+    const {onEdit, options} = this.props;
+    const editItem = this.resolveOption(options, originValue);
+    onEdit && editItem && onEdit({...item, originValue}, editItem, true);
+  }
+
+  @autobind
+  deleteItemFromAction(value: any) {
+    const {onDelete, options} = this.props;
+    const deleteItem = this.resolveOption(options, value);
+    onDelete && deleteItem && onDelete(deleteItem);
   }
 
   filterOptions(options: Array<Option>, keywords: string): Array<Option> {
@@ -269,11 +480,58 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
 
   @autobind
   async handleChange(value: any) {
-    const {onChange, dispatchEvent} = this.props;
+    const {
+      onChange,
+      searchable,
+      options,
+      dispatchEvent,
+      multiple,
+      delimiter,
+      valueField,
+      selectedOptions: originSelectedItems,
+      joinValues,
+      extractValue
+    } = this.props;
+    const {filteredOptions, allowSearch} = this.state;
+    const items = searchable || allowSearch ? filteredOptions : options;
+
+    const selectedItems = value2array(value, {
+      multiple,
+      delimiter,
+      valueField,
+      options: filteredOptions
+    });
+    const item = multiple ? null : selectedItems[0];
+
+    // 如果是搜索模式，有可能已经选择的值被过滤掉了，如果值发生了变化
+    // 不应该让原来选中的值丢失
+    // https://github.com/baidu/amis/issues/9946
+    if (multiple && (searchable || allowSearch) && originSelectedItems.length) {
+      originSelectedItems.forEach(origin => {
+        const exists = findTree(
+          filteredOptions,
+          item => item[valueField || 'value'] === origin[valueField || 'value']
+        );
+        if (!exists) {
+          selectedItems.push(origin);
+        }
+      });
+      value = selectedItems.map(item =>
+        extractValue || joinValues ? item[valueField || 'value'] : item
+      );
+      if (joinValues) {
+        value = value.join(delimiter || ',');
+      }
+    }
 
     const rendererEvent = await dispatchEvent(
       'change',
-      resolveEventData(this.props, {value})
+      resolveEventData(this.props, {
+        value,
+        item,
+        items,
+        selectedItems
+      })
     );
 
     if (rendererEvent?.prevented) {
@@ -283,9 +541,52 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
     onChange && onChange(value);
   }
 
-  handleSearch(keyword: string) {
-    const {options} = this.props;
-    const filterOptions = this.filterOptions(options, keyword);
+  @autobind
+  async handleNodeClick(item: any) {
+    const {dispatchEvent, data} = this.props;
+
+    const rendererEvent = await dispatchEvent(
+      'itemClick',
+      createObject(data, {item})
+    );
+
+    if (rendererEvent?.prevented) {
+      return;
+    }
+  }
+
+  async handleSearch(keyword: string) {
+    const {searchApi, options, env, data, translate: __} = this.props;
+
+    let filterOptions: Array<Option> = [];
+
+    if (isEffectiveApi(searchApi)) {
+      try {
+        const payload = await env.fetcher(
+          searchApi,
+          createObject(data, {term: keyword})
+        );
+
+        if (!payload.ok) {
+          throw new Error(__(payload.msg || 'networkError'));
+        }
+
+        const result =
+          payload.data.options || payload.data.items || payload.data;
+        if (!Array.isArray(result)) {
+          throw new Error(__('Tree.invalidArray'));
+        }
+
+        filterOptions = result;
+      } catch (e) {
+        if (!env.isCancel(e)) {
+          !(searchApi as BaseApiObject).silent &&
+            env.notify('error', e.message);
+        }
+      }
+    } else if (keyword) {
+      filterOptions = this.filterOptions(options, keyword);
+    }
 
     this.setState({
       keyword,
@@ -320,11 +621,37 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
     });
   }
 
+  @autobind
+  renderItemActions(option: Option, states: any) {
+    const {itemActions, data, render} = this.props;
+
+    return render(`action/${states.index}`, itemActions || '', {
+      data: createObject(createObject(data, {...states}), option)
+    });
+  }
+
+  @autobind
+  renderSearch() {
+    const {classPrefix: ns, searchConfig, mobileUI, testIdBuilder} = this.props;
+    return (
+      <SearchBox
+        className={cx(`${ns}TreeControl-searchbox`, searchConfig?.className, {
+          'is-sticky': searchConfig?.sticky
+        })}
+        mini={false}
+        clearable={true}
+        {...omit(searchConfig, 'className', 'sticky')}
+        onSearch={this.handleSearch}
+        mobileUI={mobileUI}
+        testIdBuilder={testIdBuilder?.getChild('search')}
+      />
+    );
+  }
+
   @supportStatic()
   render() {
     const {
       className,
-      style,
       treeContainerClassName,
       classPrefix: ns,
       value,
@@ -347,6 +674,7 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
       hideRoot,
       rootLabel,
       autoCheckChildren,
+      autoCancelParent,
       cascade,
       rootValue,
       showIcon,
@@ -367,6 +695,7 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
       rootCreateTip,
       labelField,
       iconField,
+      deferField,
       nodePath,
       deferLoad,
       expandTreeOptions,
@@ -380,10 +709,18 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
       searchable,
       searchConfig = {},
       heightAuto,
-      mobileUI
+      mobileUI,
+      testIdBuilder,
+      nodeBehavior,
+      itemActions,
+      id,
+      wrapperCustomStyle,
+      themeCss,
+      env
     } = this.props;
     let {highlightTxt} = this.props;
-    const {filteredOptions, keyword} = this.state;
+    const {filteredOptions, keyword, allowSearch, virtualListHeight} =
+      this.state;
 
     if (isPureVariable(highlightTxt)) {
       highlightTxt = resolveVariableAndFilter(highlightTxt, data);
@@ -396,14 +733,16 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
         labelField={labelField}
         valueField={valueField}
         iconField={iconField}
+        deferField={deferField}
         disabled={disabled}
         onChange={this.handleChange}
+        onHandleNodeClick={this.handleNodeClick}
         joinValues={joinValues}
         extractValue={extractValue}
         delimiter={delimiter}
         placeholder={__(placeholder)}
-        options={searchable ? filteredOptions : options}
-        highlightTxt={searchable ? keyword : highlightTxt}
+        options={searchable || allowSearch ? filteredOptions : options}
+        highlightTxt={searchable || allowSearch ? keyword : highlightTxt}
         multiple={multiple}
         initiallyOpen={initiallyOpen}
         unfoldedLevel={unfoldedLevel}
@@ -417,6 +756,7 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
         showRadio={showRadio}
         showOutline={showOutline}
         autoCheckChildren={autoCheckChildren}
+        autoCancelParent={autoCancelParent}
         cascade={cascade}
         foldedField="collapsed"
         value={value || ''}
@@ -439,46 +779,69 @@ export default class TreeControl extends React.Component<TreeProps, TreeState> {
         onDeferLoad={deferLoad}
         onExpandTree={expandTreeOptions}
         virtualThreshold={virtualThreshold}
+        virtualHeight={
+          toNumber(virtualListHeight) >= 0
+            ? toNumber(virtualListHeight)
+            : undefined
+        }
         itemHeight={toNumber(itemHeight) > 0 ? toNumber(itemHeight) : undefined}
         itemRender={menuTpl ? this.renderOptionItem : undefined}
         enableDefaultIcon={enableDefaultIcon}
         mobileUI={mobileUI}
+        nodeBehavior={nodeBehavior}
+        itemActionsRender={itemActions ? this.renderItemActions : undefined}
+        actionClassName={cx(
+          setThemeClassName({
+            ...this.props,
+            name: 'actionControlClassName',
+            id,
+            themeCss
+          })
+        )}
+        testIdBuilder={testIdBuilder?.getChild('tree')}
       />
     );
 
     return (
-      <div
-        className={cx(`${ns}TreeControl`, className, treeContainerClassName, {
-          'is-sticky': searchable && searchConfig?.sticky,
-          'h-auto': heightAuto
-        })}
-      >
-        <Spinner
-          size="sm"
-          key="info"
-          show={loading}
-          loadingConfig={loadingConfig}
+      <>
+        <div
+          ref={this.rootRef}
+          className={cx(`${ns}TreeControl`, className, treeContainerClassName, {
+            'is-sticky': searchable && searchConfig?.sticky,
+            'h-auto': heightAuto
+          })}
+          {...testIdBuilder?.getChild('control').getTestId()}
+        >
+          <Spinner
+            size="sm"
+            key="info"
+            show={loading}
+            loadingConfig={loadingConfig}
+          />
+          {loading ? null : searchable ? (
+            <>
+              {this.renderSearch()}
+              {TreeCmpt}
+            </>
+          ) : (
+            TreeCmpt
+          )}
+        </div>
+        <CustomStyle
+          {...this.props}
+          config={{
+            wrapperCustomStyle,
+            id,
+            themeCss,
+            classNames: [
+              {
+                key: 'actionControlClassName'
+              }
+            ]
+          }}
+          env={env}
         />
-        {loading ? null : searchable ? (
-          <>
-            <SearchBox
-              className={cx(
-                `${ns}TreeControl-searchbox`,
-                searchConfig?.className,
-                {'is-sticky': searchConfig?.sticky}
-              )}
-              mini={false}
-              clearable={true}
-              {...omit(searchConfig, 'className', 'sticky')}
-              onSearch={this.handleSearch}
-              mobileUI={mobileUI}
-            />
-            {TreeCmpt}
-          </>
-        ) : (
-          TreeCmpt
-        )}
-      </div>
+      </>
     );
   }
 }

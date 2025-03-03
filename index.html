@@ -24,7 +24,12 @@
       rel="stylesheet"
       href="/node_modules/@fortawesome/fontawesome-free/css/v4-shims.css"
     />
+    <link rel="stylesheet" href="/node_modules/katex/dist/katex.min.css" />
     <link rel="stylesheet" href="/node_modules/prismjs/themes/prism.css" />
+    <link
+      rel="stylesheet"
+      href="/node_modules/github-markdown-css/github-markdown-light.css"
+    />
     <link rel="stylesheet" href="/examples/doc.css" />
 
     <link rel="stylesheet" href="/examples/style.scss" />
@@ -42,7 +47,7 @@
         theme = 'cxd';
       }
 
-      ['ang', 'cxd', 'antd'].forEach(key => {
+      ['ang', 'cxd', 'antd', 'dark'].forEach(key => {
         const link = document.createElement('link');
         link.setAttribute('rel', 'stylesheet');
         link.setAttribute('title', key);
@@ -93,5 +98,10 @@
       const initialState = {};
       bootstrap(document.getElementById('root'), initialState);
     </script>
+    <script defer src="/node_modules/katex/dist/katex.min.js"></script>
+    <script
+      defer
+      src="/node_modules/katex/dist/contrib/auto-render.min.js"
+    ></script>
   </body>
 </html>

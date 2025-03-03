@@ -27,6 +27,7 @@ export interface ColorProps extends LocaleProps, ThemeProps {
   popoverClassName?: string;
   disabled?: boolean;
   popOverContainer?: any;
+  popOverContainerSelector?: string;
   placement?: string;
   value?: any;
   onChange: (value: any) => void;
@@ -196,6 +197,10 @@ export class ColorControl extends React.PureComponent<
       );
     } else if (format === 'rgb') {
       onChange(`rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`);
+    } else if (format === 'hexa') {
+      onChange(
+        this.rgbaToHex(color.rgb.r, color.rgb.g, color.rgb.b, color.rgb.a)
+      );
     } else if (format === 'hsl') {
       onChange(
         `hsl(${Math.round(color.hsl.h)}, ${Math.round(
@@ -217,6 +222,13 @@ export class ColorControl extends React.PureComponent<
       tempValue = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${color.rgb.a})`;
     } else if (format === 'rgb') {
       tempValue = `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`;
+    } else if (format === 'hexa') {
+      tempValue = this.rgbaToHex(
+        color.rgb.r,
+        color.rgb.g,
+        color.rgb.b,
+        color.rgb.a
+      );
     } else if (format === 'hsl') {
       tempValue = `hsl(${Math.round(color.hsl.h)}, ${Math.round(
         color.hsl.s * 100
@@ -234,6 +246,36 @@ export class ColorControl extends React.PureComponent<
     this.close();
   }
 
+  /**
+   * Converts an RGBA color to an 8-digit hex color.
+   *
+   * @param r - Red component (0-255)
+   * @param g - Green component (0-255)
+   * @param b - Blue component (0-255)
+   * @param a - Alpha component (1-100)
+   * @returns The hex color string in the format #RRGGBBAA
+   */
+  rgbaToHex(r: number, g: number, b: number, a: number | undefined): string {
+    if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+      return `#00000000`;
+    }
+    if (typeof a === 'undefined' || a > 1) {
+      a = 1;
+    }
+    if (a < 0.01) {
+      a = 0;
+    }
+
+    const toHex = (n: number) => n.toString(16).padStart(2, '0').toUpperCase();
+
+    const alphaHex = toHex(Math.round(a * 255));
+    const redHex = toHex(r);
+    const greenHex = toHex(g);
+    const blueHex = toHex(b);
+
+    return `#${redHex}${greenHex}${blueHex}${alphaHex}`;
+  }
+
   render() {
     const {
       classPrefix: ns,
@@ -243,6 +285,7 @@ export class ColorControl extends React.PureComponent<
       placeholder,
       disabled,
       popOverContainer,
+      popOverContainerSelector,
       format,
       clearable,
       placement,
@@ -313,6 +356,7 @@ export class ColorControl extends React.PureComponent<
             target={() => findDOMNode(this)}
             onHide={this.close}
             container={popOverContainer || (() => findDOMNode(this))}
+            containerSelector={popOverContainerSelector}
             rootClose={false}
             show
           >

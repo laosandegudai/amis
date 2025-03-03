@@ -177,18 +177,24 @@ export class CRUDColumnControl extends React.Component<
           const parent = e.to as HTMLElement;
 
           if (e.oldIndex < parent.childNodes.length - 1) {
-            parent.insertBefore(e.item, parent.childNodes[e.oldIndex]);
+            parent.insertBefore(
+              e.item,
+              parent.childNodes[
+                e.oldIndex > e.newIndex ? e.oldIndex + 1 : e.oldIndex
+              ]
+            );
           } else {
             parent.appendChild(e.item);
           }
 
           const options = this.state.options.concat();
 
-          options[e.oldIndex] = options.splice(
-            e.newIndex,
-            1,
-            options[e.oldIndex]
-          )[0];
+          // options[e.oldIndex] = options.splice(
+          //   e.newIndex,
+          //   1,
+          //   options[e.oldIndex]
+          // )[0];
+          options.splice(e.newIndex, 0, options.splice(e.oldIndex, 1)[0]);
 
           this.setState({options}, () => this.handleSort());
         }
@@ -449,19 +455,29 @@ export class CRUDColumnControl extends React.Component<
             size="sm"
             className={cx('flex')}
           />
-        ) : Array.isArray(options) && options.length > 0 ? (
+        ) : (
           <>
             {this.renderHeader()}
-            <ul className={cx('ae-CRUDConfigControl-list')} ref={this.dragRef}>
-              {options.map((item, index) => {
-                return this.renderOption(item, index);
-              })}
-            </ul>
+            {Array.isArray(options) && options.length > 0 ? (
+              <ul
+                className={cx('ae-CRUDConfigControl-list')}
+                ref={this.dragRef}
+              >
+                {options.map((item, index) => {
+                  return this.renderOption(item, index);
+                })}
+              </ul>
+            ) : (
+              <ul
+                className={cx('ae-CRUDConfigControl-list')}
+                ref={this.dragRef}
+              >
+                <p className={cx(`ae-CRUDConfigControl-placeholder`)}>
+                  暂无数据
+                </p>
+              </ul>
+            )}
           </>
-        ) : (
-          <ul className={cx('ae-CRUDConfigControl-list')} ref={this.dragRef}>
-            <p className={cx(`ae-CRUDConfigControl-placeholder`)}>暂无数据</p>
-          </ul>
         )}
 
         {showAddModal ? (

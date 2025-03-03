@@ -7,11 +7,10 @@ import cx from 'classnames';
 import {FormItem, Switch, Option} from 'amis';
 
 import {autobind, getSchemaTpl} from 'amis-editor-core';
-import {BaseLabelMark} from '../component/BaseControl';
 
 import type {FormControlProps} from 'amis-core';
 import type {SchemaCollection} from 'amis';
-import type {FormSchema} from '../../../amis/src/Schema';
+import type {FormSchema} from 'amis/lib/Schema';
 
 export interface StatusControlProps extends FormControlProps {
   name: string;
@@ -31,6 +30,7 @@ export interface StatusControlProps extends FormControlProps {
 type StatusFormData = {
   statusType: number;
   expression: string;
+  condition: object;
 };
 
 interface StatusControlState {
@@ -65,7 +65,11 @@ export class StatusControl extends React.Component<
 
     const formData: StatusFormData = {
       statusType: 1,
-      expression: ''
+      expression: '',
+      condition: {
+        conjunction: 'and',
+        children: []
+      }
     };
 
     let ctx = data;
@@ -74,14 +78,29 @@ export class StatusControl extends React.Component<
       ctx = noBulkChangeData;
     }
 
-    if (ctx[expressionName] || ctx[expressionName] === '') {
+    if (
+      typeof ctx[expressionName] === 'string' &&
+      (ctx[expressionName] || ctx[expressionName] === '')
+    ) {
       formData.statusType = 2;
       formData.expression = ctx[expressionName];
     }
+
+    if (
+      typeof ctx[expressionName] === 'object' &&
+      ctx[expressionName] &&
+      ctx[expressionName].conjunction
+    ) {
+      formData.statusType = 3;
+      formData.condition = ctx[expressionName];
+    }
+
     return {
       checked:
         ctx[name] == trueValue ||
         typeof ctx[expressionName] === 'string' ||
+        Object.prototype.toString.call(ctx[expressionName]) ===
+          '[object Object]' ||
         (!!defaultTrue &&
           ctx[name] == undefined &&
           ctx[expressionName] == undefined),
@@ -99,7 +118,7 @@ export class StatusControl extends React.Component<
   @autobind
   handleSwitch(value: boolean) {
     const {trueValue, falseValue} = this.props;
-    const {expression, statusType = 1} = this.state.formData || {};
+    const {condition, expression, statusType = 1} = this.state.formData || {};
     this.setState({checked: value == trueValue ? true : false}, () => {
       const {onBulkChange, noBulkChange, onDataChange, expressionName, name} =
         this.props;
@@ -115,6 +134,9 @@ export class StatusControl extends React.Component<
             break;
           case 2:
             newData[expressionName] = expression;
+            break;
+          case 3:
+            newData[expressionName] = condition;
             break;
         }
       }
@@ -140,6 +162,9 @@ export class StatusControl extends React.Component<
         break;
       case 2:
         data[expressionName] = values.expression;
+        break;
+      case 3:
+        data[expressionName] = values.condition;
         break;
     }
     !noBulkChange && onBulkChange && onBulkChange(data);
@@ -194,7 +219,7 @@ export class StatusControl extends React.Component<
             actionsClassName: 'border-none mt-2.5',
             wrapperComponent: 'div',
             submitOnChange: true,
-            autoFocus: true,
+            // autoFocus: true,
             formLazyChange: true,
             footerWrapClassName: 'hidden',
             preventEnterSubmit: true,
@@ -217,6 +242,10 @@ export class StatusControl extends React.Component<
                   {
                     label: '表达式',
                     value: 2
+                  },
+                  {
+                    label: '自定义条件',
+                    value: 3
                   }
                 ]
               },
@@ -225,8 +254,12 @@ export class StatusControl extends React.Component<
                 label: '表达式',
                 name: 'expression',
                 placeholder: `请输入${label}条件`,
-                visibleOn: 'this.statusType === 2',
-                onChange: (value: any) => {}
+                visibleOn: 'this.statusType === 2'
+              }),
+              getSchemaTpl('conditionFormulaControl', {
+                label: '条件设置',
+                name: 'condition',
+                visibleOn: 'this.statusType === 3'
               })
             ]
           },

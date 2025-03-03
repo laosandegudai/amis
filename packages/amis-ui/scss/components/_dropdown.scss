@@ -47,16 +47,17 @@
     &-root {
       position: absolute;
       z-index: $zindex-dropdown;
-      top: 100%;
       left: 0;
       margin: px2rem(1px) 0 0;
-      border: none;
+      border: var(--Form-select-outer-borderWidth) solid
+        var(--Form-select-outer-borderColor);
       border-radius: var(--DropDown-menu-borderRadius);
       box-shadow: var(--DropDown-menu-boxShadow);
       min-width: var(--DropDown-menu-minWidth);
       overflow-y: auto;
       overflow-x: hidden;
       max-height: px2rem(300px);
+      margin-top: px2rem(4px);
     }
   }
 
@@ -67,10 +68,11 @@
 
   &-menuItem,
   &-menu > li {
-    padding: var(--DropDown-menuItem-paddingY) var(--DropDown-menuItem-paddingX);
+    padding: 0 var(--DropDown-menuItem-paddingX);
     white-space: nowrap;
     box-sizing: border-box;
     height: var(--DropDown-menu-height);
+    line-height: var(--DropDown-menu-height);
     vertical-align: middle;
     user-select: none;
     color: var(--DropDown-menuItem-color);
@@ -95,7 +97,7 @@
 
     &.#{$ns}DropDown-divider {
       height: px2rem(1px);
-      margin: px2rem(9px) 0;
+      margin: px2rem(4px) 0;
       overflow: hidden;
       background: var(--DropDown-menu-borderColor);
       padding: 0;
@@ -125,7 +127,7 @@
   }
 
   &-menuItem,
-  &-menu:not(.is-mobile) > li {
+  &-menu:not(.is-mobile) > li:not(.is-disabled) {
     &:hover {
       background: var(--DropDown-menuItem-onHover-bg);
       color: var(--DropDown-menuItem-onHover-color);

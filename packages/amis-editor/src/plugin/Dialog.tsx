@@ -1,5 +1,5 @@
 import React from 'react';
-import {Button, Drawer, Modal} from 'amis-ui';
+import {Button, Drawer, Icon, Modal} from 'amis-ui';
 import {
   registerEditorPlugin,
   BaseEventContext,
@@ -11,12 +11,22 @@ import {
   defaultValue,
   EditorNodeType,
   isEmpty,
-  getI18nEnabled
+  getI18nEnabled,
+  BuildPanelEventContext,
+  BasicPanelItem,
+  PluginEvent,
+  ChangeEventContext,
+  JSONPipeOut
 } from 'amis-editor-core';
-import {getEventControlConfig} from '../renderer/event-control/helper';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../renderer/event-control/helper';
 import omit from 'lodash/omit';
 import type {RendererConfig, Schema} from 'amis-core';
-import {ModalProps} from 'amis-ui/src/components/Modal';
+import {ModalProps} from 'amis-ui/lib/components/Modal';
+import ModalSettingPanel from '../component/ModalSettingPanel';
+import find from 'lodash/find';
 
 interface InlineModalProps extends ModalProps {
   type: string;
@@ -112,7 +122,8 @@ export class DialogPlugin extends BasePlugin {
     {
       actionType: 'confirm',
       actionLabel: '确认',
-      description: '触发弹窗确认操作'
+      description: '触发弹窗确认操作',
+      descDetail: (info: any) => <div>打开确认对话框</div>
     },
     {
       actionType: 'cancel',
@@ -122,7 +133,8 @@ export class DialogPlugin extends BasePlugin {
     {
       actionType: 'setValue',
       actionLabel: '变量赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -139,19 +151,45 @@ export class DialogPlugin extends BasePlugin {
             {
               title: '基本',
               body: [
-                getSchemaTpl('layout:originPosition', {value: 'left-top'}),
+                {
+                  type: 'input-text',
+                  label: '组件名称',
+                  name: 'editorSetting.displayName'
+                },
+
+                {
+                  type: 'radios',
+                  label: '弹出方式',
+                  name: 'actionType',
+                  pipeIn: (value: any, store: any, data: any) =>
+                    value ?? data.type,
+                  inline: false,
+                  options: [
+                    {
+                      label: '弹窗',
+                      value: 'dialog'
+                    },
+                    {
+                      label: '抽屉',
+                      value: 'drawer'
+                    },
+                    {
+                      label: '确认对话框',
+                      value: 'confirmDialog'
+                    }
+                  ]
+                },
+
                 {
                   label: '标题',
                   type: 'input-text',
                   name: 'title'
                 },
-                getSchemaTpl('layout:originPosition', {value: 'left-top'}),
                 {
                   label: '确认按钮文案',
                   type: 'input-text',
                   name: 'confirmText'
                 },
-                getSchemaTpl('layout:originPosition', {value: 'left-top'}),
                 {
                   label: '取消按钮文案',
                   type: 'input-text',
@@ -223,12 +261,45 @@ export class DialogPlugin extends BasePlugin {
           {
             title: '基本',
             body: [
+              {
+                type: 'input-text',
+                label: '组件名称',
+                name: 'editorSetting.displayName'
+              },
+
+              {
+                type: 'radios',
+                label: '弹出方式',
+                name: 'actionType',
+                pipeIn: (value: any, store: any, data: any) =>
+                  value ?? data.type,
+                inline: false,
+                options: [
+                  {
+                    label: '弹窗',
+                    value: 'dialog'
+                  },
+                  {
+                    label: '抽屉',
+                    value: 'drawer'
+                  },
+                  {
+                    label: '确认对话框',
+                    value: 'confirmDialog'
+                  }
+                ]
+              },
+
               getSchemaTpl('layout:originPosition', {value: 'left-top'}),
+
               {
                 label: '标题',
                 type: i18nEnabled ? 'input-text-i18n' : 'input-text',
                 name: 'title'
               },
+
+              getSchemaTpl('button-manager'),
+
               getSchemaTpl('switch', {
                 label: '展示关闭按钮',
                 name: 'showCloseButton',
@@ -260,6 +331,11 @@ export class DialogPlugin extends BasePlugin {
                 label: '左下角展示loading动画',
                 name: 'showLoading',
                 value: true
+              }),
+              getSchemaTpl('switch', {
+                label: '是否可拖拽',
+                name: 'draggable',
+                value: false
               }),
               getSchemaTpl('dataMap')
             ]
@@ -469,7 +545,45 @@ export class DialogPlugin extends BasePlugin {
     ]);
   };
 
+  afterUpdate(event: PluginEvent<ChangeEventContext>) {
+    const context = event.context;
+
+    // 当弹出方式改变的时候，切换渲染器类型
+    if (
+      context.info.renderer.type &&
+      ['dialog', 'drawer'].includes(context.info.renderer.type) &&
+      context.diff?.some(change => change.path?.join('.') === 'actionType')
+    ) {
+      const change: any = find(
+        context.diff,
+        change => change.path?.join('.') === 'actionType'
+      )!;
+
+      let value = change?.rhs;
+      const newType = value === 'drawer' ? 'drawer' : 'dialog';
+
+      if (
+        newType !== context.schema.type &&
+        this.manager.replaceChild(context.id, {
+          ...context.schema,
+          type: value === 'drawer' ? 'drawer' : 'dialog'
+        })
+      ) {
+        setTimeout(() => {
+          this.manager.rebuild();
+        }, 4);
+      }
+    }
+  }
+
   buildSubRenderers() {}
+
+  /**
+   * dialog 高亮区域应该是里面的内容
+   */
+  wrapperResolve(dom: HTMLElement): HTMLElement | Array<HTMLElement> {
+    return dom.lastChild as HTMLElement;
+  }
 
   async buildDataSchemas(
     node: EditorNodeType,
@@ -478,7 +592,10 @@ export class DialogPlugin extends BasePlugin {
   ) {
     const renderer = this.manager.store.getNodeById(node.id)?.getComponent();
     const data = omit(renderer.props.$schema.data, '$$id');
-    let dataSchema: any = {};
+    const inputParams = JSONPipeOut(renderer.props.$schema.inputParams);
+    let dataSchema: any = {
+      ...inputParams?.properties
+    };
 
     if (renderer.props.$schema.data === undefined || !isEmpty(data)) {
       // 静态数据
@@ -510,6 +627,7 @@ export class DialogPlugin extends BasePlugin {
     return {
       $id: 'dialog',
       type: 'object',
+      ...inputParams,
       title: node.schema?.label || node.schema?.name,
       properties: dataSchema
     };
@@ -542,6 +660,33 @@ export class DialogPlugin extends BasePlugin {
           : null
       ].filter((item: any) => item)
     };
+  }
+
+  buildEditorPanel(
+    context: BuildPanelEventContext,
+    panels: Array<BasicPanelItem>
+  ) {
+    if (
+      this.manager.store.isSubEditor &&
+      ['dialog', 'drawer'].includes(this.manager.store.schema?.type)
+    ) {
+      panels.push({
+        key: 'modal-setting',
+        icon: '', // 'fa fa-code',
+        title: (
+          <span
+            className="editor-tab-icon editor-tab-s-icon"
+            editor-tooltip="弹窗参数"
+          >
+            <Icon icon="modal-setting" />
+          </span>
+        ),
+        position: 'left',
+        component: ModalSettingPanel,
+        order: -99999
+      });
+    }
+    super.buildEditorPanel(context, panels);
   }
 }
 

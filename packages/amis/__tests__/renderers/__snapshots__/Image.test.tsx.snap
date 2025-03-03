@@ -4,7 +4,7 @@ exports[`Renderer:image image as form item 1`] = `
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -13,7 +13,7 @@ exports[`Renderer:image image as form item 1`] = `
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -34,6 +34,7 @@ exports[`Renderer:image image as form item 1`] = `
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="image"
           data-role="form-item"
         >
           <label
@@ -41,7 +42,7 @@ exports[`Renderer:image image as form item 1`] = `
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   颜色
@@ -57,6 +58,7 @@ exports[`Renderer:image image as form item 1`] = `
             >
               <div
                 class="cxd-ImageField cxd-ImageField--thumb"
+                style="transform: scale(1);"
               >
                 <div
                   class="cxd-Image cxd-Image--thumb no-border"
@@ -65,8 +67,13 @@ exports[`Renderer:image image as form item 1`] = `
                     class="cxd-Image-thumbWrap"
                   >
                     <div
-                      class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                      class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
                     >
+                      <div
+                        class="mask"
+                      >
+                        <span />
+                      </div>
                       <img
                         class="cxd-Image-image"
                         src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -96,45 +103,6 @@ exports[`Renderer:image image as form item 1`] = `
         </button>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -143,6 +111,7 @@ exports[`Renderer:image image:basic 1`] = `
 <div>
   <div
     class="cxd-ImageField cxd-ImageField--thumb show"
+    style="transform: scale(1);"
   >
     <div
       class="cxd-Image cxd-Image--thumb"
@@ -151,8 +120,15 @@ exports[`Renderer:image image:basic 1`] = `
         class="cxd-Image-thumbWrap"
       >
         <div
-          class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+          class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
         >
+          <div
+            class="mask"
+          >
+            <span>
+              图片
+            </span>
+          </div>
           <img
             class="cxd-Image-image b"
             src="https://www.baidu.com/img/bd_logo1.png"
@@ -178,6 +154,7 @@ exports[`Renderer:image image:enlargeAble & originalSrc & enlargeTitle & showToo
 <div>
   <div
     class="cxd-ImageField cxd-ImageField--thumb"
+    style="transform: scale(1);"
   >
     <div
       class="cxd-Image cxd-Image--thumb"
@@ -186,8 +163,13 @@ exports[`Renderer:image image:enlargeAble & originalSrc & enlargeTitle & showToo
         class="cxd-Image-thumbWrap"
       >
         <div
-          class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+          class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
         >
+          <div
+            class="mask"
+          >
+            <span />
+          </div>
           <img
             class="cxd-Image-image"
             src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -218,6 +200,7 @@ exports[`Renderer:image image:enlargeAble & originalSrc & enlargeTitle & showToo
 <div>
   <div
     class="cxd-ImageField cxd-ImageField--thumb"
+    style="transform: scale(1);"
   >
     <div
       class="cxd-Image cxd-Image--thumb"
@@ -226,8 +209,13 @@ exports[`Renderer:image image:enlargeAble & originalSrc & enlargeTitle & showToo
         class="cxd-Image-thumbWrap"
       >
         <div
-          class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+          class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
         >
+          <div
+            class="mask"
+          >
+            <span />
+          </div>
           <img
             class="cxd-Image-image"
             src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -271,6 +259,7 @@ exports[`Renderer:image image:href 1`] = `
         >
           <div
             class="cxd-ImageField cxd-ImageField--thumb"
+            style="transform: scale(1);"
           >
             <a
               class="cxd-Link"
@@ -285,8 +274,13 @@ exports[`Renderer:image image:href 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg"
@@ -303,10 +297,67 @@ exports[`Renderer:image image:href 1`] = `
 </div>
 `;
 
+exports[`Renderer:image image:preview 预览动作 1`] = `
+<div>
+  <div
+    class="cxd-Page"
+  >
+    <div
+      class="cxd-Page-content"
+    >
+      <div
+        class="cxd-Page-main"
+      >
+        <div
+          class="cxd-Page-body"
+          role="page-body"
+        >
+          <div
+            class="cxd-ImageField cxd-ImageField--thumb"
+            style="transform: scale(1);"
+          >
+            <div
+              class="cxd-Image cxd-Image--thumb"
+            >
+              <div
+                class="cxd-Image-thumbWrap"
+              >
+                <div
+                  class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
+                >
+                  <div
+                    class="mask"
+                  >
+                    <span />
+                  </div>
+                  <img
+                    class="cxd-Image-image"
+                    src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg@s_0,w_216,l_1,f_jpg,q_80"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <button
+            class="cxd-Button cxd-Button--default cxd-Button--size-default"
+            type="button"
+          >
+            <span>
+              预览图片
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`Renderer:image image:title & imageCaption 1`] = `
 <div>
   <div
     class="cxd-ImageField cxd-ImageField--thumb"
+    style="transform: scale(1);"
   >
     <div
       class="cxd-Image cxd-Image--thumb"
@@ -315,8 +366,15 @@ exports[`Renderer:image image:title & imageCaption 1`] = `
         class="cxd-Image-thumbWrap"
       >
         <div
-          class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+          class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
         >
+          <div
+            class="mask"
+          >
+            <span>
+              这是标题
+            </span>
+          </div>
           <img
             class="cxd-Image-image"
             src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -348,6 +406,7 @@ exports[`Renderer:image image:width & height 1`] = `
 <div>
   <div
     class="cxd-ImageField cxd-ImageField--thumb"
+    style="transform: scale(1);"
   >
     <div
       class="cxd-Image cxd-Image--thumb"
@@ -356,13 +415,82 @@ exports[`Renderer:image image:width & height 1`] = `
         class="cxd-Image-thumbWrap"
       >
         <div
-          class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+          class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
           style="height: 200px; width: 200px;"
         >
+          <div
+            class="mask"
+          >
+            <span />
+          </div>
           <img
             class="cxd-Image-image"
             src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg@s_0,w_400,l_1,f_jpg,q_80"
           />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Renderer:image image:zoom & maxScale & minScale 调整图片比例动作 1`] = `
+<div>
+  <div
+    class="cxd-Page"
+  >
+    <div
+      class="cxd-Page-content"
+    >
+      <div
+        class="cxd-Page-main"
+      >
+        <div
+          class="cxd-Page-body"
+          role="page-body"
+        >
+          <div
+            class="cxd-ImageField cxd-ImageField--thumb"
+            style="transform: scale(1);"
+          >
+            <div
+              class="cxd-Image cxd-Image--thumb"
+            >
+              <div
+                class="cxd-Image-thumbWrap"
+              >
+                <div
+                  class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1 cxd-Img-container"
+                >
+                  <div
+                    class="mask"
+                  >
+                    <span />
+                  </div>
+                  <img
+                    class="cxd-Image-image"
+                    src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg@s_0,w_216,l_1,f_jpg,q_80"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <button
+            class="cxd-Button cxd-Button--default cxd-Button--size-default"
+            type="button"
+          >
+            <span>
+              放大图片
+            </span>
+          </button>
+          <button
+            class="cxd-Button cxd-Button--default cxd-Button--size-default"
+            type="button"
+          >
+            <span>
+              缩小图片
+            </span>
+          </button>
         </div>
       </div>
     </div>
@@ -398,8 +526,13 @@ exports[`Renderer:images images:basic 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -414,8 +547,13 @@ exports[`Renderer:images images:basic 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692942/d8e4992057f9.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -430,8 +568,13 @@ exports[`Renderer:images images:basic 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395693148/1314a2a3d3f6.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -446,8 +589,13 @@ exports[`Renderer:images images:basic 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395693379/8f2e79f82be0.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -462,8 +610,13 @@ exports[`Renderer:images images:basic 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395693566/552b175ef11d.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -489,8 +642,13 @@ exports[`Renderer:images images:basic 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -505,8 +663,13 @@ exports[`Renderer:images images:basic 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692942/d8e4992057f9.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -521,8 +684,13 @@ exports[`Renderer:images images:basic 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395693148/1314a2a3d3f6.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -537,8 +705,13 @@ exports[`Renderer:images images:basic 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395693379/8f2e79f82be0.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -553,8 +726,13 @@ exports[`Renderer:images images:basic 1`] = `
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span />
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395693566/552b175ef11d.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -599,8 +777,15 @@ exports[`Renderer:images images:enlargeAble & originalSrc & source & title & des
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span>
+                        图片1
+                      </span>
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692722/4f3cb4202335.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -622,22 +807,6 @@ exports[`Renderer:images images:enlargeAble & originalSrc & source & title & des
                     </a>
                   </div>
                 </div>
-                <div
-                  class="cxd-Image-info"
-                >
-                  <div
-                    class="cxd-Image-title"
-                    title="图片1"
-                  >
-                    图片1
-                  </div>
-                  <div
-                    class="cxd-Image-caption"
-                    title="图片1的描述"
-                  >
-                    图片1的描述
-                  </div>
-                </div>
               </div>
               <div
                 class="cxd-Image cxd-Image--thumb cxd-Images-item"
@@ -646,8 +815,15 @@ exports[`Renderer:images images:enlargeAble & originalSrc & source & title & des
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span>
+                        图片2
+                      </span>
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395692942/d8e4992057f9.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -669,22 +845,6 @@ exports[`Renderer:images images:enlargeAble & originalSrc & source & title & des
                     </a>
                   </div>
                 </div>
-                <div
-                  class="cxd-Image-info"
-                >
-                  <div
-                    class="cxd-Image-title"
-                    title="图片2"
-                  >
-                    图片2
-                  </div>
-                  <div
-                    class="cxd-Image-caption"
-                    title="图片2的描述"
-                  >
-                    图片2的描述
-                  </div>
-                </div>
               </div>
               <div
                 class="cxd-Image cxd-Image--thumb cxd-Images-item"
@@ -693,8 +853,15 @@ exports[`Renderer:images images:enlargeAble & originalSrc & source & title & des
                   class="cxd-Image-thumbWrap"
                 >
                   <div
-                    class="cxd-Image-thumb cxd-Image-thumb--contain cxd-Image-thumb--1-1"
+                    class="cxd-Image-thumb cxd-Image-thumb--cover cxd-Image-thumb--1-1 cxd-Img-container text-style-4"
                   >
+                    <div
+                      class="mask"
+                    >
+                      <span>
+                        图片3
+                      </span>
+                    </div>
                     <img
                       class="cxd-Image-image"
                       src="https://internal-amis-res.cdn.bcebos.com/images/2020-1/1578395693148/1314a2a3d3f6.jpeg@s_0,w_216,l_1,f_jpg,q_80"
@@ -714,22 +881,6 @@ exports[`Renderer:images images:enlargeAble & originalSrc & source & title & des
                         icon="view"
                       />
                     </a>
-                  </div>
-                </div>
-                <div
-                  class="cxd-Image-info"
-                >
-                  <div
-                    class="cxd-Image-title"
-                    title="图片3"
-                  >
-                    图片3
-                  </div>
-                  <div
-                    class="cxd-Image-caption"
-                    title="图片3的描述"
-                  >
-                    图片3的描述
                   </div>
                 </div>
               </div>

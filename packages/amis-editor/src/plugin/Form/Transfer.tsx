@@ -1,13 +1,21 @@
-import {EditorNodeType, getSchemaTpl} from 'amis-editor-core';
-import {registerEditorPlugin} from 'amis-editor-core';
-import {BasePlugin, BaseEventContext} from 'amis-editor-core';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
-import {RendererPluginAction, RendererPluginEvent} from 'amis-editor-core';
-
-import {ValidatorTag} from '../../validator';
-import {tipedLabel} from 'amis-editor-core';
-import {resolveOptionType} from '../../util';
+import {
+  EditorManager,
+  EditorNodeType,
+  defaultValue,
+  getSchemaTpl,
+  BasePlugin,
+  BaseEventContext,
+  registerEditorPlugin,
+  tipedLabel,
+  RendererPluginAction,
+  RendererPluginEvent,
+  undefinedPipeOut
+} from 'amis-editor-core';
 import type {Schema} from 'amis';
+import {getEventControlConfig} from '../../renderer/event-control/helper';
+import {ValidatorTag} from '../../validator';
+import {resolveOptionEventDataSchame, resolveOptionType} from '../../util';
+import {getActionCommonProps} from '../../renderer/event-control/helper';
 
 export class TransferPlugin extends BasePlugin {
   static id = 'TransferPlugin';
@@ -59,49 +67,48 @@ export class TransferPlugin extends BasePlugin {
       eventName: 'change',
       eventLabel: '值变化',
       description: '输入框失去焦点时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'string',
-                  title: '选中的值'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项列表'
+      dataSchema: (manager: EditorManager) => {
+        const {value, items} = resolveOptionEventDataSchame(manager, true);
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value,
+                  items
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     },
     {
       eventName: 'selectAll',
       eventLabel: '全选',
       description: '选中所有选项',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                items: {
-                  type: 'array',
-                  title: '选项列表'
+      dataSchema: (manager: EditorManager) => {
+        const {items} = resolveOptionEventDataSchame(manager, true);
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  items
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     }
   ];
 
@@ -110,22 +117,26 @@ export class TransferPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清空选中内容'
+      description: '清空选中内容',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '重置选择的内容'
+      description: '重置选择的内容',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'selectAll',
       actionLabel: '全选',
-      description: '选中所有选项'
+      description: '选中所有选项',
+      ...getActionCommonProps('selectAll')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新，多值用“,”分隔'
+      description: '触发组件数据更新，多值用“,”分隔',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -190,15 +201,15 @@ export class TransferPlugin extends BasePlugin {
                   type: 'select',
                   multiple: true
                 }),
-                visibleOn: 'data.options.length > 0'
+                visibleOn: 'this.options.length > 0'
               }),
-              getSchemaTpl('labelRemark'),
-              getSchemaTpl('remark'),
-              getSchemaTpl('description'),
               getSchemaTpl('switch', {
                 label: '统计数据',
                 name: 'statistics'
-              })
+              }),
+              getSchemaTpl('labelRemark'),
+              getSchemaTpl('remark'),
+              getSchemaTpl('description')
             ]
           },
           {
@@ -239,11 +250,6 @@ export class TransferPlugin extends BasePlugin {
                 }
               },
 
-              getSchemaTpl('optionControl', {
-                visibleOn: 'data.selectMode === "list"',
-                multiple: true
-              }),
-
               getSchemaTpl(
                 'loadingConfig',
                 {
@@ -251,11 +257,15 @@ export class TransferPlugin extends BasePlugin {
                 },
                 {context}
               ),
+              getSchemaTpl('optionControl', {
+                visibleOn: 'this.selectMode === "list"',
+                multiple: true
+              }),
 
               {
                 type: 'ae-transferTableControl',
                 label: '数据',
-                visibleOn: 'data.selectMode === "table"',
+                visibleOn: 'this.selectMode === "table"',
                 mode: 'normal',
                 // 自定义change函数
                 onValueChange: (
@@ -276,18 +286,33 @@ export class TransferPlugin extends BasePlugin {
               },
 
               getSchemaTpl('treeOptionControl', {
-                visibleOn: 'data.selectMode === "tree"'
+                visibleOn: 'this.selectMode === "tree"'
               }),
 
               getSchemaTpl('switch', {
                 label: '可检索',
                 name: 'searchable'
               }),
+              getSchemaTpl('switch', {
+                label: tipedLabel(
+                  '仅包含子节点的值',
+                  '仅在autoCheckChildren=true时生效'
+                ),
+                value: true,
+                name: 'onlyChildren',
+                visibleOn: 'this.selectMode === "tree"'
+              }),
+              getSchemaTpl('switch', {
+                label: '选中父节点自动选中子节点',
+                name: 'autoCheckChildren',
+                value: true,
+                visibleOn: 'this.selectMode === "tree"'
+              }),
 
               getSchemaTpl('optionsMenuTpl', {
                 manager: this.manager,
                 onChange: (value: any) => {},
-                visibleOn: 'data.selectMode !== "table"'
+                visibleOn: 'this.selectMode !== "table"'
               }),
 
               {
@@ -330,7 +355,7 @@ export class TransferPlugin extends BasePlugin {
                 },
                 inputClassName: 'is-inline',
                 visibleOn:
-                  'data.selectMode === "list" && !data.resultListModeFollowSelect'
+                  'this.selectMode === "list" && !this.resultListModeFollowSelect'
               }),
 
               getSchemaTpl('optionsMenuTpl', {
@@ -338,7 +363,7 @@ export class TransferPlugin extends BasePlugin {
                 manager: this.manager,
                 onChange: (value: any) => {},
                 visibleOn:
-                  '!(data.selectMode === "table" && data.resultListModeFollowSelect)'
+                  '!(this.selectMode === "table" && this.resultListModeFollowSelect)'
               }),
               {
                 label: '标题',
@@ -374,7 +399,59 @@ export class TransferPlugin extends BasePlugin {
               label: 'AddOn',
               visibleOn: 'this.addOn && this.addOn.type === "text"'
             })
-          ])
+          ]),
+          ...(this.rendererName === 'transfer-picker'
+            ? [
+                {
+                  title: '边框',
+                  key: 'borderMode',
+                  body: [getSchemaTpl('borderMode')]
+                },
+                {
+                  title: '弹窗',
+                  key: 'picker',
+                  body: [
+                    {
+                      name: 'pickerSize',
+                      type: 'select',
+                      pipeIn: defaultValue(''),
+                      pipeOut: undefinedPipeOut,
+                      label: '弹窗大小',
+                      options: [
+                        {
+                          label: '默认',
+                          value: ''
+                        },
+                        {
+                          value: 'sm',
+                          label: '小'
+                        },
+
+                        {
+                          label: '中',
+                          value: 'md'
+                        },
+
+                        {
+                          label: '大',
+                          value: 'lg'
+                        },
+
+                        {
+                          label: '特大',
+                          value: 'xl'
+                        },
+
+                        {
+                          label: '全屏',
+                          value: 'full'
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            : [])
         ])
       },
       {
@@ -391,7 +468,7 @@ export class TransferPlugin extends BasePlugin {
   };
 
   buildDataSchemas(node: EditorNodeType, region: EditorNodeType) {
-    const type = resolveOptionType(node.schema?.options);
+    const type = resolveOptionType(node.schema);
     // todo:异步数据case
     let dataSchema: any = {
       type,

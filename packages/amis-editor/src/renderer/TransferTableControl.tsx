@@ -233,7 +233,7 @@ function BaseOptionControl(Cmpt: React.JSXElementConstructor<any>) {
           label: '接口',
           name: 'source',
           className: 'ae-ExtendMore',
-          visibleOn: 'data.autoComplete !== false',
+          visibleOn: 'this.autoComplete !== false',
           value: api,
           onChange: this.handleAPIChange,
           footer: [
@@ -324,7 +324,7 @@ export default class TransferTableOption extends React.Component<
     return {
       type: 'action',
       actionType: 'dialog',
-      label: '添加表格列',
+      label: '设置表格列',
       level: 'enhance',
       dialog: {
         title: '设置表格列选项',
@@ -348,12 +348,14 @@ export default class TransferTableOption extends React.Component<
               {
                 type: 'input-text',
                 name: 'label',
-                placeholder: '标题'
+                placeholder: '标题',
+                required: true
               },
               {
                 type: 'input-text',
                 name: 'name',
-                placeholder: '绑定字段名'
+                placeholder: '绑定字段名',
+                required: true
               },
               {
                 type: 'select',
@@ -417,7 +419,7 @@ export default class TransferTableOption extends React.Component<
         {
           type: 'action',
           actionType: 'dialog',
-          label: '添加表格行',
+          label: '设置表格行',
           level: 'enhance',
           disabled: columns && columns.length === 0,
           block: true,
@@ -495,6 +497,7 @@ const TransferTableControl = BaseOptionControl(TransferTableOption);
 
 @FormItem({
   type: 'ae-transferTableControl',
+  strictMode: false,
   renderLabel: false
 })
 export class TransferTableControlRenderer extends TransferTableControl {}

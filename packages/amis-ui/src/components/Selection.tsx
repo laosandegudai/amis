@@ -23,6 +23,8 @@ import {
 import Checkbox from './Checkbox';
 import {Option, Options} from './Select';
 
+import type {TestIdBuilder} from 'amis-core';
+
 export interface BaseSelectionProps extends ThemeProps, LocaleProps {
   options: Options;
   className?: string;
@@ -32,6 +34,7 @@ export interface BaseSelectionProps extends ThemeProps, LocaleProps {
   clearable?: boolean;
   labelField?: string;
   valueField?: string;
+  deferField?: string;
   onChange?: (value: Array<any> | any) => void;
   onDeferLoad?: (option: Option) => void;
   onLeftDeferLoad?: (option: Option, leftOptions: Option) => void;
@@ -48,6 +51,7 @@ export interface BaseSelectionProps extends ThemeProps, LocaleProps {
   placeholderRender?: (props: any) => JSX.Element | null;
   checkAll?: boolean;
   checkAllLabel?: string;
+  testIdBuilder?: TestIdBuilder;
 }
 
 export interface ItemRenderStates {
@@ -58,6 +62,7 @@ export interface ItemRenderStates {
   onChange: () => void;
   disabled?: boolean;
   classnames: ClassNamesFn;
+  testIdBuilder?: TestIdBuilder;
 }
 
 export class BaseSelection<
@@ -68,6 +73,7 @@ export class BaseSelection<
     const label = option[states?.labelField || 'label'];
     const tip = option.tip || '';
     const classnames = states.classnames;
+    const testIdBuilder = states.testIdBuilder;
 
     const canlabelTitle =
       typeof label === 'string' || typeof label === 'number';
@@ -80,6 +86,7 @@ export class BaseSelection<
         className={`${cx({'is-invalid': option?.__unmatched})} ${classnames(
           'Selection-ellipsis-line'
         )}`}
+        {...testIdBuilder?.getChild('span').getTestId()}
       >
         {label}
         {tip}
@@ -240,7 +247,8 @@ export class BaseSelection<
       multiple,
       labelField,
       valueField,
-      onClick
+      onClick,
+      testIdBuilder
     } = this.props;
 
     const __ = this.props.translate;
@@ -272,7 +280,8 @@ export class BaseSelection<
             onChange: () => this.toggleOption(option),
             labelField,
             classnames: cx,
-            disabled: disabled || option.disabled
+            disabled: disabled || option.disabled,
+            testIdBuilder: testIdBuilder?.getChild(key)
           })}
         </Checkbox>
       ));

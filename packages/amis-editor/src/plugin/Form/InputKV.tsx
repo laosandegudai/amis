@@ -1,16 +1,15 @@
 /**
  * @file input-kv 组件的素项目部
  */
-import {RendererPluginAction, RendererPluginEvent} from 'amis-editor-core';
-import {defaultValue, getSchemaTpl, valuePipeOut} from 'amis-editor-core';
-import {registerEditorPlugin} from 'amis-editor-core';
 import {
-  BasePlugin,
-  BasicSubRenderInfo,
-  RendererEventContext,
-  SubRendererInfo
+  RendererPluginAction,
+  RendererPluginEvent,
+  defaultValue,
+  getSchemaTpl,
+  registerEditorPlugin,
+  BasePlugin
 } from 'amis-editor-core';
-
+import {getActionCommonProps} from '../../renderer/event-control/helper';
 export class KVControlPlugin extends BasePlugin {
   static id = 'KVControlPlugin';
   static scene = ['layout'];
@@ -43,7 +42,16 @@ export class KVControlPlugin extends BasePlugin {
     ]
   };
 
-  // 事件定义
+  patchSchema: any = (patched: any) => {
+    if (patched.pipeIn || patched.pipeOut) {
+      patched = {...patched};
+      delete patched.pipeIn;
+      delete patched.pipeOut;
+    }
+    return patched;
+  };
+
+  // 事件定义，定义了而已，配置面板还没升级，未暴露入口
   events: RendererPluginEvent[] = [
     {
       eventName: 'add',
@@ -104,17 +112,20 @@ export class KVControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除选中值'
+      description: '清除选中值',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '将值重置为resetValue，若没有配置resetValue，则清空'
+      description: '将值重置为初始值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 

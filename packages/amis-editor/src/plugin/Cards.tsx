@@ -17,7 +17,8 @@ import {
 import {defaultValue, getSchemaTpl} from 'amis-editor-core';
 import {diff, JSONPipeOut, repeatArray} from 'amis-editor-core';
 import set from 'lodash/set';
-import {escapeFormula, resolveArrayDatasource} from '../util';
+import merge from 'lodash/merge';
+import {escapeFormula, generateId, resolveArrayDatasource} from '../util';
 
 export class CardsPlugin extends BasePlugin {
   static id = 'CardsPlugin';
@@ -33,6 +34,7 @@ export class CardsPlugin extends BasePlugin {
   memberImmutable = true;
   description =
     '功能类似于表格，但是用一个个小卡片来展示数据。当前组件需要配置数据源，不自带数据拉取，请优先使用 「CRUD」 组件。';
+  searchKeywords = '卡片组';
   docLink = '/amis/zh-CN/components/cards';
   tags = ['展示'];
   icon = 'fa fa-window-maximize';
@@ -60,7 +62,8 @@ export class CardsPlugin extends BasePlugin {
                     marginRight: '10px'
                   }
                 }
-              }
+              },
+              id: generateId()
             },
             {
               type: 'tpl',
@@ -70,24 +73,37 @@ export class CardsPlugin extends BasePlugin {
               editorSetting: {
                 mock: {}
               },
-              style: {
-                fontSize: 'var(--fonts-size-6)',
-                color: 'var(--colors-neutral-text-2)',
-                fontWeight: 'var(--fonts-weight-3)'
-              }
+              style: {},
+              themeCss: {
+                baseControlClassName: {
+                  'font:default': {
+                    fontSize: 'var(--fonts-size-6)',
+                    color: 'var(--colors-neutral-text-2)',
+                    fontWeight: 'var(--fonts-weight-3)'
+                  }
+                }
+              },
+              id: generateId()
             }
           ],
           style: {
             position: 'static',
             display: 'flex',
             flexWrap: 'nowrap',
-            alignItems: 'center',
-            marginBottom: '15px'
+            alignItems: 'center'
           },
           wrapperBody: false,
           isFixedHeight: false,
           isFixedWidth: false,
-          size: 'none'
+          size: 'none',
+          themeCss: {
+            baseControlClassName: {
+              'padding-and-margin:default': {
+                marginBottom: '15px'
+              }
+            }
+          },
+          id: generateId()
         },
         {
           type: 'flex',
@@ -104,35 +120,54 @@ export class CardsPlugin extends BasePlugin {
                       tpl: '12/',
                       inline: true,
                       wrapperComponent: '',
-                      style: {
-                        fontSize: 'var(--fonts-size-6)',
-                        color: 'var(--colors-neutral-text-2)',
-                        fontWeight: 'var(--fonts-weight-3)'
-                      }
+                      style: {},
+                      themeCss: {
+                        baseControlClassName: {
+                          'font:default': {
+                            fontSize: 'var(--fonts-size-6)',
+                            color: 'var(--colors-neutral-text-2)',
+                            fontWeight: 'var(--fonts-weight-3)'
+                          }
+                        }
+                      },
+                      id: generateId()
                     },
                     {
                       type: 'tpl',
                       tpl: '19',
                       inline: true,
                       wrapperComponent: '',
-                      style: {
-                        color: 'var(--colors-neutral-text-6)',
-                        fontSize: 'var(--fonts-size-6)'
-                      }
+                      style: {},
+                      themeCss: {
+                        baseControlClassName: {
+                          'font:default': {
+                            color: 'var(--colors-neutral-text-6)',
+                            fontSize: 'var(--fonts-size-6)'
+                          }
+                        }
+                      },
+                      id: generateId()
                     }
                   ],
                   style: {
                     position: 'static',
                     display: 'block',
-                    flex: '0 0 auto',
-                    marginTop: 'var(--sizes-size-0)',
-                    marginRight: 'var(--sizes-size-0)',
-                    marginBottom: 'var(--sizes-size-0)',
-                    marginLeft: 'var(--sizes-size-0)'
+                    flex: '0 0 auto'
                   },
                   wrapperBody: false,
                   isFixedWidth: false,
-                  size: 'none'
+                  size: 'none',
+                  themeCss: {
+                    baseControlClassName: {
+                      'padding-and-margin:default': {
+                        marginTop: 'var(--sizes-size-0)',
+                        marginRight: 'var(--sizes-size-0)',
+                        marginBottom: 'var(--sizes-size-0)',
+                        marginLeft: 'var(--sizes-size-0)'
+                      }
+                    }
+                  },
+                  id: generateId()
                 },
                 {
                   type: 'container',
@@ -142,9 +177,15 @@ export class CardsPlugin extends BasePlugin {
                       tpl: '单元测试',
                       inline: true,
                       wrapperComponent: '',
-                      style: {
-                        color: 'var(--colors-neutral-text-5)'
-                      }
+                      style: {},
+                      themeCss: {
+                        baseControlClassName: {
+                          'font:default': {
+                            color: 'var(--colors-neutral-text-5)'
+                          }
+                        }
+                      },
+                      id: generateId()
                     }
                   ],
                   style: {
@@ -159,7 +200,8 @@ export class CardsPlugin extends BasePlugin {
                   wrapperBody: false,
                   isFixedHeight: false,
                   isFixedWidth: false,
-                  size: 'none'
+                  size: 'none',
+                  id: generateId()
                 }
               ],
               size: 'xs',
@@ -176,7 +218,8 @@ export class CardsPlugin extends BasePlugin {
               },
               wrapperBody: false,
               isFixedHeight: false,
-              isFixedWidth: false
+              isFixedWidth: false,
+              id: generateId()
             },
             {
               type: 'container',
@@ -186,20 +229,32 @@ export class CardsPlugin extends BasePlugin {
                   tpl: '100%',
                   inline: true,
                   wrapperComponent: '',
-                  style: {
-                    fontSize: 'var(--fonts-size-6)',
-                    color: 'var(--colors-neutral-text-2)',
-                    fontWeight: 'var(--fonts-weight-3)'
-                  }
+                  style: {},
+                  themeCss: {
+                    baseControlClassName: {
+                      'font:default': {
+                        fontSize: 'var(--fonts-size-6)',
+                        color: 'var(--colors-neutral-text-2)',
+                        fontWeight: 'var(--fonts-weight-3)'
+                      }
+                    }
+                  },
+                  id: generateId()
                 },
                 {
                   type: 'tpl',
                   tpl: '通过率',
                   inline: true,
                   wrapperComponent: '',
-                  style: {
-                    color: 'var(--colors-neutral-text-5)'
-                  }
+                  style: {},
+                  themeCss: {
+                    baseControlClassName: {
+                      'font:default': {
+                        color: 'var(--colors-neutral-text-5)'
+                      }
+                    }
+                  },
+                  id: generateId()
                 }
               ],
               size: 'xs',
@@ -216,7 +271,8 @@ export class CardsPlugin extends BasePlugin {
               },
               wrapperBody: false,
               isFixedHeight: false,
-              isFixedWidth: false
+              isFixedWidth: false,
+              id: generateId()
             },
             {
               type: 'container',
@@ -226,20 +282,32 @@ export class CardsPlugin extends BasePlugin {
                   tpl: '99.9%',
                   inline: true,
                   wrapperComponent: '',
-                  style: {
-                    fontSize: 'var(--fonts-size-6)',
-                    color: 'var(--colors-neutral-text-2)',
-                    fontWeight: 'var(--fonts-weight-3)'
-                  }
+                  style: {},
+                  themeCss: {
+                    baseControlClassName: {
+                      'font:default': {
+                        fontSize: 'var(--fonts-size-6)',
+                        color: 'var(--colors-neutral-text-2)',
+                        fontWeight: 'var(--fonts-weight-3)'
+                      }
+                    }
+                  },
+                  id: generateId()
                 },
                 {
                   type: 'tpl',
                   tpl: '任务实例',
                   inline: true,
                   wrapperComponent: '',
-                  style: {
-                    color: 'var(--colors-neutral-text-5)'
-                  }
+                  style: {},
+                  themeCss: {
+                    baseControlClassName: {
+                      'font:default': {
+                        color: 'var(--colors-neutral-text-5)'
+                      }
+                    }
+                  },
+                  id: generateId()
                 }
               ],
               size: 'xs',
@@ -256,12 +324,14 @@ export class CardsPlugin extends BasePlugin {
               },
               wrapperBody: false,
               isFixedHeight: false,
-              isFixedWidth: false
+              isFixedWidth: false,
+              id: generateId()
             }
           ],
           style: {
             position: 'relative'
-          }
+          },
+          id: generateId()
         },
         {
           type: 'container',
@@ -271,63 +341,59 @@ export class CardsPlugin extends BasePlugin {
               tpl: '报告',
               inline: true,
               wrapperComponent: '',
-              style: {
-                fontSize: '14px',
-                color: 'var(--colors-neutral-text-5)'
-              }
+              style: {},
+              themeCss: {
+                baseControlClassName: {
+                  'font:default': {
+                    fontSize: '14px',
+                    color: 'var(--colors-neutral-text-5)'
+                  }
+                }
+              },
+              id: generateId()
             },
             {
               type: 'tpl',
               tpl: '2023-01-01 12:00',
               inline: true,
               wrapperComponent: '',
-              style: {
-                fontSize: '12px',
-                color: 'var(--colors-neutral-text-6)'
-              }
+              style: {},
+              themeCss: {
+                baseControlClassName: {
+                  'font:default': {
+                    fontSize: '12px',
+                    color: 'var(--colors-neutral-text-6)'
+                  }
+                }
+              },
+              id: generateId()
             }
           ],
           style: {
             position: 'static',
             display: 'flex',
             flexWrap: 'nowrap',
-            justifyContent: 'space-between',
-            marginTop: '20px'
+            justifyContent: 'space-between'
           },
           wrapperBody: false,
           isFixedHeight: false,
-          isFixedWidth: false
+          isFixedWidth: false,
+          themeCss: {
+            baseControlClassName: {
+              'padding-and-margin:default': {
+                marginTop: '20px'
+              }
+            }
+          },
+          id: generateId()
         }
       ],
       size: 'none',
       style: {
-        'position': 'static',
-        'display': 'block',
-        'paddingTop': '10px',
-        'paddingRight': '10px',
-        'paddingBottom': '10px',
-        'paddingLeft': '10px',
-        'radius': {
-          'top-left-border-radius': '6px',
-          'top-right-border-radius': '6px',
-          'bottom-left-border-radius': '6px',
-          'bottom-right-border-radius': '6px'
-        },
-        'top-border-width': 'var(--borders-width-4)',
-        'left-border-width': 'var(--borders-width-2)',
-        'right-border-width': 'var(--borders-width-2)',
-        'bottom-border-width': 'var(--borders-width-2)',
-        'top-border-style': 'var(--borders-style-2)',
-        'left-border-style': 'var(--borders-style-2)',
-        'right-border-style': 'var(--borders-style-2)',
-        'bottom-border-style': 'var(--borders-style-2)',
-        'top-border-color': 'var(--colors-brand-6)',
-        'left-border-color': 'var(--colors-brand-10)',
-        'right-border-color': 'var(--colors-brand-10)',
-        'bottom-border-color': 'var(--colors-brand-10)',
-        'flex': '0 0 150px',
-        'marginRight': '15px',
-        'flexBasis': '100%'
+        position: 'static',
+        display: 'block',
+        flex: '0 0 150px',
+        flexBasis: '100%'
       },
       wrapperBody: false,
       isFixedHeight: false,
@@ -337,14 +403,47 @@ export class CardsPlugin extends BasePlugin {
           weight: 0,
           actions: []
         }
-      }
+      },
+      themeCss: {
+        baseControlClassName: {
+          'radius:default': {
+            'top-left-border-radius': '6px',
+            'top-right-border-radius': '6px',
+            'bottom-left-border-radius': '6px',
+            'bottom-right-border-radius': '6px'
+          },
+          'border:default': {
+            'top-border-width': 'var(--borders-width-4)',
+            'left-border-width': 'var(--borders-width-2)',
+            'right-border-width': 'var(--borders-width-2)',
+            'bottom-border-width': 'var(--borders-width-2)',
+            'top-border-style': 'var(--borders-style-2)',
+            'left-border-style': 'var(--borders-style-2)',
+            'right-border-style': 'var(--borders-style-2)',
+            'bottom-border-style': 'var(--borders-style-2)',
+            'top-border-color': 'var(--colors-brand-6)',
+            'left-border-color': 'var(--colors-brand-10)',
+            'right-border-color': 'var(--colors-brand-10)',
+            'bottom-border-color': 'var(--colors-brand-10)'
+          },
+          'padding-and-margin:default': {
+            paddingTop: '10px',
+            paddingRight: '10px',
+            paddingBottom: '10px',
+            paddingLeft: '10px',
+            marginRight: '15px'
+          }
+        }
+      },
+      id: generateId()
     },
     placeholder: '',
     name: '',
     style: {
       gutterX: 15,
       gutterY: 15
-    }
+    },
+    id: generateId()
   };
   previewSchema = {
     ...this.scaffold,
@@ -446,37 +545,52 @@ export class CardsPlugin extends BasePlugin {
       node.schema.source && String(node.schema.source).match(/{([\w-_]+)}/);
     let field = node.schema.name || match?.[1];
     const scope = this.manager.dataSchema.getScope(`${node.id}-${node.type}`);
-    const schema = scope?.parent?.getSchemaByPath(field);
-    if (isObject(schema?.items)) {
-      dataSchema = {
-        ...dataSchema,
-        ...(schema!.items as any)
-      };
 
-      // 列表添加序号方便处理
-      set(dataSchema, 'properties.index', {
-        type: 'number',
-        title: '索引'
-      });
+    if (scope) {
+      const origin = this.manager.dataSchema.current;
+      this.manager.dataSchema.switchTo(scope.parent!);
+      const schema = this.manager.dataSchema.getSchemaByPath(field);
+      this.manager.dataSchema.switchTo(origin);
+      if (isObject(schema?.items)) {
+        dataSchema = {
+          ...dataSchema,
+          ...(schema!.items as any)
+        };
+
+        // 列表添加序号方便处理
+        set(dataSchema, 'properties.index', {
+          type: 'number',
+          title: '索引'
+        });
+      }
     }
 
     return dataSchema;
   }
 
-  filterProps(props: any) {
+  filterProps(props: any, node: EditorNodeType) {
     // 编辑时显示两行假数据
     const count = (props.columnsCount || 3) * 2;
-    props.value = repeatArray({}, count).map((item, index) => {
-      return {
-        ...item,
-        id: index + 1
-      };
-    });
+    if (!node.state.value) {
+      node.updateState({
+        value: repeatArray({}, count).map((item, index) => {
+          return {
+            ...item,
+            id: index + 1
+          };
+        })
+      });
+    }
 
     props.className = `${props.className || ''} ae-Editor-list`;
     props.itemsClassName = `${props.itemsClassName || ''} cards-items`;
     if (props.card && !props.card.className?.includes('listItem')) {
-      props.card.className = `${props.card.className || ''} ae-Editor-listItem`;
+      props.card = merge(
+        {
+          className: `${props.card.className || ''} ae-Editor-listItem`
+        },
+        props.card
+      );
     }
 
     // 列表类型内的文本元素显示原始公式

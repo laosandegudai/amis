@@ -6,10 +6,14 @@ import {
   RendererPluginEvent,
   tipedLabel,
   defaultValue,
-  getSchemaTpl
+  getSchemaTpl,
+  EditorNodeType
 } from 'amis-editor-core';
 import {ValidatorTag} from '../../validator';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../../renderer/event-control/helper';
 
 export class MatrixControlPlugin extends BasePlugin {
   static id = 'MatrixControlPlugin';
@@ -78,7 +82,7 @@ export class MatrixControlPlugin extends BasePlugin {
               title: '数据',
               properties: {
                 value: {
-                  type: 'string',
+                  type: 'array',
                   title: '选中的值'
                 }
               }
@@ -94,22 +98,26 @@ export class MatrixControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除选中值'
+      description: '清除选中值',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '重置为默认值'
+      description: '重置为默认值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'reload',
       actionLabel: '重新加载',
-      description: '触发组件数据刷新并重新渲染'
+      description: '触发组件数据刷新并重新渲染',
+      ...getActionCommonProps('reload')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -128,7 +136,8 @@ export class MatrixControlPlugin extends BasePlugin {
               getSchemaTpl('label'),
               getSchemaTpl('switch', {
                 name: 'multiple',
-                label: '可多选'
+                label: '可多选',
+                pipeIn: defaultValue(true)
               }),
               {
                 label: tipedLabel('模式', '行级、列级或者单个单元单选'),
@@ -255,6 +264,15 @@ export class MatrixControlPlugin extends BasePlugin {
       }
     ]);
   };
+
+  buildDataSchemas(node: EditorNodeType, region: EditorNodeType) {
+    // 先简单处理了
+    return {
+      type: 'array',
+      title: node.schema?.label || node.schema?.name,
+      riginalValue: node.schema?.value // 记录原始值，循环引用检测需要
+    };
+  }
 }
 
 registerEditorPlugin(MatrixControlPlugin);

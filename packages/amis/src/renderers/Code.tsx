@@ -167,7 +167,6 @@ export default class Code extends React.Component<CodeProps> {
 
   static defaultProps: Partial<CodeProps> = {
     language: 'plaintext',
-    editorTheme: 'vs',
     tabSize: 4,
     wordWrap: true
   };
@@ -200,7 +199,7 @@ export default class Code extends React.Component<CodeProps> {
 
     if (this?.monaco?.editor && dom) {
       const {tabSize} = props;
-      const sourceCode = getPropValue(this.props);
+      const sourceCode = getPropValue(this.props) ?? '';
       const language = this.resolveLanguage();
       const theme = this.registerAndGetTheme();
       /**
@@ -231,7 +230,7 @@ export default class Code extends React.Component<CodeProps> {
 
     this.monaco = monaco;
     const {tabSize} = this.props;
-    const sourceCode = getPropValue(this.props);
+    const sourceCode = getPropValue(this.props) ?? '';
     const language = this.resolveLanguage();
     const dom = this.codeRef.current;
 
@@ -267,12 +266,11 @@ export default class Code extends React.Component<CodeProps> {
 
     return language;
   }
-
   /** 注册并返回当前主题名称，如果未自定义主题，则范围editorTheme值，默认为'vs' */
   registerAndGetTheme() {
     const monaco = this.monaco;
-    const {editorTheme = 'vs'} = this.props;
-
+    let {theme, editorTheme} = this.props;
+    editorTheme = editorTheme || (theme === 'dark' ? 'vs-dark' : 'vs');
     if (!monaco) {
       return editorTheme;
     }

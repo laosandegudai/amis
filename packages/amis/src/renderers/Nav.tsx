@@ -1,7 +1,9 @@
 import React from 'react';
 import {findDOMNode} from 'react-dom';
+import {matchSorter} from 'match-sorter';
 import isEqual from 'lodash/isEqual';
 import isString from 'lodash/isString';
+import cloneDeep from 'lodash/cloneDeep';
 import {
   Renderer,
   RendererEnv,
@@ -12,7 +14,8 @@ import {
   buildStyle,
   filter,
   evalExpression,
-  insertStyle
+  insertStyle,
+  isObjectShallowModified
 } from 'amis-core';
 import {
   guid,
@@ -24,16 +27,18 @@ import {
   spliceTree,
   findTreeIndex,
   findTree,
-  isObject
+  isObject,
+  noop,
+  str2function
 } from 'amis-core';
 import {isEffectiveApi} from 'amis-core';
 import {themeable, ThemeProps} from 'amis-core';
-import {Icon, SpinnerExtraProps} from 'amis-ui';
+import {Icon, SpinnerExtraProps, SearchBox} from 'amis-ui';
 import {BadgeObject} from 'amis-ui';
 import {RemoteOptionsProps, withRemoteConfig} from 'amis-ui';
 import {Spinner, Menu} from 'amis-ui';
 import {ScopedContext, IScopedContext} from 'amis-core';
-import type {NavigationItem} from 'amis-ui/lib/components/menu';
+import type {NavigationItem} from 'amis-ui/lib/components/menu/index';
 import type {MenuItemProps} from 'amis-ui/lib/components/menu/MenuItem';
 
 import type {Payload} from 'amis-core';
@@ -239,7 +244,7 @@ export interface NavSchema extends BaseSchema {
   /**
    * 垂直模式 非折叠状态下 控制菜单打开方式
    */
-  mode?: 'float' | 'inline'; // float（悬浮）inline（内联） 默认inline
+  mode?: 'panel' | 'float' | 'inline'; // panel（悬浮面板） float（悬浮）inline（内联） 默认inline
 
   /**
    * 自定义展开图标
@@ -265,6 +270,56 @@ export interface NavSchema extends BaseSchema {
    * 子菜单项展开浮层样式
    */
   popupClassName?: string;
+
+  /**
+   * 是否开启搜索
+   */
+  searchable?: boolean;
+
+  /**
+   * 搜索框相关配置
+   */
+  searchConfig?: {
+    /**
+     * 搜索框外层CSS样式类
+     */
+    className?: string;
+
+    /**
+     * 搜索匹配函数
+     */
+    matchFunc?: string | any;
+
+    /**
+     * 占位符
+     */
+    placeholder?: string;
+
+    /**
+     * 是否为 Mini 样式。
+     */
+    mini?: boolean;
+
+    /**
+     * 是否为加强样式
+     */
+    enhance?: boolean;
+
+    /**
+     * 是否可清除
+     */
+    clearable?: boolean;
+
+    /**
+     * 是否立马搜索。
+     */
+    searchImediately?: boolean;
+
+    /**
+     * 指定唯一标识字段
+     */
+    valueField?: string;
+  };
 }
 
 export interface Link {
@@ -296,6 +351,8 @@ export interface NavigationState {
     opacity?: number;
   };
   collapsed?: boolean;
+  keyword?: string;
+  filteredLinks?: Link[];
 }
 
 export interface NavigationProps
@@ -350,7 +407,10 @@ export class Navigation extends React.Component<
     y: 0,
     x: 0
   };
-  state: NavigationState = {};
+  state: NavigationState = {
+    keyword: '',
+    filteredLinks: []
+  };
 
   @autobind
   async handleClick(link: Link, depth: number) {
@@ -592,7 +652,7 @@ export class Navigation extends React.Component<
                   <Icon
                     key={`icon-${i}`}
                     cx={cx}
-                    icon={item['icon']}
+                    icon={item['icon'] || item}
                     className={isCollapsedNode ? '' : isAfter ? 'ml-2' : 'mr-2'}
                   />
                 );
@@ -663,7 +723,10 @@ export class Navigation extends React.Component<
           ) : null,
           icon: beforeIcon.length ? <i>{beforeIcon}</i> : null,
           children: children
-            ? this.normalizeNavigations(children, depth + 1)
+            ? this.normalizeNavigations(
+                children,
+                link.mode === 'group' ? depth : depth + 1
+              )
             : [],
           path: link.to,
           open: link.unfolded,
@@ -686,6 +749,80 @@ export class Navigation extends React.Component<
           mode: link.mode
         };
       });
+  }
+
+  @autobind
+  async handleSearch(keyword: string) {
+    const {links, searchConfig = {}} = this.props;
+    const originLinks = cloneDeep(links ?? []);
+    let matchFunc = searchConfig?.matchFunc;
+
+    if (!keyword) {
+      this.setState({keyword: '', filteredLinks: []});
+      return;
+    }
+
+    if (matchFunc && typeof matchFunc === 'string') {
+      matchFunc = str2function(matchFunc, 'link', 'keyword');
+    } else if (typeof matchFunc === 'function') {
+      /** 使用props下发的函数 */
+    } else {
+      matchFunc = (link: Link, keyword: string) => {
+        const matched = matchSorter([link], keyword, {
+          keys: ['label', 'title', 'key'],
+          threshold: matchSorter.rankings.CONTAINS
+        })?.length;
+
+        return matched || (link?.children && link.children?.length > 0);
+      };
+    }
+
+    const filterLinks = (root: Link[], text: string) => {
+      const filterChildren = (result: Link[], link: Link) => {
+        if (matchFunc(link, text)) {
+          result.push({...link, unfolded: true});
+          return result;
+        }
+
+        if (Array.isArray(link.children)) {
+          const children = link.children.reduce(filterChildren, []);
+
+          if (children.length) {
+            result.push({...link, unfolded: true, children});
+          }
+        }
+
+        return result;
+      };
+
+      return root.reduce(filterChildren, []);
+    };
+
+    this.setState({keyword, filteredLinks: filterLinks(originLinks, keyword)});
+  }
+
+  renderSearchBox() {
+    const {classnames: cx, searchable, searchConfig = {}} = this.props;
+    const keyword = this.state.keyword;
+
+    return (
+      <>
+        {searchable ? (
+          <SearchBox
+            className={cx('Nav-SearchBox', searchConfig?.className)}
+            mini={searchConfig.mini ?? false}
+            enhance={searchConfig.enhance ?? false}
+            clearable={searchConfig.clearable ?? true}
+            searchImediately={searchConfig.searchImediately}
+            placeholder={searchConfig.placeholder}
+            defaultValue={''}
+            value={keyword ?? ''}
+            onSearch={this.handleSearch}
+            onChange={/** 为了消除react报错 */ noop}
+          />
+        ) : null}
+      </>
+    );
   }
 
   render(): JSX.Element {
@@ -715,9 +852,11 @@ export class Navigation extends React.Component<
       id,
       render,
       popOverContainer,
-      env
+      env,
+      searchable,
+      testIdBuilder
     } = this.props;
-    const {dropIndicator} = this.state;
+    const {dropIndicator, filteredLinks} = this.state;
 
     let overflowedIndicator = null;
     if (overflow && isObject(overflow) && overflow.enable) {
@@ -753,82 +892,102 @@ export class Navigation extends React.Component<
         classNameId = cx(`Nav-PopupClassName-${id}`);
         if (!document.getElementById(classNameId)) {
           // rc-menu的浮层只支持配置popupClassName 因此需要将配置的style插入到页面 然后将className赋值给浮层
-          insertStyle(`.${classNameId} ${styleText}`, classNameId);
+          insertStyle({
+            style: `.${classNameId} ${styleText}`,
+            classId: classNameId
+          });
         }
       } catch (e) {}
     }
 
+    const navigations =
+      Array.isArray(filteredLinks) && filteredLinks.length > 0
+        ? filteredLinks
+        : links;
+    const menuDom = (
+      <>
+        {Array.isArray(navigations) ? (
+          <Menu
+            navigations={this.normalizeNavigations(navigations, 1)}
+            isActive={(link: NavigationItem, prefix: string = '') => {
+              if (link.link && typeof link.link.active !== 'undefined') {
+                return link.link.active;
+              }
+              const path = link.path;
+              const ret = location.pathname === path;
+
+              return !!ret;
+            }}
+            isOpen={(item: NavigationItem) => !!item.open}
+            stacked={!!stacked}
+            mode={mode}
+            testIdBuilder={testIdBuilder}
+            themeColor={themeColor}
+            onSelect={this.handleClick}
+            onToggle={this.toggleLink}
+            onChange={this.handleChange}
+            renderLink={(link: MenuItemProps) => link.link}
+            badge={itemBadge || badge}
+            collapsed={collapsed}
+            overflowedIndicator={overflowedIndicator}
+            overflowMaxCount={overflow?.maxVisibleCount}
+            overflowedIndicatorPopupClassName={cx(
+              overflow?.overflowPopoverClassName
+            )}
+            overflowSuffix={
+              overflow?.overflowSuffix
+                ? render('nav-overflow-suffix', overflow?.overflowSuffix)
+                : null
+            }
+            overflowItemWidth={overflow?.itemWidth}
+            overflowComponent={overflow?.wrapperComponent}
+            overflowStyle={overflow?.style}
+            popupClassName={`${popupClassName || ''}${
+              classNameId ? ` ${classNameId}` : ''
+            }`}
+            expandIcon={
+              expandIcon
+                ? typeof expandIcon === 'string'
+                  ? expandIcon
+                  : render('expand-icon', expandIcon)
+                : null
+            }
+            expandBefore={expandPosition === 'after' ? false : true}
+            inlineIndent={indentSize}
+            accordion={accordion}
+            draggable={draggable}
+            data={data}
+            disabled={disabled}
+            onDragStart={this.handleDragStart}
+            popOverContainer={
+              popOverContainer
+                ? popOverContainer
+                : env && env.getModalContainer
+                ? env.getModalContainer
+                : () => document.body
+            }
+          />
+        ) : null}
+        <Spinner show={!!loading} overlay loadingConfig={loadingConfig} />
+      </>
+    );
+
     return (
       <div
         className={cx('Nav', className, {
-          ['Nav-horizontal']: !stacked
+          ['Nav-horizontal']: !stacked,
+          ['Nav--searchable']: !!searchable
         })}
         style={styleConfig}
       >
-        <>
-          {Array.isArray(links) ? (
-            <Menu
-              navigations={this.normalizeNavigations(links, 1)}
-              isActive={(link: NavigationItem, prefix: string = '') => {
-                if (link.link && typeof link.link.active !== 'undefined') {
-                  return link.link.active;
-                }
-                const path = link.path;
-                const ret = location.pathname === path;
-
-                return !!ret;
-              }}
-              isOpen={(item: NavigationItem) => !!item.open}
-              stacked={!!stacked}
-              mode={mode}
-              themeColor={themeColor}
-              onSelect={this.handleClick}
-              onToggle={this.toggleLink}
-              onChange={this.handleChange}
-              renderLink={(link: MenuItemProps) => link.link}
-              badge={itemBadge || badge}
-              collapsed={collapsed}
-              overflowedIndicator={overflowedIndicator}
-              overflowMaxCount={overflow?.maxVisibleCount}
-              overflowedIndicatorPopupClassName={cx(
-                overflow?.overflowPopoverClassName
-              )}
-              overflowSuffix={
-                overflow?.overflowSuffix
-                  ? render('nav-overflow-suffix', overflow?.overflowSuffix)
-                  : null
-              }
-              overflowItemWidth={overflow?.itemWidth}
-              overflowComponent={overflow?.wrapperComponent}
-              overflowStyle={overflow?.style}
-              popupClassName={`${popupClassName || ''}${
-                classNameId ? ` ${classNameId}` : ''
-              }`}
-              expandIcon={
-                expandIcon
-                  ? typeof expandIcon === 'string'
-                    ? expandIcon
-                    : render('expand-icon', expandIcon)
-                  : null
-              }
-              expandBefore={expandPosition === 'after' ? false : true}
-              inlineIndent={indentSize}
-              accordion={accordion}
-              draggable={draggable}
-              data={data}
-              disabled={disabled}
-              onDragStart={this.handleDragStart}
-              popOverContainer={
-                popOverContainer
-                  ? popOverContainer
-                  : env && env.getModalContainer
-                  ? env.getModalContainer
-                  : () => document.body
-              }
-            ></Menu>
-          ) : null}
-          <Spinner show={!!loading} overlay loadingConfig={loadingConfig} />
-        </>
+        {searchable ? (
+          <>
+            {this.renderSearchBox()}
+            {menuDom}
+          </>
+        ) : (
+          menuDom
+        )}
         {dropIndicator ? (
           <div className={cx('Nav-dropIndicator')} style={dropIndicator} />
         ) : null}
@@ -868,7 +1027,11 @@ const ConditionBuilderWithRemoteOptions = withRemoteConfig({
     if (response.value && !someTree(config, item => item.active)) {
       const {env} = props;
 
-      env.jumpTo(filter(response.value as string, props.data));
+      env.jumpTo(
+        filter(response.value as string, props.data),
+        undefined,
+        props.data
+      );
     }
   },
   normalizeConfig(
@@ -886,7 +1049,8 @@ const ConditionBuilderWithRemoteOptions = withRemoteConfig({
         location,
         level,
         defaultOpenLevel,
-        disabled
+        disabled,
+        valueField
       } = props;
 
       const isActive = (link: Link, depth: number) => {
@@ -896,7 +1060,9 @@ const ConditionBuilderWithRemoteOptions = withRemoteConfig({
         if (!!link.disabled) {
           return false;
         }
-        return motivation !== 'location-change' &&
+
+        return motivation &&
+          !['location-change', 'data-change'].includes(motivation) &&
           typeof link.active !== 'undefined'
           ? link.active
           : (depth === level
@@ -931,17 +1097,29 @@ const ConditionBuilderWithRemoteOptions = withRemoteConfig({
             __id: link.__id ?? guid()
           };
 
+          let originLink = null;
+          // 懒加载的菜单项不保留展开状态
+          if (!link.defer && valueField && link[valueField]) {
+            originLink = findTree(
+              origin || [],
+              originItem => originItem[valueField] === link[valueField]
+            );
+          }
+
           // defaultOpenLevel depth <= defaultOpenLevel的默认全部展开
           // 优先级比unfolded属性低 如果用户配置了unfolded为false 那么默认不展开
-          item.unfolded =
-            typeof link.unfolded !== 'undefined'
-              ? isUnfolded(item, {unfoldedField, foldedField})
-              : defaultOpenLevel && depth <= defaultOpenLevel
-              ? true
-              : link.children &&
-                !!findTree(link.children, (child, i, d) =>
-                  isActive(child, depth + d)
-                );
+          // 如果defer菜单项，unfolded默认设置了true，那么会有问题
+          // 先前相同菜单做了展开收起操作的话 优先级最高
+          item.unfolded = originLink
+            ? isUnfolded(originLink, {unfoldedField, foldedField})
+            : typeof link.unfolded !== 'undefined'
+            ? isUnfolded(item, {unfoldedField, foldedField})
+            : defaultOpenLevel && depth <= defaultOpenLevel
+            ? true
+            : link.children &&
+              !!findTree(link.children, (child, i, d) =>
+                isActive(child, depth + d)
+              );
 
           return item;
         },
@@ -1042,6 +1220,17 @@ const ConditionBuilderWithRemoteOptions = withRemoteConfig({
         this.props.updateConfig(this.props.config, 'location-change');
       } else if (!isEqual(this.props.links, prevProps.links)) {
         this.props.updateConfig(this.props.links, 'update');
+      } else if (
+        isObjectShallowModified(
+          this.props.data,
+          prevProps.data,
+          false,
+          undefined,
+          undefined,
+          10
+        )
+      ) {
+        this.props.updateConfig(this.props.config, 'data-change');
       }
 
       // 外部修改defaultOpenLevel 会影响菜单的unfolded属性
@@ -1065,10 +1254,14 @@ const ConditionBuilderWithRemoteOptions = withRemoteConfig({
 
     getCurrentLink(key: string) {
       let link = null;
-      const {config, data} = this.props;
+      const {config, data, valueField} = this.props;
       const id = resolveVariableAndFilter(key, data, '| raw');
       if (key) {
-        link = findTree(config, item => item.label == id || item.key == id);
+        link = findTree(config, item =>
+          valueField
+            ? item[valueField] === id
+            : item.label == id || item.key == id
+        );
       }
       return link;
     }
@@ -1262,7 +1455,7 @@ const ConditionBuilderWithRemoteOptions = withRemoteConfig({
       if (!link.to) {
         return;
       }
-      env?.jumpTo(filter(link.to as string, data), link as any);
+      env?.jumpTo(filter(link.to as string, data), link as any, data);
     }
 
     render() {
@@ -1289,7 +1482,8 @@ const ConditionBuilderWithRemoteOptions = withRemoteConfig({
 
 export default ThemedNavigation;
 @Renderer({
-  test: /(^|\/)(?:nav|navigation)$/,
+  type: 'nav',
+  alias: ['navigation'],
   name: 'nav'
 })
 export class NavigationRenderer extends React.Component<RendererProps> {
@@ -1337,13 +1531,16 @@ export class NavigationRenderer extends React.Component<RendererProps> {
 
   doAction(
     action: ActionObject,
-    args: {
+    data: object,
+    throwErrors?: boolean,
+    args?: {
       value?: string | {[key: string]: string};
     }
   ) {
     const actionType = action?.actionType as any;
     const value = args?.value || action?.data?.value;
     if (actionType === 'updateItems') {
+      const {valueField} = this.props;
       let children: Array<Link> = [];
       if (value) {
         if (Array.isArray(value)) {
@@ -1354,20 +1551,26 @@ export class NavigationRenderer extends React.Component<RendererProps> {
               item => item.children && item.children.length
             );
             if (item) {
-              const key = item?.key || item?.label;
+              const key = valueField
+                ? item[valueField]
+                : item?.key || item?.label;
+
               if (this.navRef.state.currentKey !== key) {
-                this.navRef.setState({currentKey: item?.key || item?.label});
+                this.navRef.setState({currentKey: key});
                 children = item.children;
               }
+            } else {
+              this.navRef.setState({currentKey: ''});
             }
           }
         } else if (typeof value === 'string') {
-          const currentLink = this.navRef.getCurrentLink(value);
-          this.navRef.setState({
-            currentKey: currentLink.key || currentLink.label
-          });
-
-          children = currentLink?.children;
+          if (this.navRef.state.currentKey !== value) {
+            this.navRef.setState({
+              currentKey: value
+            });
+            const currentLink = this.navRef.getCurrentLink(value);
+            children = currentLink?.children;
+          }
         }
       }
       if (children.length > 0) {
@@ -1378,7 +1581,9 @@ export class NavigationRenderer extends React.Component<RendererProps> {
         );
 
         env?.jumpTo(
-          filter(child ? child.to : (children[0].to as string), data)
+          filter(child ? child.to : (children[0].to as string), data),
+          undefined,
+          data
         );
       }
     } else if (actionType === 'collapse') {

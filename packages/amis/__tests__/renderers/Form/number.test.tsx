@@ -21,6 +21,17 @@ const setup = async (
   formOptions: any = {},
   formItems: any[] = [{}]
 ) => {
+  const fetcher = jest.fn().mockImplementation(() =>
+    Promise.resolve({
+      data: {
+        status: 0,
+        msg: 'ok',
+        data: {
+          id: '12'
+        }
+      }
+    })
+  );
   const utils = render(
     amisRender(
       {
@@ -39,7 +50,9 @@ const setup = async (
         ...formOptions
       },
       {},
-      makeEnv()
+      makeEnv({
+        fetcher
+      })
     )
   );
 
@@ -185,6 +198,47 @@ test('Renderer:number with unitOptions', async () => {
   expect(container).toMatchSnapshot();
 });
 
+test('Renderer:number with unitOptions and default value', async () => {
+  const {container} = await setup(
+    {
+      unitOptions: ['px', '%', 'em'],
+      value: 12
+    },
+    {},
+    [
+      {
+        type: 'static',
+        name: 'number'
+      }
+    ]
+  );
+
+  const staticDom = container.querySelector('.cxd-PlainField') as Element;
+  expect(staticDom.innerHTML).toBe('12px');
+});
+
+test('Renderer:number with unitOptions and initApi', async () => {
+  const {container} = await setup(
+    {
+      name: 'id',
+      unitOptions: ['px', '%', 'em']
+    },
+    {
+      initApi: '/amis/api/mock2/sample/12'
+    },
+    [
+      {
+        type: 'static',
+        name: 'id'
+      }
+    ]
+  );
+  await wait(500); // 等待 initApi 加载完
+
+  const staticDom = container.querySelector('.cxd-PlainField') as Element;
+  expect(staticDom.innerHTML).toBe('12px');
+});
+
 test('Renderer:number with precision and default value', async () => {
   const {input, wrap, container, getByText} = await setup({
     precision: 2,
@@ -196,6 +250,15 @@ test('Renderer:number with precision and default value', async () => {
 
   replaceReactAriaIds(container);
   expect(container).toMatchSnapshot();
+});
+
+test('Renderer:number with precision and round', async () => {
+  const {input, wrap, container, getByText} = await setup({
+    precision: 2,
+    value: 6.295
+  });
+
+  expect(input.value).toBe('6.30');
 });
 
 test('Renderer:number with step & precision & displayMode & keyboard', async () => {
@@ -292,4 +355,20 @@ test('Renderer:number with static', async () => {
 
   expect(stringValInput.value).toEqual('123');
   expect(numberValInput.value).toEqual('123');
+});
+
+test('Renderer:number with showAsPercent', async () => {
+  const {input} = await setup({
+    suffix: '%',
+    showAsPercent: true,
+    value: 1.123,
+    precision: 3
+  });
+
+  expect(input.value).toEqual('112.3%');
+
+  fireEvent.change(input, {target: {value: 23.1234}});
+  fireEvent.blur(input);
+  await wait(300);
+  expect(input.value).toEqual('23.123%');
 });

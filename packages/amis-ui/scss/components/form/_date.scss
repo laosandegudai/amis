@@ -15,7 +15,7 @@
   color: var(--DatePicker-color);
   background: var(--DatePicker-bg);
   border-radius: var(--DatePicker-borderRadius);
-  min-width: var(--DatePicker-minWidth);
+  // min-width: var(--DatePicker-minWidth);
 
   &-input {
     display: inline-block;
@@ -200,11 +200,9 @@
 
 .#{$ns}DatePicker-popover {
   margin: px2rem(2px) 0 0;
-
-  &.#{$ns}PopOver--leftTopLeftBottom,
-  &.#{$ns}PopOver--rightTopRightBottom {
-    margin: px2rem(-2px) 0 0;
-  }
+  border: var(--Form-select-outer-borderWidth) solid
+    var(--Form-select-outer-borderColor);
+  box-shadow: var(--Form-select-outer-boxShadow);
 }
 
 // 移动端输入框样式
@@ -268,13 +266,13 @@
     }
 
     .rdtTimePart {
-      width: #{px2rem(128px)};
       text-align: center;
+      flex: 1;
     }
 
     .rdtTimePartWithS {
-      width: #{px2rem(192px)};
       text-align: center;
+      flex: 1;
     }
 
     .rdtShowTime {
@@ -415,6 +413,7 @@
   height: 100%;
   .#{$ns}CalendarInputsWrapper {
     height: #{px2rem(248px)};
+    display: flex;
   }
 }
 
@@ -425,6 +424,7 @@
   width: #{px2rem(64px)};
   height: #{px2rem(248px)};
   overflow: auto;
+  flex: 1;
   .#{$ns}CalendarInput-sugs {
     list-style: none;
     background: var(--inputTime-default-bg-color);
@@ -635,10 +635,15 @@
   width: var(--gap-md);
   padding: 0;
   color: var(--DatePicker-arrow-color);
-  font-size: var(--fontSizeXl);
+  font-size: var(--fontSizeXl) !important;
   text-decoration: none;
   font-family: auto;
   font-weight: normal;
+  .icon-right-arrow {
+    width: #{px2rem(12px)};
+    height: #{px2rem(12px)};
+    top: 0;
+  }
 
   &:hover {
     text-decoration: none;
@@ -691,6 +696,13 @@
     transform: rotate(180deg);
     transform-origin: 50% 50%;
   }
+  .icon-right-double-arrow {
+    top: -1px;
+  }
+  .icon-right-arrow {
+    width: #{px2rem(12px)};
+    height: #{px2rem(12px)};
+  }
 }
 
 .header-line {
@@ -709,7 +721,7 @@ td.rdtQuarter {
   > span {
     display: inline-block;
     color: var(--inputDate-other-color);
-    background: var(--inputDate-other-bg-color);
+    // background: var(--inputDate-other-bg-color);
     border-radius: var(--inputDate-other-top-left-border-radius)
       var(--inputDate-other-top-right-border-radius)
       var(--inputDate-other-bottom-right-border-radius)
@@ -750,13 +762,23 @@ td.rdtQuarter {
   }
 }
 
-.rdtPicker .rdtActive.rdtBetween.rdtStartDay {
+.rdtPicker .rdtActive.rdtBetween.rdtStart {
   background: linear-gradient(
     to right,
     transparent 0%,
     transparent 50%,
     var(--Calendar-cell-onBetween-bg) 51%,
     var(--Calendar-cell-onBetween-bg) 100%
+  );
+}
+
+.rdtPicker .rdtActive.rdtBetween.rdtEnd {
+  background: linear-gradient(
+    to right,
+    var(--Calendar-cell-onBetween-bg) 0%,
+    var(--Calendar-cell-onBetween-bg) 50%,
+    transparent 51%,
+    transparent 100%
   );
 }
 
@@ -773,16 +795,6 @@ td.rdtQuarter {
       color: inherit !important;
     }
   }
-}
-
-.rdtPicker .rdtActive.rdtBetween.rdtEndDay {
-  background: linear-gradient(
-    to right,
-    var(--Calendar-cell-onBetween-bg) 0%,
-    var(--Calendar-cell-onBetween-bg) 50%,
-    transparent 51%,
-    transparent 100%
-  );
 }
 
 .#{$ns}DateCalendar {

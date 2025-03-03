@@ -32,6 +32,7 @@ export const Store = types
   })
   .actions(self => {
     let component: any = undefined;
+    let fetchCancel: Function | null = null;
 
     const load = flow(function* (
       env: RendererEnv,
@@ -40,8 +41,22 @@ export const Store = types
       config: WithRemoteConfigSettings = {}
     ): any {
       try {
+        if (fetchCancel) {
+          fetchCancel?.('remote load request cancelled.');
+          fetchCancel = null;
+          self.fetching = false;
+        }
+
+        if (self.fetching) {
+          return;
+        }
+
         self.fetching = true;
-        const ret: Payload = yield env.fetcher(api, ctx);
+        const ret: Payload = yield env.fetcher(api, ctx, {
+          cancelExecutor: (executor: Function) => (fetchCancel = executor)
+        });
+        fetchCancel = null;
+
         if (!isAlive(self)) {
           return;
         }
@@ -202,7 +217,6 @@ export function withRemoteConfig<P = any>(
             ComposedComponent as React.ComponentType<T>;
           static contextType = EnvContext;
           toDispose: Array<() => void> = [];
-
           loadOptions = debounce(this.loadAutoComplete.bind(this), 250, {
             trailing: true,
             leading: false
@@ -216,6 +230,7 @@ export function withRemoteConfig<P = any>(
             super(props);
 
             this.setConfig = this.setConfig.bind(this);
+            this.childRef = this.childRef.bind(this);
             props.store.setComponent(this);
             this.deferLoadConfig = this.deferLoadConfig.bind(this);
             props.remoteConfigRef?.(this);
@@ -339,7 +354,7 @@ export function withRemoteConfig<P = any>(
               } else {
                 store.setConfig(source, config, 'syncConfig');
               }
-            } else if (isObject(source) && !isEffectiveApi(source, data)) {
+            } else if (isObject(source) && !source.method) {
               store.setConfig(source, config, 'syncConfig');
             }
           }
@@ -387,6 +402,20 @@ export function withRemoteConfig<P = any>(
             ret2 && store.setConfig(ret2, config, 'after-defer-load');
           }
 
+          ref: any;
+
+          childRef(ref: any) {
+            while (ref && ref.getWrappedInstance) {
+              ref = ref.getWrappedInstance();
+            }
+
+            this.ref = ref;
+          }
+
+          getWrappedInstance() {
+            return this.ref;
+          }
+
           render() {
             const store = this.props.store;
             const env: RendererEnv =
@@ -398,6 +427,12 @@ export function withRemoteConfig<P = any>(
               updateConfig: this.setConfig
             };
             const {remoteConfigRef, autoComplete, ...rest} = this.props;
+            const refConfig =
+              ComposedComponent.prototype?.isReactComponent ||
+              (ComposedComponent as any).$$typeof ===
+                Symbol.for('react.forward_ref')
+                ? {ref: this.childRef}
+                : {forwardedRef: this.childRef};
 
             return (
               <ComposedComponent
@@ -411,6 +446,7 @@ export function withRemoteConfig<P = any>(
                 {...(config.injectedPropsFilter
                   ? config.injectedPropsFilter(injectedProps, this.props)
                   : injectedProps)}
+                {...refConfig}
               />
             );
           }

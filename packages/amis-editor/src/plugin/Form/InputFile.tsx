@@ -1,9 +1,19 @@
-import {defaultValue, getSchemaTpl, valuePipeOut} from 'amis-editor-core';
-import {registerEditorPlugin, tipedLabel} from 'amis-editor-core';
-import {BasePlugin, BaseEventContext} from 'amis-editor-core';
+import {
+  defaultValue,
+  getSchemaTpl,
+  valuePipeOut,
+  RendererPluginAction,
+  RendererPluginEvent,
+  registerEditorPlugin,
+  tipedLabel,
+  BasePlugin,
+  BaseEventContext
+} from 'amis-editor-core';
 import {ValidatorTag} from '../../validator';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
-import {RendererPluginAction, RendererPluginEvent} from 'amis-editor-core';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../../renderer/event-control/helper';
 
 export class FileControlPlugin extends BasePlugin {
   static id = 'FileControlPlugin';
@@ -146,12 +156,14 @@ export class FileControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空数据',
-      description: '清除选择的文件'
+      description: '清除选择的文件',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -180,6 +192,18 @@ export class FileControlPlugin extends BasePlugin {
                   }
                 ]
               }),
+              getSchemaTpl('switch', {
+                name: 'joinValues',
+                label: '文件上传路径拼接',
+                pipeIn: defaultValue(true)
+              }),
+              {
+                type: 'input-text',
+                name: 'delimiter',
+                label: '拼接符',
+                visibleOn: 'this.joinValues !== false',
+                pipeIn: defaultValue(',')
+              },
               {
                 type: 'input-group',
                 name: 'maxSize',
@@ -236,7 +260,7 @@ export class FileControlPlugin extends BasePlugin {
                 name: 'formType',
                 type: 'select',
                 tiled: true,
-                visibleOn: 'data.uploadType === "asForm"',
+                visibleOn: 'this.uploadType === "asForm"',
                 value: 'asBlob',
                 label: tipedLabel(
                   '数据格式',
@@ -265,19 +289,19 @@ export class FileControlPlugin extends BasePlugin {
               },
 
               getSchemaTpl('bos', {
-                visibleOn: 'data.uploadType === "bos"'
+                visibleOn: 'this.uploadType === "bos"'
               }),
 
               getSchemaTpl('proxy', {
                 value: true,
-                visibleOn: 'data.uploadType !== "asForm" || !data.uploadType'
+                visibleOn: 'this.uploadType !== "asForm" || !this.uploadType'
               }),
 
               getSchemaTpl('switch', {
                 name: 'autoUpload',
                 label: '自动上传',
                 value: true,
-                visibleOn: 'data.uploadType !== "asForm"'
+                visibleOn: 'this.uploadType !== "asForm"'
               }),
 
               getSchemaTpl('switch', {
@@ -285,14 +309,14 @@ export class FileControlPlugin extends BasePlugin {
                 label: '开启分块',
                 value: false,
                 pipeIn: (value: any, form: any) => !!value, // 兼容auto
-                visibleOn: 'data.uploadType !== "asForm"'
+                visibleOn: 'this.uploadType !== "asForm"'
               }),
 
               {
                 type: 'container',
                 className: 'ae-ExtendMore mb-3',
                 visibleOn:
-                  'data.uploadType !== "asForm" && data.useChunk === true',
+                  'this.uploadType !== "asForm" && this.useChunk === true',
                 body: [
                   {
                     type: 'input-group',
@@ -313,7 +337,7 @@ export class FileControlPlugin extends BasePlugin {
                   {
                     type: 'Container',
                     visibleOn:
-                      'data.uploadType == "fileReceptor" && data.useChunk != false',
+                      'this.uploadType == "fileReceptor" && this.useChunk != false',
                     body: [
                       getSchemaTpl('apiControl', {
                         mode: 'row',
@@ -358,7 +382,7 @@ export class FileControlPlugin extends BasePlugin {
                 value: '/api/upload/file',
                 __isUpload: true,
                 visibleOn:
-                  'data.uploadType === "fileReceptor" && !data.useChunk'
+                  'this.uploadType === "fileReceptor" && !this.useChunk'
               }),
               {
                 type: 'input-text',

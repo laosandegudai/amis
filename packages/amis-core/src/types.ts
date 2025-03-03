@@ -1,7 +1,9 @@
 // https://json-schema.org/draft-07/json-schema-release-notes.html
 import type {JSONSchema7} from 'json-schema';
 import {ListenerAction} from './actions/Action';
-import {debounceConfig} from './utils/renderer-event';
+import {debounceConfig, trackConfig} from './utils/renderer-event';
+import type {TestIdBuilder, ValidateError} from './utils/helper';
+import {AnimationsProps} from './utils/animations';
 
 export interface Option {
   /**
@@ -154,6 +156,14 @@ export interface BaseApiObject {
   replaceData?: boolean;
 
   /**
+   * 是否将两次返回的数据字段，做一个合并。配置返回对象中的字段名，支持配置多个。
+   *
+   * 比如：同时返回 log 字段，第一次返回 {log: '1'}，第二次返回 {log: '2'}，合并后的结果是 {log: ['1', '2']]}
+   * 再比如：同时返回 items 字段，第一次返回 {items: [1, 2]}，第二次返回 {items: [3, 4]}，合并后的结果是 {items: [1, 2, 3, 4]}
+   */
+  concatDataFields?: string | Array<string>;
+
+  /**
    * 是否自动刷新，当 url 中的取值结果变化时，自动刷新数据。
    *
    * @default true
@@ -207,29 +217,44 @@ export type ClassName =
       [propName: string]: boolean | undefined | null | string;
     };
 
+export type RequestAdaptor = (
+  api: ApiObject,
+  context: any
+) => ApiObject | Promise<ApiObject>;
+
+export type ResponseAdaptor = (
+  payload: object,
+  response: fetcherResult,
+  api: ApiObject,
+  context: any
+) => any;
+
 export interface ApiObject extends BaseApiObject {
   config?: {
     withCredentials?: boolean;
     cancelExecutor?: (cancel: Function) => void;
   };
+  originUrl?: string; // 原始的 url 地址，记录将 data 拼接到 query 之前的地址
   jsonql?: any;
   graphql?: string;
   operationName?: string;
   body?: PlainObject;
   query?: PlainObject;
-  mockResponse?: PlainObject;
-  adaptor?: (
-    payload: object,
-    response: fetcherResult,
-    api: ApiObject,
-    context: any
-  ) => any;
-  requestAdaptor?: (
-    api: ApiObject,
-    context: any
-  ) => ApiObject | Promise<ApiObject>;
+  mockResponse?: {
+    status: number;
+    data?: any;
+    delay?: number;
+  };
+  adaptor?: ResponseAdaptor;
+  requestAdaptor?: RequestAdaptor;
+  /**
+   * api 发送上下文，可以用来传递一些数据给 api 的 adaptor
+   * @readonly
+   */
+  context?: any;
   /** 是否过滤为空字符串的 query 参数 */
   filterEmptyQuery?: boolean;
+  downloadFileName?: string;
 }
 export type ApiString = string;
 export type Api = ApiString | ApiObject;
@@ -247,7 +272,7 @@ export interface fetcherResult {
     [propName: string]: any; // 为了兼容其他返回格式
   };
   status: number;
-  headers: object;
+  headers?: object;
 }
 
 export interface fetchOptions {
@@ -287,6 +312,7 @@ export interface Schema {
   static?: boolean;
   children?: JSX.Element | ((props: any, schema?: any) => JSX.Element) | null;
   definitions?: Definitions;
+  animations?: AnimationsProps;
   [propName: string]: any;
 }
 
@@ -338,9 +364,18 @@ export interface ActionObject extends ButtonObject {
     | 'expand'
     | 'collapse'
     | 'step-submit'
+    | 'select'
     | 'selectAll'
+    | 'clearAll'
     | 'changeTabKey'
-    | 'clearSearch';
+    | 'clearSearch'
+    | 'submitQuickEdit'
+    | 'initDrag'
+    | 'cancelDrag'
+    | 'toggleExpanded'
+    | 'setExpanded'
+    | 'clearError';
+
   api?: BaseApiObject | string;
   asyncApi?: BaseApiObject | string;
   payload?: any;
@@ -377,9 +412,38 @@ export interface PlainObject {
   [propsName: string]: any;
 }
 
+export interface DataChangeReason {
+  type:
+    | 'input' // 用户输入
+    | 'api' // api 接口返回触发
+    | 'formula' // 公式计算触发
+    | 'hide' // 隐藏属性变化触发
+    | 'init' // 表单项初始化触发
+    | 'action'; // 事件动作触发
+
+  // 变化的字段名
+  // 如果是整体变化，那么是 undefined
+  name?: string;
+
+  // 变化的值
+  value?: any;
+}
+
 export interface RendererData {
   [propsName: string]: any;
+  /**
+   * 记录变化前的数据
+   */
   __prev?: RendererDataAlias;
+
+  /**
+   * 记录变化的信息
+   */
+  __changeReason?: DataChangeReason;
+
+  /**
+   * 记录上层数据
+   */
   __super?: RendererData;
 }
 type RendererDataAlias = RendererData;
@@ -393,6 +457,7 @@ export type FunctionPropertyNames<T> = {
 export type JSONSchema = JSONSchema7 & {
   group?: string; // 分组
   typeLabel?: string; // 类型说明
+  rawType?: string; // 类型
 };
 
 // export type Omit<T, K extends keyof T & any> = Pick<T, Exclude<keyof T, K>>;
@@ -452,7 +517,8 @@ export interface EventTrack {
     | 'tabChange'
     | 'pageLoaded'
     | 'pageHidden'
-    | 'pageVisible';
+    | 'pageVisible'
+    | string;
 
   /**
    * 事件数据
@@ -477,6 +543,7 @@ export type ToastConf = {
   className?: string;
   items?: Array<any>;
   useMobileUI?: boolean;
+  validateError?: ValidateError;
 };
 
 export interface OptionProps {
@@ -557,6 +624,10 @@ export type SchemaClassName =
     };
 export interface BaseSchemaWithoutType {
   /**
+   * 组件唯一 id，主要用于页面设计器中定位 json 节点
+   */
+  $$id?: string;
+  /**
    * 容器 css 类名
    */
   className?: SchemaClassName;
@@ -612,6 +683,7 @@ export interface BaseSchemaWithoutType {
       weight?: number; // 权重
       actions: ListenerAction[]; // 执行的动作集
       debounce?: debounceConfig;
+      track?: trackConfig;
     };
   };
   /**
@@ -652,6 +724,11 @@ export interface BaseSchemaWithoutType {
    */
   editorSetting?: {
     /**
+     * 组件行为、用途，如 create、update、remove
+     */
+    behavior?: string;
+
+    /**
      * 组件名称，通常是业务名称方便定位
      */
     displayName?: string;
@@ -660,12 +737,16 @@ export interface BaseSchemaWithoutType {
      * 编辑器假数据，方便展示
      */
     mock?: any;
+
+    [propName: string]: any;
   };
 
   /**
    * 可以组件级别用来关闭移动端样式
    */
   useMobileUI?: boolean;
+
+  testIdBuilder?: TestIdBuilder;
 }
 
 export type OperatorType =

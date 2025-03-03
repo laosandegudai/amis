@@ -1,3 +1,4 @@
+import './locale/index';
 /**
  * @file 所有可用验证器
  */
@@ -65,6 +66,10 @@ export const registerValidator = (...config: Array<Validator>) => {
   Validators.push(...config);
 };
 
+export const removeAllValidator = () => {
+  Validators.length = 0;
+};
+
 export const getValidatorsByTag = (tag: ValidatorTag) => {
   const defaultValidators: Record<string, Validator> = {};
   const moreValidators: Record<string, Validator> = {};
@@ -117,7 +122,9 @@ export enum ValidatorTag {
   File = '8',
   Date = '9',
   Code = '10',
-  Tree = '11'
+  Tree = '11',
+  Phone = '12',
+  Tel = '13'
 }
 
 registerValidator(
@@ -133,7 +140,8 @@ registerValidator(
       [ValidatorTag.Email]: ValidTagMatchType.isDefault,
       [ValidatorTag.Password]: ValidTagMatchType.isDefault,
       [ValidatorTag.URL]: ValidTagMatchType.isDefault,
-      [ValidatorTag.Tree]: ValidTagMatchType.isDefault
+      [ValidatorTag.Tree]: ValidTagMatchType.isDefault,
+      [ValidatorTag.Phone]: ValidTagMatchType.isDefault
     }
   },
   {
@@ -345,7 +353,8 @@ registerValidator(
     group: ValidationGroup.Pattern,
     message: '请输入合法的手机号码',
     tag: {
-      [ValidatorTag.Text]: ValidTagMatchType.isMore
+      [ValidatorTag.Text]: ValidTagMatchType.isMore,
+      [ValidatorTag.Phone]: ValidTagMatchType.isBuiltIn
     }
   },
   {
@@ -354,7 +363,8 @@ registerValidator(
     group: ValidationGroup.Pattern,
     message: '请输入合法的电话号码',
     tag: {
-      [ValidatorTag.Text]: ValidTagMatchType.isMore
+      [ValidatorTag.Text]: ValidTagMatchType.isMore,
+      [ValidatorTag.Tel]: ValidTagMatchType.isBuiltIn
     }
   },
   {
@@ -367,8 +377,17 @@ registerValidator(
     }
   },
   {
-    label: '身份证号码',
+    label: '身份证号码(18/15位)',
     name: 'isId',
+    group: ValidationGroup.Pattern,
+    message: '请输入合法的身份证号',
+    tag: {
+      [ValidatorTag.Text]: ValidTagMatchType.isMore
+    }
+  },
+  {
+    label: '身份证号码(18位)',
+    name: 'isId18',
     group: ValidationGroup.Pattern,
     message: '请输入合法的身份证号',
     tag: {

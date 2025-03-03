@@ -3,12 +3,16 @@ import {
   FormItem,
   FormControlProps,
   resolveEventData,
-  autobind
+  autobind,
+  getVariable,
+  CustomStyle,
+  setThemeClassName
 } from 'amis-core';
 import {Textarea} from 'amis-ui';
 import type {ListenerAction} from 'amis-core';
 import {FormBaseControlSchema} from '../../Schema';
 import {supportStatic} from './StaticHoc';
+import cx from 'classnames';
 
 /**
  * TextArea 多行文本输入框。
@@ -89,12 +93,22 @@ export default class TextAreaControl extends React.Component<
 
   inputRef = React.createRef<any>();
 
-  doAction(action: ListenerAction, args: any) {
+  doAction(
+    action: ListenerAction,
+    data: any,
+    throwErrors: boolean = false,
+    args?: any
+  ) {
     const actionType = action?.actionType as string;
-    const onChange = this.props.onChange;
+    const {onChange, formStore, store, name, resetValue} = this.props;
 
-    if (!!~['clear', 'reset'].indexOf(actionType)) {
-      onChange?.(this.props.resetValue);
+    if (actionType === 'clear') {
+      onChange?.('');
+      this.focus();
+    } else if (actionType === 'reset') {
+      const pristineVal =
+        getVariable(formStore?.pristine ?? store?.pristine, name) ?? resetValue;
+      onChange?.(pristineVal);
       this.focus();
     } else if (actionType === 'focus') {
       this.focus();
@@ -182,14 +196,55 @@ export default class TextAreaControl extends React.Component<
   @supportStatic()
   render() {
     const {...rest} = this.props;
+    const {id, themeCss, env, className, classPrefix: ns} = this.props;
     return (
-      <Textarea
-        {...rest}
-        forwardRef={this.inputRef}
-        onFocus={this.handleFocus}
-        onBlur={this.handleBlur}
-        onChange={this.handleChange}
-      />
+      <>
+        <Textarea
+          {...rest}
+          forwardRef={this.inputRef}
+          onFocus={this.handleFocus}
+          onBlur={this.handleBlur}
+          onChange={this.handleChange}
+          className={cx(
+            className,
+            setThemeClassName({
+              ...this.props,
+              name: 'inputControlClassName',
+              id,
+              themeCss: themeCss
+            })
+          )}
+        />
+        <CustomStyle
+          {...this.props}
+          config={{
+            themeCss: themeCss,
+            classNames: [
+              {
+                key: 'inputControlClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}TextareaControl-input`
+                  },
+                  hover: {
+                    inner: `.${ns}TextareaControl-input`
+                  },
+                  focused: {
+                    suf: '.is-focused',
+                    inner: `.${ns}TextareaControl-input`
+                  },
+                  disabled: {
+                    suf: '.is-disabled',
+                    inner: `.${ns}TextareaControl-input`
+                  }
+                }
+              }
+            ],
+            id: id
+          }}
+          env={env}
+        />
+      </>
     );
   }
 }

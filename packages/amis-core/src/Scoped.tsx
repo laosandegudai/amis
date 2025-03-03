@@ -21,7 +21,8 @@ import {
 } from './utils/helper';
 import {RendererData, ActionObject} from './types';
 import {isPureVariable} from './utils/isPureVariable';
-import {filter} from './utils';
+import {createObject, createRendererEvent, filter, memoParse} from './utils';
+import {ListenerAction, runActions} from './actions';
 
 /**
  * target 里面可能包含 ?xxx=xxx，这种情况下，需要把 ?xxx=xxx 保留下来，然后对前面的部分进行 filter
@@ -40,18 +41,61 @@ export function filterTarget(target: string, data: Record<string, any>) {
   return filter(target, data, '| raw');
 }
 
+/**
+ * 分割目标，如果里面有表达式，不要跟表达式里面的逗号冲突。
+ * @param target
+ * @returns
+ */
+export function splitTarget(target: string): Array<string> {
+  try {
+    const ast = memoParse(target);
+    const pos: Array<number> = [];
+    ast.body.forEach((item: any) => {
+      // 不要处理表达式里面的东西。
+      if (item.type === 'raw') {
+        const parts = (item.value as string).split(',');
+        if (parts.length > 1) {
+          parts.pop();
+          let start = item.start.index;
+          parts.forEach(part => {
+            pos.push(start + part.length);
+            start += part.length + 1;
+          });
+        }
+      }
+    });
+    if (pos.length) {
+      let parts: Array<string> = [];
+
+      pos.reduceRight((arr: Array<string>, index) => {
+        arr.unshift(target.slice(index + 1)?.trim());
+        target = target.slice(0, index);
+        return arr;
+      }, parts);
+      parts.unshift(target);
+
+      return parts;
+    }
+  } catch (e) {}
+  return [target];
+}
+
 export interface ScopedComponentType extends React.Component<RendererProps> {
   focus?: () => void;
   doAction?: (
     action: ActionObject,
     data: RendererData,
-    throwErrors?: boolean
+    throwErrors?: boolean,
+    args?: any
   ) => void;
   receive?: (values: RendererData, subPath?: string, replace?: boolean) => void;
   reload?: (
-    subPath?: string,
-    query?: RendererData | null,
-    ctx?: RendererData
+    subpath?: string,
+    query?: any,
+    ctx?: RendererData,
+    silent?: boolean,
+    replace?: boolean,
+    args?: any
   ) => void;
   context: any;
   setData?: (value?: object, replace?: boolean, index?: number) => void;
@@ -66,8 +110,12 @@ export interface IScopedContext {
   unRegisterComponent: (component: ScopedComponentType) => void;
   getComponentByName: (name: string) => ScopedComponentType;
   getComponentById: (id: string) => ScopedComponentType | undefined;
+  getComponentByIdUnderCurrentScope: (
+    id: string,
+    ignoreScope?: IScopedContext
+  ) => ScopedComponentType | undefined;
   getComponents: () => Array<ScopedComponentType>;
-  reload: (target: string, ctx: RendererData) => void;
+  reload: (target: string, ctx: RendererData) => void | Promise<void>;
   send: (target: string, ctx: RendererData) => void;
   close: (target: string) => void;
   closeById: (target: string) => void;
@@ -75,6 +123,7 @@ export interface IScopedContext {
     session: string,
     path: string
   ) => ScopedComponentType[];
+  doAction: (actions: ListenerAction | ListenerAction[], ctx: any) => void;
 }
 type AliasIScopedContext = IScopedContext;
 
@@ -107,6 +156,9 @@ function createScopedTools(
     unRegisterComponent(component: ScopedComponentType) {
       // 自己本身实际上注册在父级 Scoped 上。
       if (component.props.$path === path && parent) {
+        // 如果是自己，尝试把自己从父级 Scoped 上移除，否则在某些场景下会导致父级的 children 一直增长。
+        const idx = parent.children!.indexOf(self);
+        ~idx && parent.children!.splice(idx, 1);
         return parent.unRegisterComponent(component);
       }
 
@@ -141,26 +193,53 @@ function createScopedTools(
       return resolved || (parent && parent.getComponentByName(name));
     },
 
-    getComponentById(id: string) {
-      let root: AliasIScopedContext = this;
-      // 找到顶端scoped
-      while (root.parent && root.parent !== rootScopedContext) {
-        root = root.parent;
-      }
-
-      // 向下查找
+    getComponentByIdUnderCurrentScope(
+      id: string,
+      ignoreScope?: IScopedContext
+    ) {
       let component = undefined;
-      findTree([root], (item: TreeItem) =>
-        item.getComponents().find((cmpt: ScopedComponentType) => {
-          if (filter(cmpt.props.id, cmpt.props.data) === id) {
-            component = cmpt;
-            return true;
-          }
-          return false;
-        })
+      findTree(
+        [this],
+        (item: TreeItem) =>
+          item !== ignoreScope &&
+          item.getComponents().find((cmpt: ScopedComponentType) => {
+            if (filter(cmpt.props.id, cmpt.props.data) === id) {
+              component = cmpt;
+              return true;
+            }
+            return false;
+          })
       ) as ScopedComponentType | undefined;
 
       return component;
+    },
+
+    getComponentById(id: string) {
+      let root: AliasIScopedContext = this;
+      let ignoreScope: AliasIScopedContext | undefined = undefined;
+
+      // 找到顶端scoped
+      while (root) {
+        // 优先从当前scope查找
+        // 直接跑到顶层查找，对于有历史标签一次渲染多个页面的情况，会有问题
+        const component = root.getComponentByIdUnderCurrentScope(
+          id,
+          ignoreScope
+        );
+
+        if (component) {
+          return component;
+        }
+
+        if (!root.parent || root.parent === rootScopedContext) {
+          break;
+        }
+
+        ignoreScope = root;
+        root = root.parent;
+      }
+
+      return undefined;
     },
 
     /**
@@ -239,8 +318,7 @@ function createScopedTools(
     reload(target: string | Array<string>, ctx: any) {
       const scoped = this;
 
-      let targets =
-        typeof target === 'string' ? target.split(/\s*,\s*/) : target;
+      let targets = typeof target === 'string' ? splitTarget(target) : target;
       targets.forEach(name => {
         const idx2 = name.indexOf('?');
         let query = null;
@@ -274,7 +352,8 @@ function createScopedTools(
             location.reload();
           }
         } else {
-          const component = scoped.getComponentByName(name);
+          const component =
+            scoped.getComponentByName(name) || scoped.getComponentById(name);
           component &&
             component.reload &&
             component.reload(subPath, query, ctx);
@@ -285,7 +364,7 @@ function createScopedTools(
     send(receive: string | Array<string>, values: object) {
       const scoped = this;
       let receives =
-        typeof receive === 'string' ? receive.split(/\s*,\s*/) : receive;
+        typeof receive === 'string' ? splitTarget(receive) : receive;
 
       // todo 没找到做提示！
       receives.forEach(name => {
@@ -336,8 +415,7 @@ function createScopedTools(
 
       if (typeof target === 'string') {
         // 过滤已经关掉的，当用户 close 配置多个弹框 name 时会出现这种情况
-        target
-          .split(/\s*,\s*/)
+        splitTarget(target)
           .map(name => scoped.getComponentByName(name))
           .filter(component => component && component.props.show)
           .forEach(closeDialog);
@@ -353,6 +431,22 @@ function createScopedTools(
       const component: any = scoped.getComponentById(id);
       if (component && component.props.show) {
         closeDialog(component);
+      }
+    },
+
+    async doAction(actions: ListenerAction | ListenerAction[], ctx: any) {
+      const renderer = this.getComponents()[0]; // 直接拿最顶层
+      const rendererEvent = createRendererEvent('embed', {
+        env,
+        nativeEvent: undefined,
+        data: createObject(renderer.props.data, ctx),
+        scoped: this
+      });
+
+      await runActions(actions, renderer, rendererEvent);
+
+      if (rendererEvent.prevented) {
+        return;
       }
     }
   };

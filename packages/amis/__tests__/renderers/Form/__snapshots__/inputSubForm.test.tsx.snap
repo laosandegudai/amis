@@ -8,7 +8,7 @@ exports[`Renderer:InputSubForm base 1`] = `
   <div>
     <div
       class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-      style="position: relative;"
+      data-role="container"
     >
       <div
         class="cxd-Panel-heading"
@@ -17,7 +17,7 @@ exports[`Renderer:InputSubForm base 1`] = `
           class="cxd-Panel-title"
         >
           <span
-            class="cxd-TplField"
+            class="cxd-TplField fr-view"
           >
             <span>
               表单
@@ -38,6 +38,7 @@ exports[`Renderer:InputSubForm base 1`] = `
           />
           <div
             class="cxd-Form-item cxd-Form-item--normal"
+            data-amis-name="form"
             data-role="form-item"
           >
             <label
@@ -45,7 +46,7 @@ exports[`Renderer:InputSubForm base 1`] = `
             >
               <span>
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     子Form
@@ -68,7 +69,7 @@ exports[`Renderer:InputSubForm base 1`] = `
                     class="cxd-SubForm-valueLabel"
                   >
                     <span
-                      class="cxd-TplField"
+                      class="cxd-TplField fr-view"
                     >
                       <span>
                         设置子表单
@@ -104,45 +105,6 @@ exports[`Renderer:InputSubForm base 1`] = `
             </span>
           </button>
         </div>
-      </div>
-      <div
-        class="resize-sensor"
-        style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-  
-        <div
-          class="resize-sensor-expand"
-          style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-        >
-          
-    
-          <div
-            style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-          />
-          
-  
-        </div>
-        
-  
-        <div
-          class="resize-sensor-shrink"
-          style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-        >
-          
-    
-          <div
-            style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-          />
-          
-  
-        </div>
-        
-  
-        <div
-          class="resize-sensor-appear"
-          style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-        />
       </div>
     </div>
   </div>
@@ -189,6 +151,7 @@ exports[`Renderer:InputSubForm base 1`] = `
           />
           <div
             class="cxd-Form-item cxd-Form-item--horizontal"
+            data-amis-name="a"
             data-role="form-item"
           >
             <label
@@ -196,7 +159,7 @@ exports[`Renderer:InputSubForm base 1`] = `
             >
               <span>
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     A
@@ -228,6 +191,7 @@ exports[`Renderer:InputSubForm base 1`] = `
           </div>
           <div
             class="cxd-Form-item cxd-Form-item--horizontal"
+            data-amis-name="b"
             data-role="form-item"
           >
             <label
@@ -235,7 +199,7 @@ exports[`Renderer:InputSubForm base 1`] = `
             >
               <span>
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     B
@@ -296,7 +260,7 @@ exports[`Renderer:InputSubForm with addButtonClassName & itemsClassName & itemCl
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -305,7 +269,7 @@ exports[`Renderer:InputSubForm with addButtonClassName & itemsClassName & itemCl
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -326,6 +290,7 @@ exports[`Renderer:InputSubForm with addButtonClassName & itemsClassName & itemCl
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="form2"
           data-role="form-item"
         >
           <label
@@ -333,7 +298,7 @@ exports[`Renderer:InputSubForm with addButtonClassName & itemsClassName & itemCl
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   多选
@@ -438,45 +403,6 @@ exports[`Renderer:InputSubForm with addButtonClassName & itemsClassName & itemCl
         </button>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -485,7 +411,7 @@ exports[`Renderer:InputSubForm with draggable & addable & removable 1`] = `
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -494,7 +420,7 @@ exports[`Renderer:InputSubForm with draggable & addable & removable 1`] = `
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -515,6 +441,7 @@ exports[`Renderer:InputSubForm with draggable & addable & removable 1`] = `
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="form"
           data-role="form-item"
         >
           <label
@@ -522,7 +449,7 @@ exports[`Renderer:InputSubForm with draggable & addable & removable 1`] = `
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   子Form
@@ -551,7 +478,7 @@ exports[`Renderer:InputSubForm with draggable & addable & removable 1`] = `
                   class="cxd-SubForm-valueLabel"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       设置val-b-change
@@ -592,7 +519,7 @@ exports[`Renderer:InputSubForm with draggable & addable & removable 1`] = `
                   class="cxd-SubForm-valueLabel"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       设置val-c
@@ -633,7 +560,7 @@ exports[`Renderer:InputSubForm with draggable & addable & removable 1`] = `
                   class="cxd-SubForm-valueLabel"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       设置val-d
@@ -687,45 +614,6 @@ exports[`Renderer:InputSubForm with draggable & addable & removable 1`] = `
         </button>
       </div>
     </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
-    </div>
   </div>
 </div>
 `;
@@ -734,7 +622,7 @@ exports[`Renderer:InputSubForm with multiple & maxLength & btnLabel 1`] = `
 <div>
   <div
     class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-    style="position: relative;"
+    data-role="container"
   >
     <div
       class="cxd-Panel-heading"
@@ -743,7 +631,7 @@ exports[`Renderer:InputSubForm with multiple & maxLength & btnLabel 1`] = `
         class="cxd-Panel-title"
       >
         <span
-          class="cxd-TplField"
+          class="cxd-TplField fr-view"
         >
           <span>
             表单
@@ -764,6 +652,7 @@ exports[`Renderer:InputSubForm with multiple & maxLength & btnLabel 1`] = `
         />
         <div
           class="cxd-Form-item cxd-Form-item--normal"
+          data-amis-name="form"
           data-role="form-item"
         >
           <label
@@ -771,7 +660,7 @@ exports[`Renderer:InputSubForm with multiple & maxLength & btnLabel 1`] = `
           >
             <span>
               <span
-                class="cxd-TplField"
+                class="cxd-TplField fr-view"
               >
                 <span>
                   子Form
@@ -792,7 +681,7 @@ exports[`Renderer:InputSubForm with multiple & maxLength & btnLabel 1`] = `
                   class="cxd-SubForm-valueLabel"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       设置val-1-1
@@ -825,7 +714,7 @@ exports[`Renderer:InputSubForm with multiple & maxLength & btnLabel 1`] = `
                   class="cxd-SubForm-valueLabel"
                 >
                   <span
-                    class="cxd-TplField"
+                    class="cxd-TplField fr-view"
                   >
                     <span>
                       设置val-2-1
@@ -888,45 +777,6 @@ exports[`Renderer:InputSubForm with multiple & maxLength & btnLabel 1`] = `
           </span>
         </button>
       </div>
-    </div>
-    <div
-      class="resize-sensor"
-      style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-    >
-      
-  
-      <div
-        class="resize-sensor-expand"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-shrink"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-      >
-        
-    
-        <div
-          style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-        />
-        
-  
-      </div>
-      
-  
-      <div
-        class="resize-sensor-appear"
-        style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-      />
     </div>
   </div>
 </div>

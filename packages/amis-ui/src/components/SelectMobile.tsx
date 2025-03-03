@@ -23,6 +23,7 @@ interface Props extends SelectProps {
   isOpen: boolean;
   highlightedIndex: any;
   selectedItem: any;
+  visibleItemCount?: number;
   getInputProps: (...params: any) => any;
   getItemProps: (...params: any) => any;
   onClose: () => void;
@@ -265,6 +266,7 @@ export default class SelectMobile extends React.Component<Props, SelectState> {
       searchable,
       disabled,
       searchPromptText,
+      visibleItemCount,
       translate: __,
       hideSelected,
       renderMenu,
@@ -345,15 +347,26 @@ export default class SelectMobile extends React.Component<Props, SelectState> {
         >
           {renderMenu ? (
             multiple ? (
-              renderMenu(item, {
-                multiple,
-                checkAll,
-                checked,
-                onChange: () => this.handleChange(item),
-                inputValue: inputValue || '',
-                searchable,
-                index
-              })
+              <>
+                <div
+                  title={item[labelField]}
+                  className={cx('Select-option-item-check')}
+                  onClick={() => !item.disabled && this.handleChange([item])}
+                >
+                  {renderMenu(item, {
+                    multiple,
+                    checkAll,
+                    checked,
+                    onChange: () => this.handleChange(item),
+                    inputValue: inputValue || '',
+                    searchable,
+                    index
+                  })}
+                </div>
+                {checked ? (
+                  <Icon icon="check" className={cx('Select-option-mcheck')} />
+                ) : null}
+              </>
             ) : (
               renderMenu(item, {
                 multiple,
@@ -407,6 +420,31 @@ export default class SelectMobile extends React.Component<Props, SelectState> {
       );
     };
 
+    const searchInput = (
+      <div
+        className={cx(`Select-input`, {
+          'is-focused': this.state.isFocused
+        })}
+      >
+        <Icon icon="search" className="icon" />
+        <Input
+          {...getInputProps({
+            onFocus: this.onFocus,
+            onBlur: this.onBlur,
+            disabled: disabled,
+            placeholder: __(searchPromptText),
+            onChange: this.handleInputChange,
+            ref: this.inputRef
+          })}
+        />
+        {inputValue?.length ? (
+          <a onClick={this.clearSearchValue} className={cx('Select-clear')}>
+            <Icon icon="close" className="icon" />
+          </a>
+        ) : null}
+      </div>
+    );
+
     const menu = (
       <div
         className={cx('Select-menu', {
@@ -414,30 +452,7 @@ export default class SelectMobile extends React.Component<Props, SelectState> {
           'is-mobile': true
         })}
       >
-        {searchable ? (
-          <div
-            className={cx(`Select-input`, {
-              'is-focused': this.state.isFocused
-            })}
-          >
-            <Icon icon="search" className="icon" />
-            <Input
-              {...getInputProps({
-                onFocus: this.onFocus,
-                onBlur: this.onBlur,
-                disabled: disabled,
-                placeholder: __(searchPromptText),
-                onChange: this.handleInputChange,
-                ref: this.inputRef
-              })}
-            />
-            {inputValue?.length ? (
-              <a onClick={this.clearSearchValue} className={cx('Select-clear')}>
-                <Icon icon="close" className="icon" />
-              </a>
-            ) : null}
-          </div>
-        ) : null}
+        {searchable ? searchInput : null}
         {multiple && valuesNoWrap ? (
           <div className={cx('Select-option')}>
             已选择({selectionValues.length})
@@ -491,19 +506,24 @@ export default class SelectMobile extends React.Component<Props, SelectState> {
         {multiple ? (
           menu
         ) : (
-          <Picker
-            className={'Select-picker'}
-            columns={{
-              options: filtedOptions as Option[],
-              optionRender: renderMenu
-            }}
-            onChange={item => this.handleChange(item as any)}
-            showToolbar={false}
-            labelField={labelField}
-            valueField={valueField}
-            itemHeight={40}
-            value={[selection[0]?.[valueField]]}
-          />
+          <div className={cx(`Select-popup-inner`)}>
+            {searchable ? searchInput : null}
+            <Picker
+              className={'Select-picker'}
+              columns={{
+                options: filtedOptions as Option[],
+                optionRender: renderMenu
+              }}
+              highlightTxt={inputValue}
+              onChange={item => this.handleChange(item as any)}
+              showToolbar={false}
+              labelField={labelField}
+              valueField={valueField}
+              itemHeight={40}
+              visibleItemCount={visibleItemCount}
+              value={[selection[0]?.[valueField]]}
+            />
+          </div>
         )}
       </PopUp>
     );

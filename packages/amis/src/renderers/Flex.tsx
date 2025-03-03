@@ -95,6 +95,18 @@ export default class Flex extends React.Component<FlexProps, object> {
     super(props);
   }
 
+  renderItems() {
+    const {items, render, disabled, classnames: cx} = this.props;
+    let children = Array.isArray(items) ? items : items ? [items] : [];
+
+    return children.map((item, key) =>
+      render(`items/${key}`, item, {
+        key: `items/${key}`,
+        disabled: (item as SchemaObject)?.disabled ?? disabled
+      })
+    );
+  }
+
   render() {
     const {
       items,
@@ -137,18 +149,25 @@ export default class Flex extends React.Component<FlexProps, object> {
         className={cx(
           'Flex',
           className,
-          setThemeClassName('baseControlClassName', id, themeCss),
-          setThemeClassName('wrapperCustomStyle', id, wrapperCustomStyle)
+          setThemeClassName({
+            ...this.props,
+            name: 'baseControlClassName',
+            id,
+            themeCss
+          }),
+          setThemeClassName({
+            ...this.props,
+            name: 'wrapperCustomStyle',
+            id,
+            themeCss: wrapperCustomStyle
+          })
         )}
+        data-id={id}
+        data-role="container"
       >
-        {(Array.isArray(items) ? items : items ? [items] : []).map(
-          (item, key) =>
-            render(`flexItem/${key}`, item, {
-              key: `flexItem/${key}`,
-              disabled: (item as SchemaObject)?.disabled ?? disabled
-            })
-        )}
+        {this.renderItems()}
         <CustomStyle
+          {...this.props}
           config={{
             wrapperCustomStyle,
             id,

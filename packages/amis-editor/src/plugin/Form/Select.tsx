@@ -1,26 +1,33 @@
-import React from 'react';
-import omit from 'lodash/omit';
-import {findObjectsWithKey} from 'amis-core';
-import {Button, Icon} from 'amis-ui';
+import type {Schema, SchemaType} from 'amis';
 import {
   registerEditorPlugin,
   getSchemaTpl,
   BasePlugin,
   tipedLabel,
-  JSONPipeOut
+  undefinedPipeOut,
+  RAW_TYPE_MAP
 } from 'amis-editor-core';
-
-import {ValidatorTag} from '../../validator';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
-import {resolveOptionType} from '../../util';
-
-import type {Schema} from 'amis';
 import type {
   EditorNodeType,
   RendererPluginAction,
   RendererPluginEvent,
-  BaseEventContext
+  BaseEventContext,
+  EditorManager
 } from 'amis-editor-core';
+
+import {ValidatorTag} from '../../validator';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../../renderer/event-control/helper';
+import {
+  OPTION_EDIT_EVENTS,
+  OPTION_EDIT_EVENTS_OLD,
+  resolveOptionEventDataSchame,
+  resolveOptionType
+} from '../../util';
+
+import {inputStateTpl} from '../../renderer/style-control/helper';
 
 export class SelectControlPlugin extends BasePlugin {
   static id = 'SelectControlPlugin';
@@ -49,6 +56,8 @@ export class SelectControlPlugin extends BasePlugin {
 
   description = '支持多选，输入提示，可使用 source 获取选项';
 
+  searchKeywords = '选择器';
+
   docLink = '/amis/zh-CN/components/form/select';
 
   tags = ['表单项'];
@@ -76,190 +85,112 @@ export class SelectControlPlugin extends BasePlugin {
   };
 
   // 事件定义
-  events: RendererPluginEvent[] = [
-    {
-      eventName: 'change',
-      eventLabel: '值变化',
-      description: '选中值变化时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
+  events: (schema: any) => RendererPluginEvent[] = (schema: any) => {
+    return [
+      {
+        eventName: 'change',
+        eventLabel: '值变化',
+        description: '选中值变化时触发',
+        dataSchema: (manager: EditorManager) => {
+          const {value, selectedItems, items} =
+            resolveOptionEventDataSchame(manager);
+
+          return [
+            {
               type: 'object',
-              title: '数据',
               properties: {
-                value: {
-                  type: 'string',
-                  title: '选中的值'
-                },
-                selectedItems: {
+                data: {
                   type: 'object',
-                  title: '选中的项'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项列表'
+                  title: '数据',
+                  properties: {
+                    value,
+                    selectedItems,
+                    items
+                  }
                 }
               }
             }
-          }
+          ];
         }
-      ]
-    },
-    {
-      eventName: 'focus',
-      eventLabel: '获取焦点',
-      description: '输入框获取焦点时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
+      },
+      {
+        eventName: 'focus',
+        eventLabel: '获取焦点',
+        description: '输入框获取焦点时触发',
+        dataSchema: (manager: EditorManager) => {
+          const {value, items} = resolveOptionEventDataSchame(manager);
+
+          return [
+            {
               type: 'object',
-              title: '数据',
               properties: {
-                value: {
-                  type: 'string',
-                  title: '选中的值'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项列表'
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      eventName: 'blur',
-      eventLabel: '失去焦点',
-      description: '输入框失去焦点时触发',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'string',
-                  title: '选中的值'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项列表'
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      eventName: 'add',
-      eventLabel: '新增选项',
-      description: '新增选项',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
+                data: {
                   type: 'object',
-                  title: '新增的选项'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项列表'
+                  title: '数据',
+                  properties: {
+                    value,
+                    items
+                  }
                 }
               }
             }
-          }
+          ];
         }
-      ]
-    },
-    {
-      eventName: 'edit',
-      eventLabel: '编辑选项',
-      description: '编辑选项',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
+      },
+      {
+        eventName: 'blur',
+        eventLabel: '失去焦点',
+        description: '输入框失去焦点时触发',
+        dataSchema: (manager: EditorManager) => {
+          const {value, items} = resolveOptionEventDataSchame(manager);
+
+          return [
+            {
               type: 'object',
-              title: '数据',
               properties: {
-                value: {
+                data: {
                   type: 'object',
-                  title: '编辑的选项'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项列表'
+                  title: '数据',
+                  properties: {
+                    value,
+                    items
+                  }
                 }
               }
             }
-          }
+          ];
         }
-      ]
-    },
-    {
-      eventName: 'delete',
-      eventLabel: '删除选项',
-      description: '删除选项',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'object',
-                  title: '删除的选项'
-                },
-                items: {
-                  type: 'array',
-                  title: '选项列表'
-                }
-              }
-            }
-          }
-        }
-      ]
-    }
-  ];
+      },
+      ...OPTION_EDIT_EVENTS,
+      ...OPTION_EDIT_EVENTS_OLD(schema)
+    ];
+  };
 
   // 动作定义
   actions: RendererPluginAction[] = [
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除选中值'
+      description: '清除选中值',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '将值重置为resetValue，若没有配置resetValue，则清空'
+      description: '将值重置为初始值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'reload',
       actionLabel: '重新加载',
-      description: '触发组件数据刷新并重新渲染'
+      description: '触发组件数据刷新并重新渲染',
+      ...getActionCommonProps('reload')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -270,6 +201,7 @@ export class SelectControlPlugin extends BasePlugin {
         body: getSchemaTpl('collapseGroup', [
           {
             title: '基本',
+            id: 'properties-basic',
             body: [
               getSchemaTpl('layout:originPosition', {value: 'left-top'}),
               getSchemaTpl('formItemName', {
@@ -295,9 +227,6 @@ export class SelectControlPlugin extends BasePlugin {
                 ]
               }),
               getSchemaTpl('checkAll'),
-              getSchemaTpl('valueFormula', {
-                rendererSchema: (schema: Schema) => schema
-              }),
               getSchemaTpl('labelRemark'),
               getSchemaTpl('remark'),
               getSchemaTpl('placeholder'),
@@ -306,9 +235,32 @@ export class SelectControlPlugin extends BasePlugin {
           },
           {
             title: '选项',
+            id: 'properties-options',
             body: [
               getSchemaTpl('optionControlV2'),
-              getSchemaTpl('selectFirst'),
+              getSchemaTpl('selectFirst', {
+                onChange: (
+                  value: any,
+                  oldValue: any,
+                  model: any,
+                  form: any
+                ) => {
+                  if (value) {
+                    form.deleteValueByName('value');
+                  }
+                }
+              }),
+              getSchemaTpl('valueFormula', {
+                rendererSchema: (schema: Schema) => ({
+                  ...schema,
+                  type: 'input-text'
+                }),
+                pipeOut: undefinedPipeOut,
+                // 默认值组件设计有些问题，自动发起了请求，接口数据作为了默认值选项，接口形式应该是设置静态值或者FX
+                needDeleteProps: ['source'],
+                // 当数据源是自定义静态选项时，不额外配置默认值，在选项上直接勾选即可，放开会有个bug：当去掉勾选时，默认值配置组件不清空，只是schema清空了value
+                visibleOn: 'this.selectFirst !== true && this.source != null'
+              }),
               getSchemaTpl(
                 'loadingConfig',
                 {
@@ -355,7 +307,35 @@ export class SelectControlPlugin extends BasePlugin {
         title: '外观',
         body: [
           getSchemaTpl('collapseGroup', [
-            getSchemaTpl('style:formItem', {renderer: context.info.renderer}),
+            getSchemaTpl('theme:formItem'),
+            getSchemaTpl('theme:form-label'),
+            getSchemaTpl('theme:form-description'),
+            {
+              title: '选择框样式',
+              body: [
+                ...inputStateTpl(
+                  'themeCss.selectControlClassName',
+                  '--select-base'
+                )
+              ]
+            },
+            {
+              title: '下拉框样式',
+              body: [
+                ...inputStateTpl(
+                  'themeCss.selectPopoverClassName',
+                  '--select-base-${state}-option',
+                  {
+                    state: [
+                      {label: '常规', value: 'default'},
+                      {label: '悬浮', value: 'hover'},
+                      {label: '选中', value: 'focused'}
+                    ]
+                  }
+                )
+              ]
+            },
+            getSchemaTpl('theme:cssCode'),
             getSchemaTpl('style:classNames')
           ])
         ]
@@ -374,11 +354,12 @@ export class SelectControlPlugin extends BasePlugin {
   };
 
   buildDataSchemas(node: EditorNodeType, region: EditorNodeType) {
-    const type = resolveOptionType(node.schema?.options);
+    const type = resolveOptionType(node.schema);
     // todo:异步数据case
     let dataSchema: any = {
       type,
       title: node.schema?.label || node.schema?.name,
+      rawType: RAW_TYPE_MAP[node.schema.type as SchemaType] || 'string',
       originalValue: node.schema?.value // 记录原始值，循环引用检测需要
     };
 

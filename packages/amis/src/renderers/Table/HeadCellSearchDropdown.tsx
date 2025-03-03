@@ -5,6 +5,7 @@ import {Icon} from 'amis-ui';
 import {Overlay} from 'amis-core';
 import {PopOver} from 'amis-core';
 import {setVariable, createObject} from 'amis-core';
+import type {TestIdBuilder} from 'amis-core';
 
 export interface QuickSearchConfig {
   type?: string;
@@ -19,6 +20,7 @@ export interface HeadCellSearchProps extends RendererProps {
   searchable: boolean | QuickSearchConfig;
   classPrefix: string;
   onQuery: (values: object) => void;
+  testIdBuilder?: TestIdBuilder;
 }
 
 export function HeadCellSearchDropDown({
@@ -33,7 +35,8 @@ export function HeadCellSearchDropDown({
   translate: __,
   classPrefix: ns,
   popOverContainer,
-  render
+  render,
+  testIdBuilder
 }: HeadCellSearchProps) {
   const ref = React.createRef<HTMLElement>();
   const [formSchema, formItems] = React.useMemo(() => {
@@ -53,7 +56,10 @@ export function HeadCellSearchDropDown({
         ]
       };
     } else if (searchable) {
-      if (searchable.body || searchable.tabs || searchable.fieldSet) {
+      if (
+        !searchable.type &&
+        (searchable.body || searchable.tabs || searchable.fieldSet)
+      ) {
         // todo 删除此处代码，这些都是不推荐的用法
         schema = {
           title: '',
@@ -78,18 +84,25 @@ export function HeadCellSearchDropDown({
       }
     }
 
-    if (schema) {
+    function findFormItems(schema: any) {
       Array.isArray(schema.body) &&
         schema.body.forEach((item: any) => {
           item.name && formItems.push(item.name);
           item.extraName &&
             typeof item.extraName === 'string' &&
             formItems.push(item.extraName);
+          findFormItems(item);
         });
+    }
+
+    if (schema) {
+      // schema有可能配置为{type: 'form', body[]} 所以真正的formItem需要到form的body里去找
+      findFormItems(schema);
       schema = {
         ...schema,
         type: 'form',
         wrapperComponent: 'div',
+        canAccessSuperData: false,
         actions: [
           {
             type: 'button',
@@ -174,6 +187,7 @@ export function HeadCellSearchDropDown({
         isActive ? 'is-active' : '',
         isOpened ? 'is-opened' : ''
       )}
+      {...testIdBuilder?.getTestId()}
     >
       <span onClick={open}>
         <Icon icon="search" className="icon" />
@@ -196,9 +210,8 @@ export function HeadCellSearchDropDown({
           >
             {
               render('quick-search-form', formSchema, {
-                data: {
-                  ...data
-                },
+                popOverContainer,
+                data: data,
                 onSubmit: handleSubmit,
                 onAction: handleAction
               }) as JSX.Element

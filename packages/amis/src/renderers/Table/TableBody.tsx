@@ -1,5 +1,5 @@
 import React from 'react';
-import {ClassNamesFn, RendererEvent} from 'amis-core';
+import {ClassNamesFn, RendererEvent, autobind} from 'amis-core';
 
 import {SchemaNode, ActionObject} from 'amis-core';
 import TableRow from './TableRow';
@@ -9,7 +9,7 @@ import {trace, reaction} from 'mobx';
 import {createObject, flattenTree} from 'amis-core';
 import {LocaleProps} from 'amis-core';
 import {ActionSchema} from '../Action';
-import type {IColumn, IRow, ITableStore} from 'amis-core';
+import type {IColumn, IRow, ITableStore, TestIdBuilder} from 'amis-core';
 
 export interface TableBodyProps extends LocaleProps {
   store: ITableStore;
@@ -60,18 +60,27 @@ export interface TableBodyProps extends LocaleProps {
   prefixRow?: Array<any>;
   affixRow?: Array<any>;
   itemAction?: ActionSchema;
+  testIdBuilder?: TestIdBuilder;
 }
 
 @observer
-export class TableBody extends React.Component<TableBodyProps> {
+export class TableBody<
+  T extends TableBodyProps = TableBodyProps
+> extends React.Component<T> {
   componentDidMount(): void {
     this.props.store.initTableWidth();
+  }
+
+  @autobind
+  testIdBuilder(rowPath: string) {
+    return this.props.testIdBuilder?.getChild(`row-${rowPath}`);
   }
 
   renderRows(
     rows: Array<any>,
     columns = this.props.columns,
-    rowProps: any = {}
+    rowProps: any = {},
+    indexPath?: string
   ): any {
     const {
       rowClassName,
@@ -97,15 +106,19 @@ export class TableBody extends React.Component<TableBodyProps> {
 
     return rows.map((item: IRow, rowIndex: number) => {
       const itemProps = buildItemProps ? buildItemProps(item, rowIndex) : null;
+      const rowPath = `${indexPath ? indexPath + '/' : ''}${rowIndex}`;
+
       const doms = [
         <TableRow
           {...itemProps}
+          testIdBuilder={this.testIdBuilder}
           store={store}
           itemAction={itemAction}
           classnames={cx}
           checkOnItemClick={checkOnItemClick}
           key={item.id}
           itemIndex={rowIndex}
+          rowPath={rowPath}
           item={item}
           itemClassName={cx(
             rowClassNameExpr
@@ -144,6 +157,7 @@ export class TableBody extends React.Component<TableBodyProps> {
               checkOnItemClick={checkOnItemClick}
               key={`foot-${item.id}`}
               itemIndex={rowIndex}
+              rowPath={rowPath}
               item={item}
               itemClassName={cx(
                 rowClassNameExpr
@@ -164,16 +178,22 @@ export class TableBody extends React.Component<TableBodyProps> {
               onQuickChange={onQuickChange}
               ignoreFootableContent={ignoreFootableContent}
               {...rowProps}
+              testIdBuilder={this.testIdBuilder}
             />
           );
         }
       } else if (item.children.length && item.expanded) {
         // 嵌套表格
         doms.push(
-          ...this.renderRows(item.children, columns, {
-            ...rowProps,
-            parent: item
-          })
+          ...this.renderRows(
+            item.children,
+            columns,
+            {
+              ...rowProps,
+              parent: item
+            },
+            rowPath
+          )
         );
       }
       return doms;
@@ -203,7 +223,12 @@ export class TableBody extends React.Component<TableBodyProps> {
     let offset = 0;
 
     // 将列的隐藏对应的把总结行也隐藏起来
-    const result: any[] = items
+    const result: Array<{
+      colSpan?: number;
+      firstColumn: IColumn;
+      lastColumn: IColumn;
+      [propName: string]: any;
+    }> = items
       .map((item, index) => {
         let colIdxs: number[] = [offset + index];
         if (item.colSpan > 1) {
@@ -232,6 +257,7 @@ export class TableBody extends React.Component<TableBodyProps> {
       typeof columns[0]?.type === 'string' &&
       columns[0]?.type.substring(0, 2) === '__'
     ) {
+      result[0].firstColumn = columns[0];
       result[0].colSpan = (result[0].colSpan || 1) + 1;
     }
 
@@ -272,7 +298,7 @@ export class TableBody extends React.Component<TableBodyProps> {
     return (
       <tr
         className={cx(
-          'Table-tr',
+          'Table-table-tr',
           'is-summary',
           position === 'prefix' ? prefixRowClassName : '',
           position === 'affix' ? affixRowClassName : ''
@@ -288,9 +314,13 @@ export class TableBody extends React.Component<TableBodyProps> {
           if (item.align) {
             style.textAlign = item.align;
           }
+          if (item.vAlign) {
+            style.verticalAlign = item.vAlign;
+          }
           const [stickyStyle, stickyClassName] = store.getStickyStyles(
             lastColumn.fixed === 'right' ? lastColumn : firstColumn,
-            store.filteredColumns
+            store.filteredColumns,
+            item.colSpan
           );
           Object.assign(style, stickyStyle);
 
@@ -301,7 +331,7 @@ export class TableBody extends React.Component<TableBodyProps> {
               style={style}
               className={(item.cellClassName || '') + ' ' + stickyClassName}
             >
-              {render(`summary-row/${index}`, item, {
+              {render(`summary-row/${index}`, item as any, {
                 data: ctx
               })}
             </Com>

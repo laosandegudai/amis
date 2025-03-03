@@ -3,9 +3,9 @@ import {keyToPath} from './keyToPath';
 import {resolveVariable} from './resolveVariable';
 
 // 方便取值的时候能够把上层的取到，但是获取的时候不会全部把所有的数据获取到。
-export function createObject(
-  superProps?: {[propName: string]: any},
-  props?: {[propName: string]: any},
+export function createObject<P extends {[propName: string]: any} | null>(
+  superProps?: P,
+  props?: P,
   properties?: any
 ): object {
   if (superProps && Object.isFrozen(superProps)) {
@@ -127,8 +127,13 @@ export function setVariable(
 
   const parts = convertKeyToPath !== false ? keyToPath(key) : [key];
   const last = parts.pop() as string;
+  const stack: Array<{
+    host: Record<string, any>;
+    key: string;
+  }> = [];
 
   while (parts.length) {
+    let host = data;
     let key = parts.shift() as string;
     if (isPlainObject(data[key])) {
       data = data[key] = {
@@ -143,9 +148,25 @@ export function setVariable(
       data[key] = {};
       data = data[key];
     } else {
+      // 如果是数字，那么就是数组
+      if (/^\d+$/.test(key) && stack.length) {
+        const prev = stack[stack.length - 1];
+        if (
+          !Array.isArray(prev.host[prev.key]) &&
+          !Object.keys(prev.host[prev.key]).length
+        ) {
+          host = data = prev.host[prev.key] = [];
+        }
+      }
+
       data[key] = {};
       data = data[key];
     }
+
+    stack.push({
+      host,
+      key
+    });
   }
 
   data[last] = value;

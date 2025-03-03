@@ -3,12 +3,15 @@ import {
   OptionsControl,
   OptionsControlProps,
   Option,
-  resolveEventData
+  resolveEventData,
+  getVariable
 } from 'amis-core';
 import Downshift from 'downshift';
 import find from 'lodash/find';
 import isInteger from 'lodash/isInteger';
 import unionWith from 'lodash/unionWith';
+import compact from 'lodash/compact';
+import uniq from 'lodash/uniq';
 import {findDOMNode} from 'react-dom';
 import {PopUp, ResultBox, SpinnerExtraProps} from 'amis-ui';
 import {autobind, filterTree, createObject} from 'amis-core';
@@ -21,6 +24,7 @@ import {isMobile} from 'amis-core';
 import {FormOptionsSchema} from '../../Schema';
 import {supportStatic} from './StaticHoc';
 import {TooltipWrapperSchema} from '../TooltipWrapper';
+import {matchSorter} from 'match-sorter';
 
 /**
  * Tag 输入框
@@ -141,13 +145,15 @@ export default class TagControl extends React.PureComponent<
   }
 
   doAction(action: ActionObject, data: object, throwErrors: boolean) {
-    const {resetValue, onChange} = this.props;
+    const {resetValue, onChange, formStore, store, name} = this.props;
     const actionType = action?.actionType as string;
 
     if (actionType === 'clear') {
       onChange?.('');
     } else if (actionType === 'reset') {
-      onChange?.(resetValue ?? '');
+      const pristineVal =
+        getVariable(formStore?.pristine ?? store?.pristine, name) ?? resetValue;
+      onChange?.(pristineVal ?? '');
     }
   }
 
@@ -168,13 +174,15 @@ export default class TagControl extends React.PureComponent<
 
   /** 处理输入的内容 */
   normalizeInputValue(inputValue: string): Option[] {
-    const {enableBatchAdd, separator, valueField, labelField} = this.props;
+    const {enableBatchAdd, separator, valueField, labelField, delimiter} =
+      this.props;
     let batchValues = [];
 
     if (enableBatchAdd && separator && typeof separator === 'string') {
       batchValues = inputValue.split(separator);
     } else {
-      batchValues.push(inputValue);
+      const inputValueArr = uniq(compact(inputValue.split(delimiter || ',')));
+      batchValues.push(...inputValueArr);
     }
 
     return batchValues.filter(Boolean).map(item => ({
@@ -471,10 +479,9 @@ export default class TagControl extends React.PureComponent<
       this.props;
 
     const value = this.state.inputValue.trim();
-    const selectedItems = selectedOptions.concat({
-      [`${labelField || 'label'}`]: value,
-      [`${valueField || 'value'}`]: value
-    });
+    const selectedItems = selectedOptions.concat(
+      this.normalizeMergedValue(value, false) as Option[]
+    );
 
     if (selectedOptions.length && !value && evt.key == 'Backspace') {
       const newValueRes = this.getValue('pop');
@@ -505,6 +512,8 @@ export default class TagControl extends React.PureComponent<
       this.setState({
         inputValue: ''
       });
+    } else if (!value && evt.key === 'Enter') {
+      this.handleBlur(evt);
     }
   }
 
@@ -516,7 +525,7 @@ export default class TagControl extends React.PureComponent<
       this.addItem2(option);
       return;
     }
-    if (this.isReachMax() || this.state.inputValue || !option) {
+    if (this.isReachMax() || !option) {
       return;
     }
 
@@ -573,16 +582,23 @@ export default class TagControl extends React.PureComponent<
       loadingConfig,
       valueField,
       env,
-      mobileUI
+      mobileUI,
+      labelField,
+      testIdBuilder
     } = this.props;
 
+    const term = this.state.inputValue;
     const finnalOptions = Array.isArray(options)
       ? filterTree(
           options,
-          item =>
-            (Array.isArray(item.children) && !!item.children.length) ||
-            (item[valueField || 'value'] !== undefined &&
-              (mobileUI || !~selectedOptions.indexOf(item))),
+          (item: Option, key: number, level: number, paths: Array<Option>) =>
+            item[valueField || 'value'] !== undefined &&
+            (mobileUI || !~selectedOptions.indexOf(item)) &&
+            (matchSorter([item].concat(paths), term, {
+              keys: [labelField || 'label', valueField || 'value'],
+              threshold: matchSorter.rankings.CONTAINS
+            }).length ||
+              (Array.isArray(item.children) && !!item.children.length)),
           0,
           true
         )
@@ -626,6 +642,7 @@ export default class TagControl extends React.PureComponent<
                 popOverContainer={popOverContainer || env.getModalContainer}
                 allowInput={!mobileUI || (mobileUI && !options?.length)}
                 mobileUI={mobileUI}
+                testIdBuilder={testIdBuilder?.getChild('resule-box')}
               >
                 {loading ? (
                   <Spinner loadingConfig={loadingConfig} size="sm" />
@@ -707,6 +724,7 @@ export default class TagControl extends React.PureComponent<
                         options={finnalOptions}
                         itemRender={this.renderItem}
                         highlightIndex={highlightedIndex}
+                        testIdBuilder={testIdBuilder?.getChild('options')}
                         getItemProps={({
                           item,
                           index

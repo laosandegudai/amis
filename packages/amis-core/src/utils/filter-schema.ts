@@ -1,4 +1,8 @@
-import {evalExpression, filter} from './tpl';
+import {
+  evalExpression,
+  evalExpressionWithConditionBuilder,
+  filter
+} from './tpl';
 import {PlainObject} from '../types';
 import {injectPropsToObject, mapObject} from './helper';
 import isPlainObject from 'lodash/isPlainObject';
@@ -45,14 +49,14 @@ export function filterClassNameObject(
 export function getExprProperties(
   schema: PlainObject,
   data: object = {},
-  blackList: Array<string> = ['addOn', 'ref'],
+  ignoreList: Array<string> = ['addOn', 'ref'],
   props?: any
 ): PlainObject {
   const exprProps: PlainObject = {};
   let ctx: any = null;
 
   Object.getOwnPropertyNames(schema).forEach(key => {
-    if (blackList && ~blackList.indexOf(key)) {
+    if (ignoreList && ~ignoreList.indexOf(key)) {
       return;
     }
 
@@ -62,7 +66,8 @@ export function getExprProperties(
 
     if (
       value &&
-      typeof value === 'string' &&
+      (typeof value === 'string' ||
+        Object.prototype.toString.call(value) === '[object Object]') &&
       parts?.[1] &&
       (type === 'On' || type === 'Expr')
     ) {
@@ -81,7 +86,9 @@ export function getExprProperties(
         }
 
         if (type === 'On') {
-          value = props?.[key] || evalExpression(value, ctx || data);
+          value =
+            props?.[key] ||
+            evalExpressionWithConditionBuilder(value, ctx || data);
         } else {
           value = filter(value, ctx || data);
         }
@@ -100,6 +107,20 @@ export function getExprProperties(
   });
 
   return exprProps;
+}
+
+export function hasExprPropertiesChanged(
+  schema: PlainObject,
+  prevSchema: PlainObject
+) {
+  return Object.getOwnPropertyNames(schema).some(key => {
+    let parts = /^(.*)(On|Expr|(?:c|C)lassName)(Raw)?$/.exec(key);
+    if (parts) {
+      return schema[key] !== prevSchema[key];
+    }
+
+    return false;
+  });
 }
 
 export default getExprProperties;

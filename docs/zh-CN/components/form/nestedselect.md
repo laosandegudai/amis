@@ -751,8 +751,8 @@ order: 31
 
 当做选择器表单项使用时，除了支持 [普通表单项属性表](./formitem#%E5%B1%9E%E6%80%A7%E8%A1%A8) 中的配置以外，还支持下面一些配置
 
-| 属性名             | 类型                                      | 默认值                                                                             | 说明                                                                                        | 版本 |
-| ------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --- |
+| 属性名             | 类型                                      | 默认值                                                                             | 说明                                                                                        | 版本    |
+| ------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------- |
 | options            | `Array<object>`或`Array<string>`          |                                                                                    | [选项组](./options#%E9%9D%99%E6%80%81%E9%80%89%E9%A1%B9%E7%BB%84-options)                   |
 | source             | `string`或 [API](../../../docs/types/api) |                                                                                    | [动态选项组](./options#%E5%8A%A8%E6%80%81%E9%80%89%E9%A1%B9%E7%BB%84-source)                |
 | delimiter          | `boolean`                                 | `false`                                                                            | [拼接符](./options#%E6%8B%BC%E6%8E%A5%E7%AC%A6-delimiter)                                   |
@@ -785,6 +785,58 @@ order: 31
 | blur     | `[name]: string` 组件的值 | 输入框失去焦点时触发 |
 | focus    | `[name]: string` 组件的值 | 输入框获取焦点时触发 |
 
+### change
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+      {
+        "type": "nested-select",
+        "name": "nestedSelect",
+        "label": "级联选择器",
+        "options": [
+          {
+            "label": "A",
+            "value": "a"
+          },
+          {
+            "label": "B",
+            "value": "b",
+            "children": [
+              {
+                "label": "B-1",
+                "value": "b-1"
+              },
+              {
+                "label": "B-2",
+                "value": "b-2"
+              }
+            ]
+          },
+          {
+            "label": "C",
+            "value": "c"
+          }
+        ],
+        "onEvent": {
+            "change": {
+                "actions": [
+                    {
+                      "actionType": "toast",
+                      "args": {
+                          "msg": "${event.data.value|json}"
+                      }
+                    }
+                ]
+            }
+        }
+      }
+    ]
+  }
+```
+
 ## 动作表
 
 当前组件对外暴露以下特性动作，其他组件可以通过指定`actionType: 动作名称`、`componentId: 该组件id`来触发这些动作，动作配置可以通过`args: {动作配置项名称: xxx}`来配置具体的参数，详细请查看[事件动作](../../docs/concepts/event-action#触发其他组件的动作)。
@@ -792,6 +844,226 @@ order: 31
 | 动作名称 | 动作配置                 | 说明                                                    |
 | -------- | ------------------------ | ------------------------------------------------------- |
 | clear    | -                        | 清空                                                    |
-| reset    | -                        | 将值重置为`resetValue`，若没有配置`resetValue`，则清空  |
+| reset    | -                        | 将值重置为初始值。6.3.0 及以下版本为`resetValue`        |
 | reload   | -                        | 重新加载，调用 `source`，刷新数据域数据刷新（重新加载） |
 | setValue | `value: string` 更新的值 | 更新数据，开启`multiple`时，多个值用`,`分隔             |
+
+### clear
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+          "type": "nested-select",
+          "name": "nestedSelect",
+          "label": "级联选择器",
+          "options": [
+            {
+              "label": "A",
+              "value": "a"
+            },
+            {
+              "label": "B",
+              "value": "b",
+              "children": [
+                {
+                  "label": "B-1",
+                  "value": "b-1"
+                },
+                {
+                  "label": "B-2",
+                  "value": "b-2"
+                },
+                {
+                  "label": "B-3",
+                  "value": "b-3"
+                }
+              ]
+            },
+            {
+              "label": "C",
+              "value": "c"
+            }
+          ],
+          "value": "a",
+          "id": "clear_text"
+        },
+        {
+            "type": "button",
+            "label": "清空",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "clear",
+                            "componentId": "clear_text"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+### reset
+
+如果配置了`resetValue`，则重置时使用`resetValue`的值，否则使用初始值。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+          "type": "nested-select",
+          "name": "nestedSelect",
+          "label": "级联选择器",
+          "options": [
+            {
+              "label": "A",
+              "value": "a"
+            },
+            {
+              "label": "B",
+              "value": "b",
+              "children": [
+                {
+                  "label": "B-1",
+                  "value": "b-1"
+                },
+                {
+                  "label": "B-2",
+                  "value": "b-2"
+                },
+                {
+                  "label": "B-3",
+                  "value": "b-3"
+                }
+              ]
+            },
+            {
+              "label": "C",
+              "value": "c"
+            }
+          ],
+          "value": "a",
+          "id": "reset_text"
+        },
+        {
+            "type": "button",
+            "label": "重置",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "reset",
+                            "componentId": "reset_text"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+### reload
+
+只有选择器模式支持，即配置`source`，用于重新加载选择器的数据源。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+          "type": "nested-select",
+          "name": "nestedSelect",
+          "label": "级联选择器",
+          "id": "reload_type",
+          "source": "/api/mock2/form/getTreeOptions",
+          "value": "a"
+        },
+        {
+            "type": "button",
+            "label": "重新加载",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "reload",
+                            "componentId": "reload_type"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+### setValue
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+          "type": "nested-select",
+          "name": "nestedSelect",
+          "label": "级联选择器",
+          "options": [
+            {
+              "label": "A",
+              "value": "a"
+            },
+            {
+              "label": "B",
+              "value": "b",
+              "children": [
+                {
+                  "label": "B-1",
+                  "value": "b-1"
+                },
+                {
+                  "label": "B-2",
+                  "value": "b-2"
+                },
+                {
+                  "label": "B-3",
+                  "value": "b-3"
+                }
+              ]
+            },
+            {
+              "label": "C",
+              "value": "c"
+            }
+          ],
+          "value": "a",
+          "id": "setvalue_text"
+        },
+        {
+            "type": "button",
+            "label": "赋值",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "setValue",
+                            "componentId": "setvalue_text",
+                            "args": {
+                                "value": "b"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```

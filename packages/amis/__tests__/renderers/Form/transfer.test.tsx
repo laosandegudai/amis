@@ -1392,7 +1392,6 @@ test('Renderer:transfer search highlight', async () => {
 });
 
 test('Renderer:transfer tree search', async () => {
-
   const onSubmit = jest.fn();
   const {container, findByText, getByText} = render(
     amisRender(
@@ -1486,7 +1485,7 @@ test('Renderer:transfer tree search', async () => {
   });
 
   await(300);
-  
+
   const libai = getByText('李白');
   expect(libai).not.toBeNull();
   fireEvent.click(libai);
@@ -1502,3 +1501,490 @@ test('Renderer:transfer tree search', async () => {
     transfer: "caocao,libai"
   });
 });
+
+test('Renderer:transfer table follow left mode close', async () => {
+  const {container} = render(
+    amisRender(
+      {
+        "label": "表格形式",
+        "type": "transfer",
+        "name": "transfer",
+        "selectMode": "table",
+        "resultListModeFollowSelect": true,
+        "columns": [
+          {
+            "name": "label",
+            "label": "英雄"
+          },
+          {
+            "name": "position",
+            "label": "位置"
+          }
+        ],
+        "options": [
+          {
+            "label": "诸葛亮",
+            "value": "zhugeliang",
+            "position": "中单"
+          },
+          {
+            "label": "曹操",
+            "value": "caocao",
+            "position": "上单"
+          },
+          {
+            "label": "钟无艳",
+            "value": "zhongwuyan",
+            "position": "上单"
+          },
+          {
+            "label": "李白",
+            "value": "libai",
+            "position": "打野"
+          },
+          {
+            "label": "韩信",
+            "value": "hanxin",
+            "position": "打野"
+          },
+          {
+            "label": "云中君",
+            "value": "yunzhongjun",
+            "position": "打野"
+          }
+        ]
+      },
+      {}
+    )
+  );
+
+  await wait(500);
+
+  const checkboxes = container.querySelectorAll('.cxd-Checkbox')!;
+
+  const zhugeliang = checkboxes[1];
+  const caocao = checkboxes[2];
+  expect(zhugeliang).not.toBeNull();
+  expect(caocao).not.toBeNull();
+  fireEvent.click(zhugeliang);
+  await wait(300);
+
+  fireEvent.click(caocao);
+  
+  await wait(300);
+
+  const zhugeliangClose = container.querySelectorAll('.cxd-ResultTableList-close-btn')[0];
+  expect(zhugeliangClose).not.toBeNaN();
+  fireEvent.click(zhugeliangClose);
+
+  await wait(500);
+
+  const results = container.querySelectorAll('.cxd-ResultTableList .is-active');
+  expect(results.length).toEqual(1);
+});
+
+test('Renderer:transfer tree follow left mode resultSearchable', async () => {
+  const onSubmit = jest.fn();
+  const {container, getByText} = render(
+    amisRender(
+      {
+        "type": "form",
+        "api": "/api/mock2/form/saveForm",
+        "body": [
+          {
+            "label": "默认",
+            "type": "transfer",
+            "name": "transfer",
+            "selectMode": "tree",
+            "searchable": true,
+            "resultSearchable": true,
+            "options": [
+              {
+                "label": "法师",
+                "children": [
+                  {
+                    "label": "诸葛亮",
+                    "value": "zhugeliang"
+                  }
+                ]
+              },
+              {
+                "label": "战士",
+                "children": [
+                  {
+                    "label": "曹操",
+                    "value": "caocao"
+                  },
+                  {
+                    "label": "钟无艳",
+                    "value": "zhongwuyan"
+                  }
+                ]
+              },
+              {
+                "label": "打野",
+                "children": [
+                  {
+                    "label": "李白",
+                    "value": "libai"
+                  },
+                  {
+                    "label": "韩信",
+                    "value": "hanxin"
+                  },
+                  {
+                    "label": "云中君",
+                    "value": "yunzhongjun"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {onSubmit},
+      makeEnv({})
+    )
+  )
+
+  await wait(500);
+
+  const caocao = getByText('曹操');
+  console.log(caocao.innerHTML)
+  expect(caocao).not.toBeNull();
+  fireEvent.click(caocao);
+
+  await wait(300);
+
+  const zhugeliang = getByText('诸葛亮');
+  console.log(zhugeliang.innerHTML)
+  expect(zhugeliang).not.toBeNull();
+  fireEvent.click(zhugeliang);
+
+  await wait(300);
+
+  const input = container.querySelectorAll('input[type=text]')[1];
+
+  expect(input).not.toBeNull();
+
+  fireEvent.change(input, {
+    target: {
+      value: '曹操'
+    }
+  });
+
+  await wait(300);
+
+  const caocaoResult = container.querySelectorAll('.cxd-Transfer-result span[title=曹操]');
+  console.log(caocaoResult[0]?.innerHTML);
+  expect(caocaoResult.length).toEqual(1);
+
+  const zhugeliangeResult = container.querySelectorAll('.cxd-Transfer-result span[title=诸葛亮]');
+  expect(zhugeliangeResult.length).toEqual(0);
+});
+
+test('Renderer:Transfer with pagination', async () => {
+  const mockData = [
+    {
+      "label": "Laura Lewis",
+      "value": "1"
+    },
+    {
+      "label": "David Gonzalez",
+      "value": "2"
+    },
+    {
+      "label": "Christopher Rodriguez",
+      "value": "3"
+    },
+    {
+      "label": "Sarah Young",
+      "value": "4"
+    },
+    {
+      "label": "James Jones",
+      "value": "5"
+    },
+    {
+      "label": "Larry Robinson",
+      "value": "6"
+    },
+    {
+      "label": "Christopher Perez",
+      "value": "7"
+    },
+    {
+      "label": "Sharon Davis",
+      "value": "8"
+    },
+    {
+      "label": "Kenneth Anderson",
+      "value": "9"
+    },
+    {
+      "label": "Deborah Lewis",
+      "value": "10"
+    },
+    {
+      "label": "Jennifer Lewis",
+      "value": "11"
+    },
+    {
+      "label": "Laura Miller",
+      "value": "12"
+    },
+    {
+      "label": "Larry Harris",
+      "value": "13"
+    },
+    {
+      "label": "Patricia Robinson",
+      "value": "14"
+    },
+    {
+      "label": "Mark Davis",
+      "value": "15"
+    },
+    {
+      "label": "Jessica Harris",
+      "value": "16"
+    },
+    {
+      "label": "Anna Brown",
+      "value": "17"
+    },
+    {
+      "label": "Lisa Young",
+      "value": "18"
+    },
+    {
+      "label": "Donna Williams",
+      "value": "19"
+    },
+    {
+      "label": "Shirley Davis",
+      "value": "20"
+    }
+  ];
+  const fetcher = jest.fn().mockImplementation((api) => {
+    const perPage = 10; /** 锁死10个方便测试 */
+    const page = Number(api.query.page || 1);
+
+    return Promise.resolve({
+      data: {
+        status: 0,
+        msg: 'ok',
+        data: {
+          count: mockData.length,
+          page: page,
+          items: mockData.concat().splice((page - 1) * perPage, perPage)
+        }
+      }
+    });
+  });
+  const {container} = render(
+    amisRender(
+      {
+        "type": "form",
+        "debug": true,
+        "body": [
+          {
+            "label": "默认",
+            "type": "transfer",
+            "name": "transfer",
+            "joinValues": false,
+            "extractValue": false,
+            "source": "/api/mock2/options/transfer?page=${page}&perPage=${perPage}",
+            "pagination": {
+              "enable": true,
+              "layout": ["pager", "perpage", "total"],
+              "popOverContainerSelector": ".cxd-Panel--form"
+            },
+            "value": [
+              {"label": "Laura Lewis", "value": "1", id: 1},
+              {"label": "Christopher Rodriguez", "value": "3", id: 3},
+              {"label": "Laura Miller", "value": "12", id: 12},
+              {"label": "Patricia Robinson", "value": "14", id: 14}
+            ]
+          }
+        ]
+    }, {}, makeEnv({fetcher})));
+
+    await wait(500);
+    expect(container.querySelector('.cxd-Transfer-footer-pagination')).toBeInTheDocument();
+
+    const checkboxes = container.querySelectorAll('input[type=checkbox]')!;
+    expect(checkboxes.length).toEqual(11); /** 包括顶部全选 */
+    expect((checkboxes[1] as HTMLInputElement)?.checked).toEqual(true);
+    expect((checkboxes[2] as HTMLInputElement)?.checked).toEqual(false);
+    expect((checkboxes[3] as HTMLInputElement)?.checked).toEqual(true);
+    expect((checkboxes[4] as HTMLInputElement)?.checked).toEqual(false);
+
+    const nextBtn = container.querySelector('.cxd-Pagination-next')!;
+    fireEvent.click(nextBtn);
+    await wait(500);
+
+    const checkboxes2 = container.querySelectorAll('input[type=checkbox]')!;
+    expect(checkboxes2.length).toEqual(11);
+    expect((checkboxes2[1] as HTMLInputElement)?.checked).toEqual(false);
+    expect((checkboxes2[2] as HTMLInputElement)?.checked).toEqual(true);
+    expect((checkboxes2[3] as HTMLInputElement)?.checked).toEqual(false);
+    expect((checkboxes2[4] as HTMLInputElement)?.checked).toEqual(true);
+})
+
+test('Renderer:Transfer with pagination and data source from data scope', async () => {
+  const mockData = [
+    {
+      "label": "Laura Lewis",
+      "value": "1"
+    },
+    {
+      "label": "David Gonzalez",
+      "value": "2"
+    },
+    {
+      "label": "Christopher Rodriguez",
+      "value": "3"
+    },
+    {
+      "label": "Sarah Young",
+      "value": "4"
+    },
+    {
+      "label": "James Jones",
+      "value": "5"
+    },
+    {
+      "label": "Larry Robinson",
+      "value": "6"
+    },
+    {
+      "label": "Christopher Perez",
+      "value": "7"
+    },
+    {
+      "label": "Sharon Davis",
+      "value": "8"
+    },
+    {
+      "label": "Kenneth Anderson",
+      "value": "9"
+    },
+    {
+      "label": "Deborah Lewis",
+      "value": "10"
+    },
+    {
+      "label": "Jennifer Lewis",
+      "value": "11"
+    },
+    {
+      "label": "Laura Miller",
+      "value": "12"
+    },
+    {
+      "label": "Larry Harris",
+      "value": "13"
+    },
+    {
+      "label": "Patricia Robinson",
+      "value": "14"
+    },
+    {
+      "label": "Mark Davis",
+      "value": "15"
+    },
+    {
+      "label": "Jessica Harris",
+      "value": "16"
+    },
+    {
+      "label": "Anna Brown",
+      "value": "17"
+    },
+    {
+      "label": "Lisa Young",
+      "value": "18"
+    },
+    {
+      "label": "Donna Williams",
+      "value": "19"
+    },
+    {
+      "label": "Shirley Davis",
+      "value": "20"
+    }
+  ];
+  const fetcher = jest.fn().mockImplementation((api) => {
+    return Promise.resolve({
+      data: {
+        status: 0,
+        msg: 'ok',
+        data: {
+          count: mockData.length,
+          items: mockData
+        }
+      }
+    });
+  });
+  const {container} = render(
+    amisRender(
+      {
+        "type": "form",
+        "debug": true,
+        "body": [
+          {
+            "type": "service",
+            "api": {
+              "url": "/api/mock2/options/loadDataOnce",
+              "method": "get",
+              "responseData": {
+                "transferOptions": "${items}"
+              }
+            },
+            body: [
+              {
+                "label": "默认",
+                "type": "transfer",
+                "name": "transfer",
+                "joinValues": false,
+                "extractValue": false,
+                "source": "${transferOptions}",
+                "pagination": {
+                  "enable": true,
+                  "layout": ["pager", "perpage", "total"],
+                  "popOverContainerSelector": ".cxd-Panel--form"
+                },
+                "value": [
+                  {"label": "Laura Lewis", "value": "1", id: 1},
+                  {"label": "Christopher Rodriguez", "value": "3", id: 3},
+                  {"label": "Laura Miller", "value": "12", id: 12},
+                  {"label": "Patricia Robinson", "value": "14", id: 14}
+                ]
+              }
+            ]
+          }
+        ]
+    }, {}, makeEnv({fetcher})));
+
+    await wait(500);
+    expect(container.querySelector('.cxd-Transfer-footer-pagination')).toBeInTheDocument();
+
+    const checkboxes = container.querySelectorAll('input[type=checkbox]')!;
+    expect(checkboxes.length).toEqual(11); /** 包括顶部全选 */
+    expect((checkboxes[1] as HTMLInputElement)?.checked).toEqual(true);
+    expect((checkboxes[2] as HTMLInputElement)?.checked).toEqual(false);
+    expect((checkboxes[3] as HTMLInputElement)?.checked).toEqual(true);
+    expect((checkboxes[4] as HTMLInputElement)?.checked).toEqual(false);
+
+    const nextBtn = container.querySelector('.cxd-Pagination-next')!;
+    fireEvent.click(nextBtn);
+    await wait(500);
+
+    const checkboxes2 = container.querySelectorAll('input[type=checkbox]')!;
+    expect(checkboxes2.length).toEqual(11);
+    expect((checkboxes2[1] as HTMLInputElement)?.checked).toEqual(false);
+    expect((checkboxes2[2] as HTMLInputElement)?.checked).toEqual(true);
+    expect((checkboxes2[3] as HTMLInputElement)?.checked).toEqual(false);
+    expect((checkboxes2[4] as HTMLInputElement)?.checked).toEqual(true);
+})

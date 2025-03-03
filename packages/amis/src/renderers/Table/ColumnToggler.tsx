@@ -132,10 +132,9 @@ export interface ColumnTogglerState {
   tempColumns: any[];
 }
 
-export default class ColumnToggler extends React.Component<
-  ColumnTogglerProps,
-  ColumnTogglerState
-> {
+export default class ColumnToggler<
+  T extends ColumnTogglerProps = ColumnTogglerProps
+> extends React.Component<T, ColumnTogglerState> {
   state: ColumnTogglerState = {
     isOpened: false,
     enableSorting: false,
@@ -156,7 +155,7 @@ export default class ColumnToggler extends React.Component<
   sortable?: Sortable;
   dragRefDOM: HTMLElement;
 
-  constructor(props: ColumnTogglerProps) {
+  constructor(props: T) {
     super(props);
 
     this.open = this.open.bind(this);
@@ -176,7 +175,7 @@ export default class ColumnToggler extends React.Component<
 
   componentDidUpdate(prevProps: ColumnTogglerProps) {
     if (anyChanged('activeToggaleColumns', prevProps, this.props)) {
-      this.setState({tempColumns: this.props.columns});
+      this.setState({tempColumns: cloneDeep(this.props.columns)});
     }
   }
 
@@ -273,7 +272,12 @@ export default class ColumnToggler extends React.Component<
 
           const parent = e.to as HTMLElement;
           if (e.oldIndex < parent.childNodes.length - 1) {
-            parent.insertBefore(e.item, parent.childNodes[e.oldIndex]);
+            parent.insertBefore(
+              e.item,
+              parent.childNodes[
+                e.oldIndex > e.newIndex ? e.oldIndex + 1 : e.oldIndex
+              ]
+            );
           } else {
             parent.appendChild(e.item);
           }
@@ -370,11 +374,12 @@ export default class ColumnToggler extends React.Component<
       overlay,
       translate: __,
       footerBtnSize,
+      children,
       env
     } = this.props;
 
     const {enableSorting, tempColumns} = this.state;
-
+    const inDragging = enableSorting && draggable && tempColumns.length > 1;
     return (
       <>
         <Modal
@@ -398,7 +403,9 @@ export default class ColumnToggler extends React.Component<
               <Icon icon="close" className="icon" />
             </a>
           </header>
-
+          {!inDragging && (
+            <ul className={cx('ColumnToggler-modal-content')}>{children}</ul>
+          )}
           <ul className={cx('ColumnToggler-modal-content')} ref={this.dragRef}>
             {Array.isArray(tempColumns)
               ? tempColumns.map((column, index) => (
@@ -414,7 +421,7 @@ export default class ColumnToggler extends React.Component<
                       className={cx('ColumnToggler-menuItem')}
                       key={column.index}
                     >
-                      {enableSorting && draggable && tempColumns.length > 1 ? (
+                      {inDragging ? (
                         <>
                           <a className={cx('ColumnToggler-menuItem-dragBar')}>
                             <Icon icon="drag" className={cx('icon')} />

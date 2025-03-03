@@ -32,6 +32,7 @@ export interface UserSelectProps
   selection?: Array<Option>;
   valueField?: string;
   labelField?: string;
+  deferField?: string;
   multi?: boolean;
   multiple?: boolean;
   isDep?: boolean;
@@ -44,6 +45,7 @@ export interface UserSelectProps
   controlled?: boolean;
   displayFields: Array<string>;
   isTab?: boolean;
+  disabled?: boolean;
   fetcher?: (
     api: Api,
     data?: any,
@@ -113,7 +115,8 @@ export class UserSelect extends React.Component<
   static defaultProps = {
     showResultBox: true,
     labelField: 'label',
-    valueField: 'value'
+    valueField: 'value',
+    deferField: 'defer'
   };
 
   componentDidMount() {}
@@ -255,7 +258,12 @@ export class UserSelect extends React.Component<
           }
           const parent = e.to as HTMLElement;
           if (e.oldIndex < parent.childNodes.length - 1) {
-            parent.insertBefore(e.item, parent.childNodes[e.oldIndex]);
+            parent.insertBefore(
+              e.item,
+              parent.childNodes[
+                e.oldIndex > e.newIndex ? e.oldIndex + 1 : e.oldIndex
+              ]
+            );
           } else {
             parent.appendChild(e.item);
           }
@@ -305,8 +313,10 @@ export class UserSelect extends React.Component<
         option.children = flatten(res);
       } else {
         // 只加载部门
-        const res = await deferLoad(option, false, deferParam);
-        option.children = res || [];
+        if (option.deferApi) {
+          const res = await deferLoad(option, false, deferParam);
+          option.children = res || [];
+        }
       }
     }
 
@@ -541,7 +551,8 @@ export class UserSelect extends React.Component<
       controlled,
       displayFields,
       isTab,
-      multiple
+      multiple,
+      deferField = 'defer'
     } = this.props;
     let selection = controlled
       ? this.props.selection || []
@@ -554,7 +565,7 @@ export class UserSelect extends React.Component<
           {options.map((option: Option, index: number) => {
             const hasChildren =
               (isRef && !option.isRef) ||
-              (isDep && (option.defer || option.children?.length));
+              (isDep && (option[deferField] || option.children?.length));
             const checkVisible =
               (isDep && isRef) ||
               (isRef && option.isRef) ||
@@ -985,6 +996,7 @@ export class UserSelect extends React.Component<
       showResultBox,
       labelField = 'label',
       valueField = 'value',
+      disabled,
       mobileUI
     } = this.props;
 
@@ -997,6 +1009,7 @@ export class UserSelect extends React.Component<
             className={cx('UserSelect-input', isOpened ? 'is-active' : '')}
             allowInput={false}
             result={this.getResult()}
+            disabled={disabled}
             itemRender={(option: any) => {
               if (labelField !== 'avatar') {
                 return (

@@ -34,10 +34,25 @@ import type {EditorNodeType, EditorNodeSnapshot} from './store/node';
 import {ContainerWrapper} from './component/ContainerWrapper';
 import type {EditorStoreType} from './store/editor';
 import {AvailableRenderersPlugin} from './plugin/AvailableRenderers';
+import {BasicToolbarPlugin} from './plugin/BasicToolbar';
+import {CodePlugin} from './plugin/Code';
+import {ErrorRendererPlugin} from './plugin/ErrorRenderer';
+import {OutlinePlugin} from './plugin/Outline';
+import {UnknownRendererPlugin} from './plugin/Unknown';
 import ShortcutKey from './component/base/ShortcutKey';
 import WidthDraggableContainer from './component/base/WidthDraggableContainer';
+import {SchemaForm} from './component/base/SchemaForm';
+import {RendererThumb} from './component/RendererThumb';
+import {AvailableRenderersPanel} from './component/Panel/AvailableRenderersPanel';
+import {deepSplice} from './deepSplice';
+import type {RightPanelsProps} from './component/Panel/RightPanels';
+import type {LeftPanelsProps} from './component/Panel/LeftPanels';
 
 export const version = '__buildVersion';
+(window as any).amisEditorVersionInfo = {
+  version: '__buildVersion',
+  buildTime: '__buildTime'
+};
 
 export default Editor;
 
@@ -45,6 +60,7 @@ export {
   Editor,
   MiniEditor,
   utils,
+  deepSplice,
   mapReactElement,
   RendererEditor,
   BasicEditor,
@@ -58,6 +74,17 @@ export {
   EditorStoreType,
   ContainerWrapper,
   AvailableRenderersPlugin,
+  AvailableRenderersPanel,
+  BasicToolbarPlugin,
+  CodePlugin,
+  ErrorRendererPlugin,
+  OutlinePlugin,
+  UnknownRendererPlugin,
   ShortcutKey,
-  WidthDraggableContainer
+  SchemaForm as SchemaFrom, // 兼容老版本
+  SchemaForm,
+  WidthDraggableContainer,
+  RendererThumb,
+  LeftPanelsProps,
+  RightPanelsProps
 };

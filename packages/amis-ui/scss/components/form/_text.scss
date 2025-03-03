@@ -1,10 +1,6 @@
 .#{$ns}TextControl {
   @include input-text();
 
-  .InputText-clear {
-    content: var(--input-clearable-icon);
-  }
-
   &-clear {
     padding: 0 var(--Form-input-clearBtn-padding);
   }
@@ -46,6 +42,7 @@
     background: var(--input-default-default-bg-color);
     height: var(--input-size-default-height);
     align-items: center;
+    transition: all var(--animation-duration) ease-in-out;
 
     input {
       color: var(--input-default-default-color);
@@ -319,7 +316,10 @@
     background: var(--Form-select-menu-bg);
     color: var(--Form-select-menu-color);
     border-radius: px2rem(2px);
-    box-shadow: var(--menu-box-shadow);
+    box-shadow: var(--Form-select-outer-boxShadow);
+    border: var(--Form-select-outer-borderWidth) solid
+      var(--Form-select-outer-borderColor);
+    padding: px2rem(4px) 0;
   }
 
   &-sugs {
@@ -328,13 +328,11 @@
   }
 
   &-sugItem {
-    padding: calc(
-        (
-            var(--Form-selectOption-height) - var(--Form-input-lineHeight) *
-              var(--Form-input-fontSize) - #{px2rem(2px)}
-          ) / 2
-      )
-      px2rem(12px);
+    padding: var(--select-base-default-option-paddingTop)
+      var(--select-base-default-option-paddingRight)
+      var(--select-base-default-option-paddingBottom)
+      var(--select-base-default-option-paddingLeft);
+    line-height: var(--select-base-default-option-line-height);
 
     svg {
       width: px2rem(16px);
@@ -492,6 +490,10 @@
       height: var(--input-password-invisible-icon-size);
     }
   }
+}
+
+.InputText-clear.icon {
+  content: var(--input-clearable-icon);
 }
 
 // 特殊处理 input-password。否则 form 内联模式，icon 会换行

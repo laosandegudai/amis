@@ -1,6 +1,11 @@
 .#{$ns}Table {
   position: relative;
 
+  // 黑科技，让 scrollIntoView 能够跑正确的位置
+  // margin-top: calc(var(--affix-offset-top) * -1);
+  // padding-top: var(--affix-offset-top);
+  scroll-margin-top: var(--affix-offset-top);
+
   border-radius: var(--Table-borderRadius);
   margin-bottom: var(--gap-md);
 
@@ -10,6 +15,7 @@
 
   &-fixedTop {
     position: sticky;
+    top: var(--affix-offset-top);
     background: var(--Table-bg);
     display: block;
     opacity: 1;
@@ -142,6 +148,14 @@
     }
   }
 
+  &-footerToolbar--affix,
+  &-footer--affix {
+    position: sticky;
+    bottom: var(--affix-offset-bottom);
+    background: var(--Table-bg);
+    z-index: $zindex-sticky;
+  }
+
   &.is-mobile {
     .#{$ns}Table-toolbar {
       .#{$ns}Form-item {
@@ -183,6 +197,10 @@
     opacity: 0.5;
     z-index: 15;
 
+    &--disabled {
+      cursor: not-allowed;
+    }
+
     &:hover,
     &.is-resizing {
       background: var(--primary);
@@ -206,6 +224,7 @@
     & th,
     & td {
       text-align: left;
+      border-color: transparent;
       border-bottom: var(--Table-borderWidth) solid var(--Table-borderColor);
 
       &.is-sticky {
@@ -236,6 +255,24 @@
         transition: box-shadow 0.3s;
         content: '';
         pointer-events: none;
+      }
+      & .label {
+        font-size: 90%;
+      }
+
+      & > .#{$ns}Form,
+      & > .#{$ns}Form-item > .#{$ns}Form-control:not(.is-thin) {
+        min-width: var(--Form-control-widthBase);
+
+        &.#{$ns}CheckboxControl,
+        &.#{$ns}SwitchControl,
+        &.#{$ns}RadiosControl {
+          min-width: auto;
+        }
+      }
+
+      .#{$ns}Form-static {
+        min-height: auto;
       }
     }
 
@@ -268,12 +305,26 @@
       text-align: right;
     }
 
+    & th.align-top,
+    & td.align-top {
+      vertical-align: top !important;
+    }
+
+    & th.align-bottom,
+    & td.align-bottom {
+      vertical-align: bottom !important;
+    }
+
     & td .#{$ns}SwitchControl {
       padding-top: 0;
     }
 
-    &--affixHeader > thead {
-      visibility: collapse;
+    &--affixHeader {
+      margin-top: calc(var(--Table-thead-height) * -1);
+
+      > thead {
+        visibility: hidden;
+      }
     }
 
     &--withCombine {
@@ -414,6 +465,7 @@
       > td,
       > th {
         padding: var(--TableCell-paddingY) var(--TableCell-paddingX);
+        position: relative;
 
         &:first-child {
           padding-left: var(--TableCell--edge-paddingX);
@@ -619,6 +671,15 @@
     > thead > tr > th.#{$ns}Table-primayCell,
     > tbody > tr > td.#{$ns}Table-primayCell {
       white-space: nowrap; // 树形表格展示标题栏，不要换行
+
+      > .#{$ns}Spinner {
+        vertical-align: middle;
+      }
+
+      > [data-role='form-item'] {
+        display: inline-block;
+        min-width: px2rem(160px);
+      }
     }
   }
 
@@ -720,7 +781,7 @@
     min-width: px2rem(320px);
     max-width: px2rem(640px);
 
-    .#{$ns}Panel {
+    > .#{$ns}Panel {
       margin: 0;
     }
   }
@@ -775,6 +836,11 @@
           margin: 0;
         }
       }
+    }
+
+    .#{$ns}SearchBox {
+      margin-left: var(--gap-xs);
+      margin-top: var(--gap-xs);
     }
   }
 
@@ -860,6 +926,14 @@
     > tbody > tr:not(:first-child) {
       border-top: var(--Table-borderWidth) solid
         var(--Table-tbody-borderTopColor);
+    }
+  }
+
+  &-retryBtn {
+    color: var(--Form-feedBack-color);
+    cursor: pointer;
+    &:hover {
+      color: var(--Form-feedBack-color);
     }
   }
 
@@ -954,8 +1028,16 @@
     margin-bottom: 0;
 
     > .#{$ns}Table-contentWrap {
-      > .#{$ns}Table-content table {
+      > .#{$ns}Table-content > table {
         border-top: none; // 不然会导致拖动时顶部露出内容
+
+        &.#{$ns}Table-table--tableFillHeight {
+          > tbody {
+            height: calc(
+              var(--Table-content-height) - var(--Table-thead-height)
+            );
+          }
+        }
       }
 
       > .#{$ns}Table-content table thead {
@@ -1093,5 +1175,15 @@
     &::before {
       @include hairline-bottom(var(--Table-borderColor));
     }
+  }
+}
+
+.#{$ns}AutoFilterToolbar {
+  display: block;
+  text-align: right;
+  white-space: nowrap;
+
+  > .#{$ns}Button {
+    margin-top: 0;
   }
 }

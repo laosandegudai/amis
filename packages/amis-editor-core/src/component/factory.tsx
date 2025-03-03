@@ -3,7 +3,6 @@ import {isAlive} from 'mobx-state-tree';
 import React from 'react';
 import {NodeWrapper} from './NodeWrapper';
 import {PanelProps, RegionConfig, RendererInfo} from '../plugin';
-import cx from 'classnames';
 import groupBy from 'lodash/groupBy';
 import {RegionWrapper} from './RegionWrapper';
 import find from 'lodash/find';
@@ -13,23 +12,16 @@ import {EditorNodeContext, EditorNodeType} from '../store/node';
 import {EditorManager} from '../manager';
 import flatten from 'lodash/flatten';
 import {render as reactRender, unmountComponentAtNode} from 'react-dom';
-import {
-  autobind,
-  diff,
-  getThemeConfig,
-  JSONGetById,
-  JSONPipeIn,
-  JSONPipeOut,
-  JSONUpdate,
-  getFixDialogType
-} from '../util';
-import {createObject, createObjectFromChain} from 'amis-core';
+import {autobind, JSONGetById, JSONUpdate, appTranslate} from '../util';
+import {ErrorBoundary} from 'amis-core';
 import {CommonConfigWrapper} from './CommonConfigWrapper';
 import type {Schema} from 'amis';
 import type {DataScope} from 'amis-core';
 import type {RendererConfig} from 'amis-core';
 import type {SchemaCollection} from 'amis';
-import omit from 'lodash/omit';
+import {SchemaForm} from './base/SchemaForm';
+import memoize from 'lodash/memoize';
+import {FormConfigWrapper} from './FormConfigWrapper';
 
 // 创建 Node Store 并构建成树
 export function makeWrapper(
@@ -40,14 +32,11 @@ export function makeWrapper(
   type Props = RendererProps & {
     $$id: string;
   };
-  type States = {
-    hasError: boolean;
-  };
   const store = manager.store;
-  const renderer = rendererConfig.component;
+  const renderer = rendererConfig.component!;
 
   @observer
-  class Wrapper extends React.Component<Props, States> {
+  class Wrapper extends React.Component<Props> {
     static displayName = renderer.displayName;
     static propsList = ((renderer && renderer.propsList) || []).concat([
       '$$id'
@@ -56,11 +45,6 @@ export function makeWrapper(
     static contextType = EditorNodeContext;
     editorNode?: EditorNodeType;
     scopeId?: string;
-
-    constructor(props: Props) {
-      super(props);
-      this.state = {hasError: false};
-    }
 
     UNSAFE_componentWillMount() {
       const parent: EditorNodeType = (this.context as any) || store.root;
@@ -73,6 +57,7 @@ export function makeWrapper(
         type: info.type,
         label: info.name,
         isCommonConfig: !!this.props.$$commonSchema,
+        isFormConfig: !!this.props.$$formSchema,
         path: this.props.$path,
         schemaPath: info.schemaPath,
         dialogTitle: info.dialogTitle,
@@ -113,9 +98,9 @@ export function makeWrapper(
         manager.dataSchema.addScope([], this.scopeId);
         if (info.name) {
           const nodeSchema = manager.store.getNodeById(info.id)?.schema;
-          const tag = nodeSchema?.title ?? nodeSchema?.name;
+          const tag = appTranslate(nodeSchema?.title ?? nodeSchema?.name);
           manager.dataSchema.current.tag = `${info.name}${
-            tag ? ` : ${tag}` : ''
+            tag && typeof tag === 'string' ? ` : ${tag}` : ''
           }`;
           manager.dataSchema.current.group = '组件上下文';
         }
@@ -131,16 +116,10 @@ export function makeWrapper(
       ) {
         this.editorNode.updateIsCommonConfig(!!this.props.$$commonSchema);
       }
-    }
 
-    componentDidCatch(error: any, errorInfo: any) {
-      console.warn(`${info.name}(${info.id})渲染发生错误：`);
-      console.warn('当前渲染器信息：', info);
-      console.warn('错误对象：', error);
-      console.warn('错误信息：', errorInfo);
-      this.setState({
-        hasError: true
-      });
+      if (this.editorNode && props.$$formSchema !== prevProps.$$formSchema) {
+        this.editorNode.updateIsFormConfig(!!this.props.$$formSchema);
+      }
     }
 
     componentWillUnmount() {
@@ -155,9 +134,21 @@ export function makeWrapper(
     }
 
     @autobind
-    wrapperRef(ref: any) {
+    wrapperRef(raw: any) {
+      let ref = raw;
       while (ref?.getWrappedInstance) {
         ref = ref.getWrappedInstance();
+      }
+
+      if (ref && !ref.props) {
+        Object.defineProperty(ref, 'props', {
+          get: () => this.props
+        });
+      } else if (!ref && raw) {
+        ref = {};
+        Object.defineProperty(ref, 'props', {
+          get: () => this.props
+        });
       }
 
       if (this.editorNode && isAlive(this.editorNode)) {
@@ -177,7 +168,7 @@ export function makeWrapper(
       // $$id 变化，渲染器最好也变化
       if (node?.$$id) {
         props = props || {}; // props 可能为 undefined
-        props.key = node.$$id || props.key;
+        props.key = `${props.key}-${node.$$id}`;
       }
 
       return render(region, node, {...props, $$editor: info});
@@ -185,14 +176,6 @@ export function makeWrapper(
 
     render() {
       const {$$id, ...rest} = this.props;
-
-      if (this.state.hasError) {
-        return (
-          <div className="ae-Editor-renderer-error">
-            {info.name}({info.id})渲染发生错误，详细错误信息请查看控制台输出。
-          </div>
-        );
-      }
 
       /*
        * 根据渲染器信息决定时 NodeWrapper 包裹还是 ContainerWrapper 包裹。
@@ -204,21 +187,34 @@ export function makeWrapper(
        */
       const Wrapper = /*info.wrapper || (*/ this.props.$$commonSchema
         ? CommonConfigWrapper
+        : this.props.$$formSchema
+        ? FormConfigWrapper
         : info.regions
         ? ContainerWrapper
         : NodeWrapper; /*)*/
-
       return (
         <EditorNodeContext.Provider
           value={this.editorNode || (this.context as any)}
         >
-          <Wrapper
-            {...rest}
-            render={this.renderChild}
-            $$editor={info}
-            $$node={this.editorNode}
-            ref={this.wrapperRef}
-          />
+          <ErrorBoundary
+            customErrorMsg={`拦截到${info.type}渲染错误`}
+            fallback={() => {
+              return (
+                <div className="renderer-error-boundary">
+                  {info?.type}
+                  渲染发生错误，详细错误信息请查看控制台输出。
+                </div>
+              );
+            }}
+          >
+            <Wrapper
+              {...rest}
+              render={this.renderChild}
+              $$editor={info}
+              $$node={this.editorNode}
+              ref={this.wrapperRef}
+            />
+          </ErrorBoundary>
         </EditorNodeContext.Provider>
       );
     }
@@ -226,8 +222,6 @@ export function makeWrapper(
 
   return Wrapper as any;
 }
-
-// 将之前选择的弹窗和本次现有弹窗schema替换为$ref引用
 
 /**
  * 将之前选择的弹窗和本次现有弹窗schema替换为$ref引用
@@ -240,294 +234,12 @@ function replaceDialogtoRef(
   dialogId: string,
   dialogRefsName: string
 ) {
-  let replacedSchema = null;
+  let replacedSchema = schema;
   const dialog = JSONGetById(schema, dialogId);
   if (dialog) {
     replacedSchema = JSONUpdate(schema, dialogId, {$ref: dialogRefsName}, true);
   }
   return replacedSchema;
-}
-
-// 添加definitions
-function addDefinitions(
-  schema: Schema,
-  definitions: Schema,
-  dialogMaxIndex: number,
-  selectDialog: any
-) {
-  let newSchema;
-  let dialogRefsName = '';
-  if (dialogMaxIndex) {
-    Object.keys(definitions).forEach(ref => {
-      const dialog = definitions[ref];
-      if (dialog.$$id === selectDialog) {
-        dialogRefsName = ref;
-      }
-    });
-  }
-  let dialogType = getFixDialogType(schema, selectDialog);
-  let newDefinitions = {...definitions};
-  if (!dialogRefsName) {
-    dialogRefsName = dialogMaxIndex
-      ? `${dialogType}-ref-${dialogMaxIndex + 1}`
-      : `${dialogType}-ref-1`;
-  }
-  let dialogBody = JSONGetById(schema, selectDialog);
-  // 防止definition被查找到替换为$ref重新生成一下
-  newDefinitions[dialogRefsName] = JSONPipeIn(
-    JSONPipeOut({
-      ...dialogBody,
-      type: dialogType
-    })
-  );
-  newSchema = {
-    ...schema,
-    definitions: newDefinitions
-  };
-  return {
-    dialogRefsName,
-    newSchema
-  };
-}
-
-// 选择现有弹窗后definitions设置和弹窗schema的同步
-function currentDialogOnchagne(
-  manager: EditorManager,
-  diffs: any,
-  newValue?: any
-) {
-  const {store} = manager;
-  let schema = store.schema;
-  let definitions = schema.definitions || {};
-  let dialogMaxIndex: number = 0;
-  Object.keys(definitions).forEach(k => {
-    if (k.includes('ref-')) {
-      let index = Number(k.split('-')[2]);
-      dialogMaxIndex = Math.max(dialogMaxIndex, index);
-    }
-  });
-  if (diffs?.length) {
-    let replacedSchema = null;
-    let editRefsName = '';
-    for (const diff of diffs) {
-      const {path, kind, item, rhs} = diff;
-      // 添加选择现有弹窗事件
-      if (
-        kind === 'A' &&
-        path.length > 1 &&
-        path?.[path.length - 1] === 'actions' &&
-        item.kind === 'N' &&
-        item.rhs?.__selectDialog
-      ) {
-        const {newSchema, dialogRefsName} = addDefinitions(
-          schema,
-          definitions,
-          dialogMaxIndex,
-          item.rhs?.__selectDialog
-        );
-        replacedSchema = replaceDialogtoRef(
-          newSchema,
-          item.rhs?.__selectDialog,
-          dialogRefsName
-        );
-        if (item.rhs?.__relatedDialogId) {
-          replacedSchema = replaceDialogtoRef(
-            replacedSchema,
-            item.rhs?.__relatedDialogId,
-            dialogRefsName
-          );
-        }
-        return replacedSchema;
-      }
-      // 编辑弹窗,从新建弹窗切换到现有弹窗,原始弹窗id
-      else if (
-        kind === 'N' &&
-        path?.length > 1 &&
-        path?.[path.length - 1] === '__selectDialog'
-      ) {
-        const {newSchema, dialogRefsName} = addDefinitions(
-          schema,
-          definitions,
-          dialogMaxIndex,
-          rhs
-        );
-        editRefsName = dialogRefsName;
-        replacedSchema = replaceDialogtoRef(newSchema, rhs, dialogRefsName);
-      }
-      // 编辑弹窗,从新建弹窗切换到现有弹窗,新生成弹窗id
-      else if (
-        kind === 'N' &&
-        path?.length > 1 &&
-        path?.[path.length - 1] === '__relatedDialogId'
-      ) {
-        replacedSchema = replaceDialogtoRef(
-          replacedSchema!,
-          rhs,
-          editRefsName!
-        );
-        return replacedSchema;
-      }
-      // 编辑弹窗,选择了其他现有弹窗，原始弹窗id
-      else if (
-        kind === 'E' &&
-        path?.length > 1 &&
-        path?.[path.length - 1] === '__selectDialog'
-      ) {
-        const {newSchema, dialogRefsName} = addDefinitions(
-          schema,
-          definitions,
-          dialogMaxIndex,
-          rhs
-        );
-        editRefsName = dialogRefsName;
-        replacedSchema = replaceDialogtoRef(newSchema, rhs, dialogRefsName);
-      }
-      // 编辑弹窗,选择了其他现有弹窗，新生成弹窗id
-      else if (
-        kind === 'E' &&
-        path?.length > 1 &&
-        path?.[path.length - 1] === '__relatedDialogId'
-      ) {
-        replacedSchema = replaceDialogtoRef(
-          replacedSchema!,
-          rhs,
-          editRefsName!
-        );
-        return replacedSchema;
-      }
-    }
-    return replacedSchema;
-  }
-  return null;
-}
-
-function SchemaFrom({
-  propKey,
-  body,
-  definitions,
-  controls,
-  onChange,
-  value,
-  env,
-  api,
-  popOverContainer,
-  submitOnChange,
-  node,
-  manager,
-  justify,
-  ctx,
-  pipeIn,
-  pipeOut
-}: {
-  propKey: string;
-  env: any;
-  body?: Array<any>;
-  /**
-   * @deprecated 用 body 代替
-   */
-  controls?: Array<any>;
-  definitions?: any;
-  value: any;
-  api?: any;
-  onChange: (value: any, diff: any) => void;
-  popOverContainer?: () => HTMLElement | void;
-  submitOnChange?: boolean;
-  node?: EditorNodeType;
-  manager: EditorManager;
-  panelById?: string;
-  justify?: boolean;
-  ctx?: any;
-  pipeIn?: (value: any) => any;
-  pipeOut?: (value: any) => any;
-}) {
-  let containerKey = 'body';
-
-  if (Array.isArray(controls)) {
-    body = controls;
-    containerKey = 'controls';
-  }
-
-  body = Array.isArray(body) ? body.concat() : [];
-
-  if (submitOnChange === false) {
-    body.push({
-      type: 'submit',
-      label: '保存',
-      level: 'primary',
-      block: true,
-      className: 'ae-Settings-actions'
-    });
-  }
-  const schema = {
-    key: propKey,
-    definitions,
-    [containerKey]: body,
-    className: cx(
-      'config-form-content',
-      'ae-Settings-content',
-      'hoverShowScrollBar',
-      submitOnChange === false ? 'with-actions' : ''
-    ),
-    wrapperComponent: 'div',
-    type: 'form',
-    title: '',
-    mode: 'normal',
-    api,
-    wrapWithPanel: false,
-    submitOnChange: submitOnChange !== false,
-    messages: {
-      validateFailed: ''
-    }
-  };
-
-  if (justify) {
-    schema.mode = 'horizontal';
-    schema.horizontal = {
-      left: 4,
-      right: 8,
-      justify: true
-    };
-  }
-
-  value = value || {};
-  const finalValue = pipeIn ? pipeIn(value) : value;
-  const themeConfig = getThemeConfig();
-
-  return render(
-    schema,
-    {
-      onFinished: async (newValue: any) => {
-        newValue = pipeOut ? await pipeOut(newValue) : newValue;
-        const diffValue = diff(value, newValue);
-        onChange(newValue, diffValue);
-
-        // 如果是选择现有弹窗，需要提取Definitions，在这里一起做变更
-        const store = manager.store;
-        const schema = store.schema;
-        let newSchema = currentDialogOnchagne(manager, diffValue, newValue);
-        if (newSchema) {
-          const schemaDiff = diff(schema, newSchema);
-          store.definitionOnchangeValue(newSchema, schemaDiff);
-        }
-        // 添加弹窗事件后自动选中弹窗
-        if (store.activeDialogPath) {
-          let activeId = store.getSchemaByPath(
-            store.activeDialogPath.split('/')
-          )?.$$id;
-          activeId && store.setPreviewDialogId(activeId);
-          store.setActiveDialogPath('');
-        }
-      },
-      data: createObjectFromChain([ctx, themeConfig, finalValue]),
-      node: node,
-      manager: manager,
-      popOverContainer
-    },
-    {
-      ...omit(env, 'replaceText')
-      // theme: 'cxd' // 右侧属性配置面板固定使用cxd主题展示
-    }
-  );
 }
 
 export function makeSchemaFormRender(
@@ -546,8 +258,19 @@ export function makeSchemaFormRender(
   }
 ) {
   const env = {...manager.env, session: 'schema-form'};
+  const filterBody = memoize(body =>
+    body ? flatten(Array.isArray(body) ? body : [body]) : undefined
+  );
 
-  return ({value, onChange, popOverContainer, id, store, node}: PanelProps) => {
+  return ({
+    value,
+    onChange,
+    popOverContainer,
+    id,
+    store,
+    node,
+    readonly
+  }: PanelProps) => {
     const ctx = {...manager.store.ctx};
 
     if (schema?.panelById && schema?.panelById !== node?.id) {
@@ -569,26 +292,17 @@ export function makeSchemaFormRender(
       schema.formKey ? schema.formKey : ''
     }`;
 
+    const body = filterBody(schema.body);
+    const controls = filterBody(schema.controls);
+
     return (
-      <SchemaFrom
+      <SchemaForm
         key={curFormKey}
         propKey={curFormKey}
         api={schema.api}
         definitions={schema.definitions}
-        body={
-          schema.body
-            ? flatten(Array.isArray(schema.body) ? schema.body : [schema.body])
-            : undefined
-        }
-        controls={
-          schema.controls
-            ? flatten(
-                Array.isArray(schema.controls)
-                  ? schema.controls
-                  : [schema.controls]
-              )
-            : undefined
-        }
+        body={body}
+        controls={controls}
         value={value}
         ctx={ctx}
         pipeIn={schema.pipeIn}
@@ -600,6 +314,7 @@ export function makeSchemaFormRender(
         node={node}
         manager={manager}
         justify={schema.justify}
+        readonly={readonly}
       />
     );
   };
@@ -653,7 +368,7 @@ export function hackIn(
 
             if (
               info &&
-              !this.props.$$commonSchema &&
+              (!this.props.$$commonSchema || !this.props.$$formSchema) &&
               Array.isArray(info.regions) &&
               regions.every(region =>
                 find(info.regions!, c => c.key === region.key)

@@ -19,29 +19,37 @@ import {
   dependencies
 } from './package.json';
 import path from 'path';
+import fs from 'fs';
 import svgr from '@svgr/rollup';
 
 const settings = {
   globals: {}
 };
 
+const pkgs = [];
+// 读取所有的node_modules目录，获取所有的包名
+[
+  path.join(__dirname, './node_modules'),
+  path.join(__dirname, '../../node_modules')
+].forEach(dir => {
+  if (fs.existsSync(dir)) {
+    fs.readdirSync(dir).forEach(item => {
+      if (item.startsWith('.')) {
+        return;
+      }
+
+      if (item.startsWith('@')) {
+        fs.readdirSync(path.join(dir, item)).forEach(subItem => {
+          pkgs.push(item + '/' + subItem);
+        });
+      }
+
+      return pkgs.push(item);
+    });
+  }
+});
 const external = id =>
-  new RegExp(
-    `^(?:${Object.keys(dependencies)
-      .concat([
-        'linkify-it',
-        'react-is',
-        'markdown-it',
-        'markdown-it-html5-media',
-        'mdurl',
-        'uc.micro',
-        'entities'
-      ])
-      .map(value =>
-        value.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&').replace(/-/g, '\\x2d')
-      )
-      .join('|')})`
-  ).test(id);
+  pkgs.some(pkg => id.startsWith(pkg) || ~id.indexOf(`node_modules/${pkg}`));
 const input = [
   './src/index.tsx',
   './src/components/ColorPicker.tsx', // 默认不加载的需要手动维护列表，否则不会编译
@@ -49,7 +57,8 @@ const input = [
   './src/components/Markdown.tsx',
   './src/components/Tinymce.tsx',
   './src/components/RichText.tsx',
-  './src/components/CityDB.ts'
+  './src/components/CityDB.ts',
+  './src/components/PdfViewer.tsx'
 ];
 
 /** 获取子包编译后的入口路径，需要使用相对路径 */
@@ -132,7 +141,8 @@ function transpileDynamicImportForCJS(options) {
 
       return {
         left: 'Promise.resolve().then(function() {return new Promise(function(fullfill) {require([',
-        right: '], function(mod) {fullfill(tslib.__importStar(mod))})})})'
+        right:
+          ', "tslib"], function(mod, tslib) {fullfill(tslib.__importStar(mod))})})})'
       };
 
       // return {

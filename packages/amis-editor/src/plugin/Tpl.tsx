@@ -8,13 +8,13 @@ import {defaultValue, getSchemaTpl, setSchemaTpl} from 'amis-editor-core';
 import {tipedLabel} from 'amis-editor-core';
 import {getEventControlConfig} from '../renderer/event-control/helper';
 import {ValidatorTag} from '../validator';
+import {InlineEditableElement} from 'amis-editor-core';
 
-setSchemaTpl(
-  'tpl:content',
+setSchemaTpl('tpl:content', () =>
   getSchemaTpl('textareaFormulaControl', {
     label: '文字内容',
     mode: 'normal',
-    visibleOn: 'data.wrapperComponent !== undefined',
+    visibleOn: 'this.wrapperComponent !== undefined',
     pipeIn: (value: any, data: any) => value || (data && data.html),
     name: 'tpl'
   })
@@ -49,7 +49,7 @@ setSchemaTpl('tpl:rich-text', {
   ],
   minRows: 5,
   language: 'html',
-  visibleOn: 'data.wrapperComponent === undefined',
+  visibleOn: 'this.wrapperComponent === undefined',
   pipeIn: (value: any, data: any) => value || (data && data.html),
   name: 'tpl'
 });
@@ -131,6 +131,15 @@ export class TplPlugin extends BasePlugin {
     inline: true,
     wrapperComponent: ''
   };
+
+  // 定义可以内联编辑的元素
+  inlineEditableElements: Array<InlineEditableElement> = [
+    {
+      match: ':scope > *',
+      key: 'tpl',
+      mode: 'rich-text'
+    }
+  ];
 
   panelTitle = '文字';
   panelJustify = true;
@@ -228,7 +237,7 @@ export class TplPlugin extends BasePlugin {
                 ),
                 name: 'inline',
                 pipeIn: defaultValue(true),
-                hiddenOn: 'data.wrapperComponent !== ""'
+                hiddenOn: 'this.wrapperComponent !== ""'
               }),
               {
                 type: 'input-number',
@@ -280,7 +289,7 @@ export class TplPlugin extends BasePlugin {
     ]);
   };
 
-  popOverBody = [
+  popOverBody?: any[] = [
     getSchemaTpl('tpl:content'),
     getSchemaTpl('tpl:rich-text'),
     getSchemaTpl('tpl:wrapperComponent')

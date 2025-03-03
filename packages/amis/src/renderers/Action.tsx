@@ -10,7 +10,8 @@ import {
   RendererProps,
   ScopedContext,
   uuid,
-  setThemeClassName
+  setThemeClassName,
+  RendererEvent
 } from 'amis-core';
 import {filter} from 'amis-core';
 import {BadgeObject, Button, SpinnerExtraProps} from 'amis-ui';
@@ -159,6 +160,11 @@ export interface ButtonSchema extends BaseSchema {
   loadingOn?: string;
 
   /**
+   * 是否在动作结束前禁用按钮
+   */
+  disabledOnAction?: boolean;
+
+  /**
    * 自定义事件处理函数
    */
   onClick?: string | any;
@@ -167,6 +173,8 @@ export interface ButtonSchema extends BaseSchema {
    * 子内容
    */
   body?: SchemaCollection;
+
+  tabIndex?: string;
 }
 
 export interface AjaxActionSchema extends ButtonSchema {
@@ -198,6 +206,7 @@ export interface DownloadActionSchema
    * 指定为下载行为
    */
   actionType: 'download';
+  downloadFileName?: string;
 }
 
 export interface SaveAsActionSchema
@@ -243,6 +252,11 @@ export interface DialogActionSchema extends ButtonSchema {
   nextCondition?: SchemaExpression;
   reload?: SchemaReload;
   redirect?: string;
+
+  /**
+   * 数据映射
+   */
+  data?: any;
 }
 
 export interface DrawerActionSchema extends ButtonSchema {
@@ -263,6 +277,11 @@ export interface DrawerActionSchema extends ButtonSchema {
   nextCondition?: SchemaExpression;
   reload?: SchemaReload;
   redirect?: string;
+
+  /**
+   * 数据映射
+   */
+  data?: any;
 }
 
 export interface ToastActionSchema extends ButtonSchema {
@@ -362,6 +381,7 @@ export interface OtherActionSchema extends ButtonSchema {
 
 export interface VanillaAction extends ButtonSchema {
   actionType?: string;
+  downloadFileName?: string;
 }
 
 /**
@@ -426,7 +446,8 @@ const ActionProps = [
   'requireSelected',
   'countDown',
   'fileName',
-  'isolateScope'
+  'isolateScope',
+  'downloadFileName'
 ];
 import {filterContents} from './Remark';
 import {ClassNamesFn, themeable, ThemeProps} from 'amis-core';
@@ -624,6 +645,7 @@ export class Action extends React.Component<ActionProps, ActionState> {
       action.actionType = 'ajax';
       const api = normalizeApi((action as AjaxActionSchema).api);
       api.responseType = 'blob';
+      api.downloadFileName = action.downloadFileName;
       (action as AjaxActionSchema).api = api;
     }
 
@@ -692,9 +714,7 @@ export class Action extends React.Component<ActionProps, ActionState> {
   render() {
     const {
       type,
-      icon,
       iconClassName,
-      rightIcon,
       rightIconClassName,
       loadingClassName,
       primary,
@@ -732,7 +752,9 @@ export class Action extends React.Component<ActionProps, ActionState> {
       wrapperCustomStyle,
       css,
       id,
-      env
+      testIdBuilder,
+      env,
+      tabIndex
     } = this.props;
 
     if (actionType !== 'email' && body) {
@@ -775,6 +797,14 @@ export class Action extends React.Component<ActionProps, ActionState> {
       }) as string;
       disabled = true;
     }
+    let icon = this.props.icon;
+    let rightIcon = this.props.rightIcon;
+    if (typeof icon === 'string') {
+      icon = filter(this.props.icon, data);
+    }
+    if (typeof rightIcon === 'string') {
+      rightIcon = filter(this.props.rightIcon, data);
+    }
 
     const iconElement = (
       <Icon
@@ -783,7 +813,12 @@ export class Action extends React.Component<ActionProps, ActionState> {
         className="Button-icon"
         classNameProp={cx(
           iconClassName,
-          setThemeClassName('iconClassName', id, themeCss || css)
+          setThemeClassName({
+            ...this.props,
+            name: 'iconClassName',
+            id,
+            themeCss: themeCss || css
+          })
         )}
       />
     );
@@ -794,7 +829,12 @@ export class Action extends React.Component<ActionProps, ActionState> {
         className="Button-icon"
         classNameProp={cx(
           rightIconClassName,
-          setThemeClassName('iconClassName', id, themeCss || css)
+          setThemeClassName({
+            ...this.props,
+            name: 'iconClassName',
+            id,
+            themeCss: themeCss || css
+          })
         )}
       />
     );
@@ -805,12 +845,23 @@ export class Action extends React.Component<ActionProps, ActionState> {
           loadingConfig={loadingConfig}
           className={cx(
             className,
-            setThemeClassName('wrapperCustomStyle', id, wrapperCustomStyle),
-            setThemeClassName('className', id, themeCss || css),
+            setThemeClassName({
+              ...this.props,
+              name: 'wrapperCustomStyle',
+              id,
+              themeCss: wrapperCustomStyle
+            }),
+            setThemeClassName({
+              ...this.props,
+              name: 'className',
+              id,
+              themeCss: themeCss || css
+            }),
             {
               [activeClassName || 'is-active']: isActive
             }
           )}
+          testIdBuilder={testIdBuilder}
           style={style}
           size={size}
           level={
@@ -835,6 +886,7 @@ export class Action extends React.Component<ActionProps, ActionState> {
           tooltipRootClose={tooltipRootClose}
           block={block}
           iconOnly={!!(icon && !label && level !== 'link')}
+          tabIndex={tabIndex}
         >
           {!loading ? iconElement : ''}
           {label ? <span>{filter(String(label), data)}</span> : null}
@@ -842,6 +894,7 @@ export class Action extends React.Component<ActionProps, ActionState> {
         </Button>
         {/* button自定义样式 */}
         <CustomStyle
+          {...this.props}
           config={{
             themeCss: themeCss || css,
             classNames: [
@@ -888,18 +941,26 @@ export type ActionRendererProps = RendererProps &
     onAction: (
       e: React.MouseEvent<any> | string | void | null,
       action: object,
-      data: any
+      data: any,
+      throwErrors?: boolean,
+      delegate?: IScopedContext,
+      rendererEvent?: RendererEvent<any>
     ) => void;
     btnDisabled?: boolean;
   };
 
 @Renderer({
-  type: 'action'
+  type: 'action',
+  alias: ['button', 'submit', 'reset']
 })
 // @ts-ignore 类型没搞定
 @withBadge
 export class ActionRenderer extends React.Component<ActionRendererProps> {
   static contextType = ScopedContext;
+
+  state = {
+    actionDisabled: false
+  };
 
   constructor(props: ActionRendererProps, scoped: IScopedContext) {
     super(props);
@@ -933,33 +994,60 @@ export class ActionRenderer extends React.Component<ActionRendererProps> {
     e: React.MouseEvent<any> | string | void | null,
     action: any
   ) {
-    const {env, onAction, data, ignoreConfirm, dispatchEvent, $schema} =
-      this.props;
-    let mergedData = data;
+    try {
+      const {env, onAction, data, ignoreConfirm, dispatchEvent, $schema} =
+        this.props;
+      let mergedData = data;
+      this.setState({actionDisabled: true});
 
-    if (action?.actionType === 'click' && isObject(action?.args)) {
-      mergedData = createObject(data, action.args);
-    }
+      if (action?.actionType === 'click' && isObject(action?.args)) {
+        mergedData = createObject(data, action.args);
+      }
 
-    const hasOnEvent = $schema.onEvent && Object.keys($schema.onEvent).length;
-    let confirmText: string = '';
-    // 有些组件虽然要求这里忽略二次确认，但是如果配了事件动作还是需要在这里等待二次确认提交才可以
-    if (
-      (!ignoreConfirm || hasOnEvent) &&
-      action.confirmText &&
-      env.confirm &&
-      (confirmText = filter(action.confirmText, mergedData))
-    ) {
-      let confirmed = await env.confirm(
-        confirmText,
-        filter(action.confirmTitle, mergedData) || undefined
-      );
-      if (confirmed) {
+      const hasOnEvent = $schema.onEvent && Object.keys($schema.onEvent).length;
+      let confirmText: string = '';
+      // 有些组件虽然要求这里忽略二次确认，但是如果配了事件动作还是需要在这里等待二次确认提交才可以
+      if (
+        this.props.showConfirmBox !== false && // 外部判断是否开启二次确认弹窗的验证,勿删
+        (!ignoreConfirm || hasOnEvent) &&
+        action.confirmText &&
+        env.confirm &&
+        (confirmText = filter(action.confirmText, mergedData))
+      ) {
+        let confirmed = await env.confirm(
+          confirmText,
+          filter(action.confirmTitle, mergedData) || undefined
+        );
+        if (confirmed) {
+          // 触发渲染器事件
+          const rendererEvent = await dispatchEvent(
+            e as React.MouseEvent<any> | string,
+            mergedData,
+            this // 保证renderer可以拿到，避免因交互设计导致的清空情况，例如crud内itemAction
+          );
+
+          // 阻止原有动作执行
+          if (rendererEvent?.prevented) {
+            return;
+          }
+
+          // 因为crud里面也会处理二次确认，所以如果按钮处理过了就跳过crud的二次确认
+          await onAction(
+            e,
+            {...action, ignoreConfirm: !!hasOnEvent},
+            mergedData,
+            undefined,
+            undefined,
+            rendererEvent
+          );
+        } else if (action.countDown) {
+          throw new Error('cancel');
+        }
+      } else {
         // 触发渲染器事件
         const rendererEvent = await dispatchEvent(
           e as React.MouseEvent<any> | string,
-          mergedData,
-          this // 保证renderer可以拿到，避免因交互设计导致的清空情况，例如crud内itemAction
+          mergedData
         );
 
         // 阻止原有动作执行
@@ -967,24 +1055,17 @@ export class ActionRenderer extends React.Component<ActionRendererProps> {
           return;
         }
 
-        // 因为crud里面也会处理二次确认，所以如果按钮处理过了就跳过crud的二次确认
-        onAction(e, {...action, ignoreConfirm: !!hasOnEvent}, mergedData);
-      } else if (action.countDown) {
-        throw new Error('cancel');
+        await onAction(
+          e,
+          action,
+          mergedData,
+          undefined,
+          undefined,
+          rendererEvent
+        );
       }
-    } else {
-      // 触发渲染器事件
-      const rendererEvent = await dispatchEvent(
-        e as React.MouseEvent<any> | string,
-        mergedData
-      );
-
-      // 阻止原有动作执行
-      if (rendererEvent?.prevented) {
-        return;
-      }
-
-      onAction(e, action, mergedData);
+    } finally {
+      this.setState({actionDisabled: false});
     }
   }
 
@@ -1017,13 +1098,16 @@ export class ActionRenderer extends React.Component<ActionRendererProps> {
   }
 
   render() {
-    const {env, disabled, btnDisabled, loading, ...rest} = this.props;
-
+    const {env, disabled, btnDisabled, disabledOnAction, loading, ...rest} =
+      this.props;
+    const {actionDisabled} = this.state;
     return (
       <Action
         {...(rest as any)}
         env={env}
-        disabled={disabled || btnDisabled}
+        disabled={
+          disabled || btnDisabled || (disabledOnAction ? actionDisabled : false)
+        }
         onAction={this.handleAction}
         onMouseEnter={this.handleMouseEnter}
         onMouseLeave={this.handleMouseLeave}
@@ -1034,18 +1118,3 @@ export class ActionRenderer extends React.Component<ActionRendererProps> {
     );
   }
 }
-
-@Renderer({
-  type: 'button'
-})
-export class ButtonRenderer extends ActionRenderer {}
-
-@Renderer({
-  type: 'submit'
-})
-export class SubmitRenderer extends ActionRenderer {}
-
-@Renderer({
-  type: 'reset'
-})
-export class ResetRenderer extends ActionRenderer {}

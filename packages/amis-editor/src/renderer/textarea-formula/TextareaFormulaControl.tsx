@@ -7,14 +7,16 @@ import cx from 'classnames';
 import {Icon, FormItem, TooltipWrapper, Spinner} from 'amis';
 import {autobind, FormControlProps, render as renderAmis} from 'amis-core';
 import {CodeMirrorEditor, FormulaEditor} from 'amis-ui';
-import type {VariableItem, CodeMirror} from 'amis-ui';
 import {FormulaPlugin, editorFactory} from './plugin';
-
+import {Button, Overlay, PopOver, VariableList} from 'amis-ui';
+import {RootClose, isMobile} from 'amis-core';
 import FormulaPicker, {CustomFormulaPickerProps} from './FormulaPicker';
 import {reaction} from 'mobx';
 import {renderFormulaValue} from '../FormulaControl';
-import {getVariables} from 'amis-editor-core';
+import {getVariables, getQuickVariables} from 'amis-editor-core';
 import {findDOMNode} from 'react-dom';
+
+import type {VariableItem, CodeMirror} from 'amis-ui';
 
 export interface AdditionalMenuClickOpts {
   /**
@@ -105,12 +107,34 @@ export interface TextareaFormulaControlProps extends FormControlProps {
    * 弹窗顶部标题，默认为 "表达式"
    */
   header: string;
+
+  /**
+   * 是否支持全屏，默认 true
+   */
+  allowFullscreen?: boolean;
+
+  /**
+   * fx 更新前事件
+   */
+  beforeFxConfirm?: (plugin: FormulaPlugin) => void;
+
+  /**
+   * 简化成员操作
+   */
+  simplifyMemberOprs?: boolean;
+
+  /**
+   * 支付支持快捷变量
+   */
+  quickVariables?: boolean;
 }
 
 interface TextareaFormulaControlState {
   value: string; // 当前文本值
 
   variables: Array<VariableItem>; // 变量数据
+
+  quickVariables: Array<VariableItem>; // 快捷变量数据
 
   formulaPickerOpen: boolean; // 是否打开公式编辑器
 
@@ -123,6 +147,9 @@ interface TextareaFormulaControlState {
   tooltipStyle: {[key: string]: string}; // 提示框样式
 
   loading: boolean;
+
+  menuIsOpened: boolean;
+  quickVariablesIsOpened: boolean;
 }
 
 export class TextareaFormulaControl extends React.Component<
@@ -137,8 +164,8 @@ export class TextareaFormulaControl extends React.Component<
   };
 
   wrapRef = React.createRef<HTMLDivElement>();
-
   tooltipRef = React.createRef<HTMLDivElement>();
+  buttonTarget: HTMLElement;
 
   editorPlugin: FormulaPlugin;
   unReaction: any;
@@ -148,13 +175,16 @@ export class TextareaFormulaControl extends React.Component<
   constructor(props: TextareaFormulaControlProps) {
     super(props);
     this.state = {
-      value: '',
+      value: this.props.value || '',
       variables: [],
+      quickVariables: [],
       formulaPickerOpen: false,
       formulaPickerValue: '',
       isFullscreen: false,
       tooltipStyle: {},
-      loading: false
+      loading: false,
+      menuIsOpened: false,
+      quickVariablesIsOpened: false
     };
   }
 
@@ -176,16 +206,24 @@ export class TextareaFormulaControl extends React.Component<
         this.hiddenToolTip
       );
     }
+
+    const variables = await getVariables(this);
+    const quickVariables = await getQuickVariables(this);
+    this.setState({variables, quickVariables});
   }
 
   async componentDidUpdate(prevProps: TextareaFormulaControlProps) {
-    if (this.state.value !== this.props.value) {
+    if (
+      this.state.value !== this.props.value &&
+      prevProps.value !== this.props.value
+    ) {
       this.setState(
         {
           value: this.props.value
         },
         this.editorAutoMark
       );
+      this.editorPlugin.setValue(this.props.value || '');
     }
   }
 
@@ -199,6 +237,11 @@ export class TextareaFormulaControl extends React.Component<
     this.editorPlugin?.dispose();
 
     this.unReaction?.();
+  }
+
+  @autobind
+  menuRef(ref: HTMLDivElement) {
+    this.buttonTarget = ref;
   }
 
   @autobind
@@ -243,11 +286,17 @@ export class TextareaFormulaControl extends React.Component<
 
   @autobind
   handleConfirm(value: any) {
+    const {beforeFxConfirm} = this.props;
     const {expressionBrace} = this.state;
+    beforeFxConfirm && beforeFxConfirm(this.editorPlugin);
     // 去除可能包裹的最外层的${}
-    value = value.replace(/^\$\{(.*)\}$/, (match: string, p1: string) => p1);
+    value = value.replace(
+      /^\$\{([\s\S]*)\}$/m,
+      (match: string, p1: string) => p1
+    );
     value = value ? `\${${value}}` : value;
-    value = value.replace(/\r\n|\r|\n/g, ' ');
+
+    // value = value.replace(/\r\n|\r|\n/g, ' ');
     this.editorPlugin?.insertContent(value, 'expression', expressionBrace);
     this.setState({
       formulaPickerOpen: false,
@@ -257,6 +306,7 @@ export class TextareaFormulaControl extends React.Component<
 
   @autobind
   handleOnChange(value: any) {
+    this.setState({value});
     this.props.onChange?.(value);
   }
 
@@ -266,9 +316,13 @@ export class TextareaFormulaControl extends React.Component<
   }
   @autobind
   handleEditorMounted(cm: any, editor: any) {
-    const variables = this.state.variables || this.props.variables || [];
+    const variables = this.state.variables || [];
+    const quickVariables = this.state.quickVariables || [];
     this.editorPlugin = new FormulaPlugin(editor, {
-      getProps: () => ({...this.props, variables}),
+      getProps: () => ({
+        ...this.props,
+        variables: [...variables, ...quickVariables]
+      }),
       onExpressionMouseEnter: this.onExpressionMouseEnter,
       customMarkText: this.props.customMarkText,
       onPluginInit: this.props.onPluginInit,
@@ -358,6 +412,140 @@ export class TextareaFormulaControl extends React.Component<
     });
   }
 
+  @autobind
+  closeMenuOuter() {
+    this.setState({menuIsOpened: false});
+  }
+
+  @autobind
+  closeQuickVariablesOuter() {
+    this.setState({quickVariablesIsOpened: false});
+  }
+
+  @autobind
+  renderMenuOuter() {
+    const {popOverContainer, classnames: cx, classPrefix: ns} = this.props;
+    const {menuIsOpened} = this.state;
+
+    return (
+      <Overlay
+        container={popOverContainer || this.wrapRef.current}
+        target={() => this.wrapRef.current}
+        placement="right-bottom-right-top"
+        show
+      >
+        <PopOver classPrefix={ns} className={cx('DropDown-popover')}>
+          <RootClose disabled={!menuIsOpened} onRootClose={this.closeMenuOuter}>
+            {(ref: any) => {
+              return (
+                <ul
+                  className={cx('DropDown-menu-root', 'DropDown-menu', {
+                    'is-mobile': isMobile()
+                  })}
+                  onClick={this.closeMenuOuter}
+                  ref={ref}
+                >
+                  <li
+                    onClick={() =>
+                      this.setState({quickVariablesIsOpened: true})
+                    }
+                  >
+                    快捷变量
+                  </li>
+                  <li onClick={this.handleFormulaClick}>函数计算</li>
+                </ul>
+              );
+            }}
+          </RootClose>
+        </PopOver>
+      </Overlay>
+    );
+  }
+
+  @autobind
+  renderQuickVariablesOuter() {
+    const {popOverContainer, classnames: cx, classPrefix: ns} = this.props;
+    const {quickVariables, quickVariablesIsOpened} = this.state;
+    return (
+      <Overlay
+        container={popOverContainer || this.wrapRef.current}
+        target={() => this.wrapRef.current}
+        placement="right-bottom-right-top"
+        show
+      >
+        <PopOver classPrefix={ns} className={cx('DropDown-popover')}>
+          <RootClose
+            disabled={!quickVariablesIsOpened}
+            onRootClose={this.closeQuickVariablesOuter}
+          >
+            {(ref: any) => {
+              return (
+                <ul
+                  className={cx('DropDown-menu-root', 'DropDown-menu', {
+                    'is-mobile': isMobile()
+                  })}
+                  ref={ref}
+                >
+                  <VariableList
+                    className={cx(
+                      'FormulaEditor-VariableList',
+                      'FormulaEditor-VariableList-root'
+                    )}
+                    data={quickVariables}
+                    onSelect={this.handleQuickVariableSelect}
+                    popOverContainer={popOverContainer}
+                    simplifyMemberOprs
+                  />
+                </ul>
+              );
+            }}
+          </RootClose>
+        </PopOver>
+      </Overlay>
+    );
+  }
+
+  @autobind
+  handleQuickVariableSelect(item: VariableItem) {
+    const value = this.props.value || '';
+    const newValue = value + '${' + item.value + '}';
+    this.handleOnChange(newValue);
+    this.closeQuickVariablesOuter();
+    setTimeout(() => {
+      this.editorAutoMark();
+    }, 100);
+  }
+
+  @autobind
+  renderButton() {
+    const {loading, quickVariables} = this.props;
+    const {menuIsOpened, quickVariablesIsOpened} = this.state;
+
+    return (
+      <div ref={this.menuRef}>
+        {quickVariables ? (
+          <a onClick={() => this.setState({menuIsOpened: true})}>
+            <Icon
+              icon="add"
+              className={cx('ae-TplFormulaControl-icon', 'icon')}
+            />
+          </a>
+        ) : (
+          <a
+            data-tooltip="表达式"
+            data-position="top"
+            onClick={this.handleFormulaClick}
+          >
+            <Icon icon="input-add-fx" className="icon" />
+          </a>
+        )}
+
+        {menuIsOpened ? this.renderMenuOuter() : null}
+        {quickVariablesIsOpened ? this.renderQuickVariablesOuter() : null}
+      </div>
+    );
+  }
+
   render() {
     const {
       className,
@@ -368,6 +556,8 @@ export class TextareaFormulaControl extends React.Component<
       additionalMenus,
       onOverallClick,
       customFormulaPicker,
+      quickVariables,
+      allowFullscreen = true,
       ...rest
     } = this.props;
     const {
@@ -414,25 +604,27 @@ export class TextareaFormulaControl extends React.Component<
             editorDidMount={this.handleEditorMounted}
             onBlur={this.editorAutoMark}
           />
-          {!this.props.value && (
+          {!this.state.value && (
             <div className="ae-TextareaResultBox-placeholder">
               {placeholder}
             </div>
           )}
           <ul className="ae-TextareaResultBox-footer">
-            <li className="ae-TextareaResultBox-footer-fullscreen">
-              <a
-                className={cx('Modal-fullscreen')}
-                data-tooltip={isFullscreen ? '退出全屏' : '全屏'}
-                data-position="top"
-                onClick={this.handleFullscreenModeChange}
-              >
-                <Icon
-                  icon={isFullscreen ? 'compress-alt' : 'expand-alt'}
-                  className="icon"
-                />
-              </a>
-            </li>
+            {allowFullscreen ? (
+              <li className="ae-TextareaResultBox-footer-fullscreen">
+                <a
+                  className={cx('Modal-fullscreen')}
+                  data-tooltip={isFullscreen ? '退出全屏' : '全屏'}
+                  data-position="top"
+                  onClick={this.handleFullscreenModeChange}
+                >
+                  <Icon
+                    icon={isFullscreen ? 'compress-alt' : 'expand-alt'}
+                    className="icon"
+                  />
+                </a>
+              </li>
+            ) : null}
             <li
               className={cx('ae-TextareaResultBox-footer-fxIcon', {
                 'is-loading': loading
@@ -441,13 +633,7 @@ export class TextareaFormulaControl extends React.Component<
               {loading ? (
                 <Spinner show icon="reload" size="sm" />
               ) : (
-                <a
-                  data-tooltip="表达式"
-                  data-position="top"
-                  onClick={this.handleFormulaClick}
-                >
-                  <Icon icon="input-add-fx" className="icon" />
-                </a>
+                this.renderButton()
               )}
             </li>
             {/* 附加底部按钮菜单项 */}

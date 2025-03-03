@@ -14,11 +14,10 @@ import {render as renderAmis} from 'amis-core';
 import {FormItem, Button, InputBox, Icon, Modal, toast} from 'amis';
 import {TooltipWrapper} from 'amis-ui';
 
-import {getSchemaTpl} from 'amis-editor';
-
-import {autobind} from 'amis-editor-core';
+import {autobind, getSchemaTpl} from 'amis-editor-core';
 import type {FormControlProps} from 'amis-core';
 import type {SchemaApi} from 'amis';
+import {getOwnValue} from '../util';
 
 export type SourceType = 'custom' | 'api' | '';
 
@@ -60,10 +59,12 @@ export class NavSourceControl extends React.Component<
   constructor(props: NavControlProps) {
     super(props);
 
+    const source = getOwnValue(props.data, 'source');
+
     this.state = {
       links: this.transformOptions(props),
-      api: props.data.source,
-      source: this.transformSource(props.data.source),
+      api: source,
+      source: this.transformSource(source),
       showDialog: false,
       isEdit: false,
       modalName: '',
@@ -87,8 +88,8 @@ export class NavSourceControl extends React.Component<
   }
 
   transformOptions(props: NavControlProps) {
-    const {data} = props;
-    return Array.isArray(data.links) ? data.links : [];
+    const links = getOwnValue(props.data, 'links');
+    return Array.isArray(links) ? links : [];
   }
 
   /**
@@ -614,6 +615,7 @@ export class NavSourceControl extends React.Component<
       modalParent,
       modalUrl,
       modalTarget,
+      showDialog,
       isEdit
     } = this.state;
     const treeData = cloneDeep(links);
@@ -739,6 +741,7 @@ export class NavSourceControl extends React.Component<
           modalUrl,
           modalTarget
         },
+        show: showDialog,
         onClose: this.closeModal,
         onConfirm: this.handleSubmit
       }
@@ -771,7 +774,7 @@ export class NavSourceControl extends React.Component<
           this.renderApiPanel()
         )}
 
-        {showDialog && this.renderDialog()}
+        {this.renderDialog()}
       </div>
     );
   }

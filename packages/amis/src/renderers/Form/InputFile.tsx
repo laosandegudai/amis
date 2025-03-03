@@ -58,6 +58,11 @@ export interface FileControlSchema extends FormBaseControlSchema {
   accept?: string;
 
   /**
+   * 控制 input 标签的 capture 属性，用于移动端拍照或录像。
+   */
+  capture?: string;
+
+  /**
    * 如果上传的文件比较小可以设置此选项来简单的把文件 base64 的值给 form 一起提交，目前不支持多选。
    */
   asBase64?: boolean;
@@ -241,6 +246,14 @@ export interface FileControlSchema extends FormBaseControlSchema {
    * 是否为拖拽上传
    */
   drag?: boolean;
+  /**
+   * 校验格式失败时显示的文字信息
+   */
+  invalidTypeMessage?: string;
+  /**
+   * 校验文件大小失败时显示的文字信息
+   */
+  invalidSizeMessage?: string;
 }
 
 export interface FileProps
@@ -350,6 +363,7 @@ export default class FileControl extends React.Component<FileProps, FileState> {
     executor: () => void;
   }> = [];
   initedFilled = false;
+  toDispose: Array<() => void> = [];
 
   static valueToFile(
     value: string | FileValue,
@@ -438,17 +452,19 @@ export default class FileControl extends React.Component<FileProps, FileState> {
   }
 
   componentDidMount() {
-    const {formInited, addHook} = this.props;
+    const {formInited, addHook, formItem} = this.props;
 
-    if (formInited || !addHook) {
+    const onInited = () => {
       this.initedFilled = true;
       this.props.initAutoFill && this.syncAutoFill();
-    } else if (addHook) {
-      addHook(() => {
-        this.initedFilled = true;
-        this.props.initAutoFill && this.syncAutoFill();
-      }, 'init');
-    }
+    };
+
+    formItem &&
+      this.toDispose.push(
+        formInited || !addHook
+          ? formItem.addInitHook(onInited)
+          : addHook(onInited, 'init')
+      );
   }
 
   componentDidUpdate(prevProps: FileProps) {
@@ -504,6 +520,13 @@ export default class FileControl extends React.Component<FileProps, FileState> {
           : undefined
       );
     }
+  }
+
+  componentWillUnmount(): void {
+    this.toDispose.forEach(fn => fn());
+    this.toDispose = [];
+    this.fileUploadCancelExecutors.forEach(item => item.executor());
+    this.fileUploadCancelExecutors = [];
   }
 
   handleDrop(files: Array<FileX>) {
@@ -564,7 +587,13 @@ export default class FileControl extends React.Component<FileProps, FileState> {
     if (evt.type !== 'change' && evt.type !== 'drop') {
       return;
     }
-    const {multiple, env, accept, translate: __} = this.props;
+    const {
+      multiple,
+      env,
+      accept,
+      translate: __,
+      invalidTypeMessage
+    } = this.props;
     const nameField = this.props.nameField || 'name';
 
     const files = rejectedFiles.map(fileRejection => ({
@@ -583,7 +612,7 @@ export default class FileControl extends React.Component<FileProps, FileState> {
     // });
 
     env.alert(
-      __('File.invalidType', {
+      __(invalidTypeMessage ?? 'File.invalidType', {
         files: files.map((item: any) => `「${item[nameField]}」`).join(' '),
         accept
       })
@@ -642,9 +671,9 @@ export default class FileControl extends React.Component<FileProps, FileState> {
   }
 
   handleSelect() {
-    const {disabled, multiple, maxLength} = this.props;
-    !disabled &&
-      !(multiple && maxLength && this.state.files.length >= maxLength) &&
+    const {disabled, multiple, maxLength, static: isStatic} = this.props;
+    !disabled && !isStatic;
+    !(multiple && maxLength && this.state.files.length >= maxLength) &&
       this.dropzone.current &&
       this.dropzone.current.open();
   }
@@ -717,6 +746,9 @@ export default class FileControl extends React.Component<FileProps, FileState> {
               const idx = files.indexOf(file as FileX);
 
               if (!~idx) {
+                // 事件里面可能把当前表单值给改了
+                this.current = null;
+                requestAnimationFrame(this.tick);
                 return;
               }
 
@@ -1324,10 +1356,21 @@ export default class FileControl extends React.Component<FileProps, FileState> {
     }
   }
 
+  // 文件大小限制 提示信息
+  sizeLimitTip(maxSize: number, file?: FileValue | FileX) {
+    let {translate: __, invalidSizeMessage} = this.props;
+    return __(invalidSizeMessage ?? 'File.sizeLimit', {
+      filename: file?.name,
+      actualSize: prettyBytes(file?.size || 0, 1024),
+      maxSize: prettyBytes(maxSize, 1024)
+    });
+  }
+
   render() {
     const {
       btnLabel,
       accept,
+      capture,
       disabled,
       maxLength,
       maxSize,
@@ -1350,7 +1393,9 @@ export default class FileControl extends React.Component<FileProps, FileState> {
       documentation,
       documentLink,
       env,
-      container
+      container,
+      testIdBuilder,
+      static: isStatic
     } = this.props;
     let {files, uploading, error} = this.state;
     const nameField = this.props.nameField || 'name';
@@ -1384,7 +1429,7 @@ export default class FileControl extends React.Component<FileProps, FileState> {
         ) : null}
 
         <DropZone
-          disabled={disabled}
+          disabled={disabled || isStatic}
           key="drop-zone"
           ref={this.dropzone}
           onDrop={this.handleDrop}
@@ -1400,12 +1445,18 @@ export default class FileControl extends React.Component<FileProps, FileState> {
               className={cx('FileControl-dropzone', {
                 'disabled':
                   disabled ||
+                  isStatic ||
                   (multiple && !!maxLength && files.length >= maxLength),
                 'is-empty': !files.length,
                 'is-active': isDragActive
               })}
             >
-              <input disabled={disabled} {...getInputProps()} />
+              <input
+                disabled={disabled || isStatic}
+                {...getInputProps()}
+                capture={capture as any}
+                {...testIdBuilder?.getChild('input').getTestId()}
+              />
 
               {drag || isDragActive ? (
                 <div
@@ -1419,7 +1470,12 @@ export default class FileControl extends React.Component<FileProps, FileState> {
                       {__('File.clickUpload')}
                     </span>
                   </span>
-                  <div className={cx('FileControl-acceptTip-help', 'TplField')}>
+                  <div
+                    className={cx(
+                      'FileControl-acceptTip-help',
+                      'TplField fr-view'
+                    )}
+                  >
                     {documentLink ? (
                       <a href={documentLink} onClick={e => e.stopPropagation()}>
                         {documentation ? documentation : __('File.helpText')}
@@ -1428,16 +1484,14 @@ export default class FileControl extends React.Component<FileProps, FileState> {
                   </div>
                   {maxSize ? (
                     <div className={cx('FileControl-sizeTip')}>
-                      {__('File.sizeLimit', {
-                        maxSize: prettyBytes(maxSize, 1024)
-                      })}
+                      {this.sizeLimitTip(maxSize)}
                     </div>
                   ) : null}
                 </div>
-              ) : (
+              ) : !isStatic ? (
                 <>
                   <Button
-                    level="default"
+                    level="enhance"
                     disabled={disabled}
                     className={cx('FileControl-selectBtn', btnClassName, {
                       'is-disabled':
@@ -1449,6 +1503,7 @@ export default class FileControl extends React.Component<FileProps, FileState> {
                         : ''
                     }
                     onClick={this.handleSelect}
+                    testIdBuilder={testIdBuilder?.getChild('select')}
                   >
                     <Icon icon="upload" className="icon" />
                     <span>
@@ -1460,22 +1515,19 @@ export default class FileControl extends React.Component<FileProps, FileState> {
                     </span>
                   </Button>
                 </>
-              )}
-              {description
-                ? render('desc', description, {
-                    className: cx(
-                      'FileControl-description',
-                      descriptionClassName
-                    )
-                  })
-                : null}
+              ) : null}
             </div>
           )}
         </DropZone>
 
+        {description
+          ? render('desc', description, {
+              className: cx('FileControl-description', descriptionClassName)
+            })
+          : null}
         {maxSize && !drag ? (
           <div className={cx('FileControl-sizeTip')}>
-            {__('File.sizeLimit', {maxSize: prettyBytes(maxSize, 1024)})}
+            {this.sizeLimitTip(maxSize)}
           </div>
         ) : null}
 
@@ -1490,7 +1542,7 @@ export default class FileControl extends React.Component<FileProps, FileState> {
               return (
                 <li key={file.id}>
                   <TooltipWrapper
-                    placement="bottom"
+                    placement="top"
                     container={container || env?.getModalContainer}
                     tooltipClassName={cx(
                       'FileControl-list-tooltip',
@@ -1501,11 +1553,7 @@ export default class FileControl extends React.Component<FileProps, FileState> {
                       file.state === 'invalid' || file.state === 'error'
                         ? (file as FileValue).error ||
                           (maxSize && file.size > maxSize
-                            ? __('File.maxSize', {
-                                filename: file.name,
-                                actualSize: prettyBytes(file.size, 1024),
-                                maxSize: prettyBytes(maxSize, 1024)
-                              })
+                            ? this.sizeLimitTip(maxSize, file)
                             : '')
                         : filename
                     }
@@ -1538,7 +1586,7 @@ export default class FileControl extends React.Component<FileProps, FileState> {
                         </span>
                       )}
 
-                      {!disabled ? (
+                      {!disabled && !isStatic ? (
                         <a
                           data-tooltip={__('Select.clear')}
                           data-position="left"
@@ -1578,9 +1626,10 @@ export default class FileControl extends React.Component<FileProps, FileState> {
           </div>
         ) : null}
 
-        {!autoUpload && !hideUploadButton && files.length ? (
+        {!isStatic && !autoUpload && !hideUploadButton && files.length ? (
           <Button
             level="default"
+            testIdBuilder={testIdBuilder?.getChild('upload')}
             disabled={!hasPending}
             className={cx('FileControl-uploadBtn', btnUploadClassName)}
             onClick={this.toggleUpload}

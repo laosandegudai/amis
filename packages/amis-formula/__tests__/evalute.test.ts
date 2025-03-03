@@ -488,11 +488,19 @@ test('evalute:array:func', () => {
 
   expect(evaluate('${ARRAYFINDINDEX(arr3, item => item === 2)}', data)).toBe(1);
 
+  expect(evaluate('${ARRAYFINDINDEX(arr3, item => item !== 1)}', data)).toBe(1);
+
   expect(
     evaluate('${ARRAYFIND(arr5, item => item.name === 1.3)}', data)
   ).toMatchObject({
     id: 1.1,
     name: 1.3
+  });
+
+  expect(
+    evaluate('${ARRAYFIND(arr5, item => item.id !== 1.1)}', data)
+  ).toMatchObject({
+    id: 2.2
   });
 
   expect(evaluate('${ARRAYSOME(arr5, item => item.name === 1.3)}', data)).toBe(
@@ -563,6 +571,18 @@ test('evalute:Math', () => {
   expect(evaluate('${POW(2, infinity)}', data)).toBe(data.infinity);
 });
 
+test('evalute:UUID', () => {
+  function isUUIDv4(value: string) {
+    return /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i.test(
+      value
+    );
+  }
+
+  expect(isUUIDv4(evaluate('${UUID()}', {}))).toBe(true);
+  expect(evaluate('${UUID()}', {}).length).toBe(36);
+  expect(evaluate('${UUID(8)}', {}).length).toBe(8);
+});
+
 test('evalute:namespace', () => {
   localStorage.setItem('a', '1');
   localStorage.setItem('b', '2');
@@ -579,4 +599,19 @@ test('evalute:namespace', () => {
   expect(evaluate('${ls: &["spec-var-name"]}', {})).toBe('you are right');
   expect(evaluate('${ls: &["c"]["c"]}', {})).toMatchObject({d: 4});
   expect(evaluate('${ls: &["c"][key]}', {})).toMatchObject({d: 4});
+});
+
+test('evalute:speical characters', () => {
+  // 优先识别成位运算，而不是过滤器
+  expect(evaluate('${1 | 2}', {})).toBe(3);
+  expect(evaluate('${1 | abc}', {abc: 2})).toBe(3);
+});
+
+test('evalute:replace', () => {
+  const data = {};
+  expect(evaluate('${REPLACE("abcdefg", "abc", "cbd")}', data)).toBe('cbddefg');
+  expect(evaluate('${REPLACE("abcdefg", "efg", "efg")}', data)).toBe('abcdefg');
+  expect(evaluate('${REPLACE("abcdefg", "abc", "abcabc")}', data)).toBe(
+    'abcabcdefg'
+  );
 });

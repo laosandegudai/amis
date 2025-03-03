@@ -3,8 +3,9 @@ import React from 'react';
 import {EditorNodeType, registerEditorPlugin} from 'amis-editor-core';
 import {BaseEventContext, BasePlugin} from 'amis-editor-core';
 import {getSchemaTpl} from 'amis-editor-core';
-import {escapeFormula} from '../util';
-import {set} from 'lodash';
+import {escapeFormula, generateId} from '../util';
+import merge from 'lodash/merge';
+import set from 'lodash/set';
 
 export class EachPlugin extends BasePlugin {
   static id = 'EachPlugin';
@@ -19,6 +20,8 @@ export class EachPlugin extends BasePlugin {
   isListComponent = true;
   memberImmutable = true;
   description = '功能渲染器，可以基于现有变量循环输出渲染器。';
+  searchKeywords = '循环渲染器';
+  docLink = '/amis/zh-CN/components/each';
   tags = ['功能'];
   icon = 'fa fa-repeat';
   pluginIcon = 'each-plugin';
@@ -45,18 +48,25 @@ export class EachPlugin extends BasePlugin {
                     fontSize: '20px'
                   }
                 }
-              }
+              },
+              id: generateId()
             },
             {
               type: 'tpl',
-              style: {
-                fontWeight: 'var(--fonts-weight-3)',
-                fontSize: '16px',
-                color: 'var(--colors-brand-6)'
-              },
+              style: {},
               tpl: '回访数量TOP1',
               inline: true,
-              wrapperComponent: ''
+              wrapperComponent: '',
+              themeCss: {
+                baseControlClassName: {
+                  'font:default': {
+                    fontWeight: 'var(--fonts-weight-3)',
+                    fontSize: '16px',
+                    color: 'var(--colors-brand-6)'
+                  }
+                }
+              },
+              id: generateId()
             }
           ],
           style: {
@@ -64,12 +74,19 @@ export class EachPlugin extends BasePlugin {
             display: 'flex',
             flexWrap: 'nowrap',
             justifyContent: 'flex-start',
-            alignItems: 'center',
-            marginBottom: '6px'
+            alignItems: 'center'
           },
           wrapperBody: false,
           isFixedHeight: false,
-          isFixedWidth: false
+          isFixedWidth: false,
+          themeCss: {
+            baseControlClassName: {
+              'padding-and-margin:default': {
+                marginBottom: '6px'
+              }
+            }
+          },
+          id: generateId()
         },
         {
           type: 'container',
@@ -79,19 +96,26 @@ export class EachPlugin extends BasePlugin {
               tpl: '北京分公司',
               inline: true,
               wrapperComponent: '',
-              style: {
-                'fontSize': 'var(--fonts-size-4)',
-                'color': 'var(--colors-neutral-text-2)',
-                'fontWeight': 'var(--fonts-weight-3)',
-                'font-family': '-apple-system'
-              }
+              style: {},
+              themeCss: {
+                baseControlClassName: {
+                  'font:default': {
+                    'fontSize': 'var(--fonts-size-4)',
+                    'color': 'var(--colors-neutral-text-2)',
+                    'fontWeight': 'var(--fonts-weight-3)',
+                    'font-family': '-apple-system'
+                  }
+                }
+              },
+              id: generateId()
             }
           ],
           style: {
             position: 'static',
             display: 'block'
           },
-          wrapperBody: false
+          wrapperBody: false,
+          id: generateId()
         }
       ],
       size: 'none',
@@ -99,24 +123,31 @@ export class EachPlugin extends BasePlugin {
         position: 'static',
         display: 'block',
         flex: '0 0 150px',
-        marginRight: '20px',
-        paddingTop: '20px',
-        paddingRight: '15px',
-        paddingBottom: '20px',
-        paddingLeft: '15px',
         flexBasis: '250px',
         overflowX: 'auto',
-        overflowY: 'auto',
-        boxShadow: ' 0px 0px 8px 0px rgba(3, 3, 3, 0.1)',
-        radius: {
-          'top-left-border-radius': 'var(--borders-radius-3)',
-          'top-right-border-radius': 'var(--borders-radius-3)',
-          'bottom-left-border-radius': 'var(--borders-radius-3)',
-          'bottom-right-border-radius': 'var(--borders-radius-3)'
-        }
+        overflowY: 'auto'
       },
       wrapperBody: false,
-      isFixedHeight: false
+      isFixedHeight: false,
+      themeCss: {
+        baseControlClassName: {
+          'boxShadow:default': ' 0px 0px 8px 0px rgba(3, 3, 3, 0.1)',
+          'radius:default': {
+            'top-left-border-radius': 'var(--borders-radius-3)',
+            'top-right-border-radius': 'var(--borders-radius-3)',
+            'bottom-left-border-radius': 'var(--borders-radius-3)',
+            'bottom-right-border-radius': 'var(--borders-radius-3)'
+          },
+          'padding-and-margin:default': {
+            marginRight: '20px',
+            paddingTop: '20px',
+            paddingRight: '15px',
+            paddingBottom: '20px',
+            paddingLeft: '15px'
+          }
+        }
+      },
+      id: generateId()
     },
     placeholder: '',
     style: {
@@ -130,7 +161,8 @@ export class EachPlugin extends BasePlugin {
     },
     isFixedHeight: false,
     isFixedWidth: false,
-    size: 'none'
+    size: 'none',
+    id: generateId()
   };
 
   previewSchema = {
@@ -158,7 +190,7 @@ export class EachPlugin extends BasePlugin {
 
       getSchemaTpl('layout:flex-setting', {
         visibleOn:
-          'data.style && (data.style.display === "flex" || data.style.display === "inline-flex")',
+          'this.style && (this.style.display === "flex" || this.style.display === "inline-flex")',
         direction: curRendererSchema.direction,
         justify: curRendererSchema.justify,
         alignItems: curRendererSchema.alignItems
@@ -166,7 +198,7 @@ export class EachPlugin extends BasePlugin {
 
       getSchemaTpl('layout:flex-wrap', {
         visibleOn:
-          'data.style && (data.style.display === "flex" || data.style.display === "inline-flex")'
+          'this.style && (this.style.display === "flex" || this.style.display === "inline-flex")'
       })
     ];
 
@@ -226,34 +258,34 @@ export class EachPlugin extends BasePlugin {
                     isFlexColumnItem,
                     label: isFlexColumnItem ? '高度设置' : '宽度设置',
                     visibleOn:
-                      'data.style && (data.style.position === "static" || data.style.position === "relative")'
+                      'this.style && (this.style.position === "static" || this.style.position === "relative")'
                   })
                 : null,
               isFlexItem
                 ? getSchemaTpl('layout:flex-grow', {
                     visibleOn:
-                      'data.style && data.style.flex === "1 1 auto" && (data.style.position === "static" || data.style.position === "relative")'
+                      'this.style && this.style.flex === "1 1 auto" && (this.style.position === "static" || this.style.position === "relative")'
                   })
                 : null,
               isFlexItem
                 ? getSchemaTpl('layout:flex-basis', {
                     label: isFlexColumnItem ? '弹性高度' : '弹性宽度',
                     visibleOn:
-                      'data.style && (data.style.position === "static" || data.style.position === "relative") && data.style.flex === "1 1 auto"'
+                      'this.style && (this.style.position === "static" || this.style.position === "relative") && this.style.flex === "1 1 auto"'
                   })
                 : null,
               isFlexItem
                 ? getSchemaTpl('layout:flex-basis', {
                     label: isFlexColumnItem ? '固定高度' : '固定宽度',
                     visibleOn:
-                      'data.style && (data.style.position === "static" || data.style.position === "relative") && data.style.flex === "0 0 150px"'
+                      'this.style && (this.style.position === "static" || this.style.position === "relative") && this.style.flex === "0 0 150px"'
                   })
                 : null,
 
               getSchemaTpl('layout:overflow-x', {
                 visibleOn: `${
                   isFlexItem && !isFlexColumnItem
-                } && data.style.flex === '0 0 150px'`
+                } && this.style.flex === '0 0 150px'`
               }),
 
               getSchemaTpl('layout:isFixedHeight', {
@@ -274,9 +306,9 @@ export class EachPlugin extends BasePlugin {
               getSchemaTpl('layout:overflow-y', {
                 visibleOn: `${
                   !isFlexItem || !isFlexColumnItem
-                } && (data.isFixedHeight || data.style && data.style.maxHeight) || (${
+                } && (this.isFixedHeight || this.style && this.style.maxHeight) || (${
                   isFlexItem && isFlexColumnItem
-                } && data.style.flex === '0 0 150px')`
+                } && this.style.flex === '0 0 150px')`
               }),
 
               getSchemaTpl('layout:isFixedWidth', {
@@ -298,7 +330,7 @@ export class EachPlugin extends BasePlugin {
               getSchemaTpl('layout:overflow-x', {
                 visibleOn: `${
                   !isFlexItem || isFlexColumnItem
-                } && (data.isFixedWidth || data.style && data.style.maxWidth)`
+                } && (this.isFixedWidth || this.style && this.style.maxWidth)`
               }),
 
               !isFlexItem ? getSchemaTpl('layout:margin-center') : null,
@@ -307,13 +339,13 @@ export class EachPlugin extends BasePlugin {
                     name: 'style.textAlign',
                     label: '内部对齐方式',
                     visibleOn:
-                      'data.style && data.style.display !== "flex" && data.style.display !== "inline-flex"'
+                      'this.style && this.style.display !== "flex" && this.style.display !== "inline-flex"'
                   })
                 : null,
               getSchemaTpl('layout:z-index'),
               getSchemaTpl('layout:sticky', {
                 visibleOn:
-                  'data.style && (data.style.position !== "fixed" && data.style.position !== "absolute")'
+                  'this.style && (this.style.position !== "fixed" && this.style.position !== "absolute")'
               }),
               getSchemaTpl('layout:stickyPosition')
             ]
@@ -324,17 +356,30 @@ export class EachPlugin extends BasePlugin {
     ]);
   };
 
-  filterProps(props: any) {
+  filterProps(props: any, node: EditorNodeType) {
     // 列表类型内的文本元素显示{{公式}}或者自定义展位，不显示实际值
     props = escapeFormula(props);
-    // 循环编辑态显示2个元素
-    props.value = [{}, {}];
+
+    if (!node.state.value) {
+      // 循环编辑态显示2个元素
+      // props.value = [{}, {}];
+      node.updateState({
+        value: [{}, {}]
+      });
+    }
 
     props.className = `${props.className || ''} ae-Editor-list`;
-    if (props.items && !props.items.className?.includes('listItem')) {
-      props.items.className = `${
-        props.items.className || ''
-      } ae-Editor-eachItem`;
+    if (
+      props.items &&
+      !props.items.className?.includes('eachItem') &&
+      !Array.isArray(props.items)
+    ) {
+      props.items = merge(
+        {
+          className: `${props.items.className || ''} ae-Editor-eachItem`
+        },
+        props.items
+      );
     }
 
     return props;
@@ -352,19 +397,24 @@ export class EachPlugin extends BasePlugin {
       node.schema.source && String(node.schema.source).match(/{([\w-_]+)}/);
     let field = node.schema.name || match?.[1];
     const scope = this.manager.dataSchema.getScope(`${node.id}-${node.type}`);
-    const schema = scope?.parent?.getSchemaByPath(field);
 
-    if (isObject(schema?.items)) {
-      dataSchema = {
-        ...dataSchema,
-        ...(schema!.items as any)
-      };
+    if (scope) {
+      const origin = this.manager.dataSchema.current;
+      this.manager.dataSchema.switchTo(scope.parent!);
+      const schema = this.manager.dataSchema.getSchemaByPath(field);
+      this.manager.dataSchema.switchTo(origin);
+      if (isObject(schema?.items)) {
+        dataSchema = {
+          ...dataSchema,
+          ...(schema!.items as any)
+        };
 
-      // 循环添加索引方便渲染序号
-      set(dataSchema, 'properties.index', {
-        type: 'number',
-        title: '索引'
-      });
+        // 列表添加序号方便处理
+        set(dataSchema, 'properties.index', {
+          type: 'number',
+          title: '索引'
+        });
+      }
     }
 
     return dataSchema;

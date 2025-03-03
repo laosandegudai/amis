@@ -95,6 +95,10 @@
     &.is-opened {
       color: var(--Form-select-menu-onActive-color);
       background: var(--Form-select-menu-onActive-bg);
+
+      &:hover {
+        background: var(--Form-select-menu-onHover-bg);
+      }
     }
 
     &.is-disabled {
@@ -144,6 +148,8 @@
       flex-direction: column;
 
       .#{$ns}Table-content-virtual {
+        min-width: 0;
+        min-height: 0;
         flex: 1;
         position: relative;
       }
@@ -217,6 +223,7 @@
 
   &-item {
     position: relative;
+    margin-bottom: 2px;
   }
   &-item.is-expanded > &-sublist {
     display: block;
@@ -382,6 +389,7 @@
     > .#{$ns}GroupedSelection {
       padding: 0;
       max-height: 100%;
+      overflow: unset;
     }
   }
 
@@ -444,8 +452,9 @@
 .#{$ns}DropDownSelection {
   position: relative;
   display: inline-block;
-  margin: 0.1875rem;
+  margin: px2rem(3px);
   vertical-align: middle;
+  max-width: 100%; // 避免超出父级容器显示
 
   &-caret {
     transition: transform var(--animation-duration) ease-out;
@@ -466,5 +475,9 @@
 
   &-input.is-active &-caret {
     transform: rotate(180deg);
+  }
+
+  &-searchbox.is-active {
+    width: 100%;
   }
 }

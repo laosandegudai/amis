@@ -16,6 +16,7 @@ export class TasksPlugin extends BasePlugin {
   name = '异步任务';
   isBaseComponent = true;
   description = '用来做异步任务呈现或者操作。';
+  searchKeywords = '任务操作集合';
   docLink = '/amis/zh-CN/components/tasks';
   tags = ['功能'];
   icon = '';
@@ -87,7 +88,7 @@ export class TasksPlugin extends BasePlugin {
             description: '可以不设置，如果检测接口返回这些信息的话。'
           },
 
-          getSchemaTpl('api', {
+          getSchemaTpl('apiControl', {
             name: 'checkApi',
             label: '状态检测接口'
           }),
@@ -97,17 +98,17 @@ export class TasksPlugin extends BasePlugin {
             type: 'input-number',
             min: 3000,
             step: 500,
-            visibleOn: 'data.checkApi',
+            visibleOn: 'this.checkApi',
             pipeIn: defaultValue(3000),
             label: '定时检测间隔'
           },
 
-          getSchemaTpl('api', {
+          getSchemaTpl('apiControl', {
             name: 'submitApi',
             label: '提交接口'
           }),
 
-          getSchemaTpl('api', {
+          getSchemaTpl('apiControl', {
             name: 'reSubmitApi',
             label: '重试接口'
           }),

@@ -4,16 +4,16 @@
  */
 
 import React from 'react';
-import cx from 'classnames';
+import DeepDiff from 'deep-diff';
 import isFunction from 'lodash/isFunction';
 import flattenDeep from 'lodash/flattenDeep';
 import cloneDeep from 'lodash/cloneDeep';
 import isEmpty from 'lodash/isEmpty';
 import uniqBy from 'lodash/uniqBy';
-import get from 'lodash/get';
 import uniq from 'lodash/uniq';
 import sortBy from 'lodash/sortBy';
-import {toast, autobind, isObject, Icon} from 'amis';
+import pick from 'lodash/pick';
+import {toast, autobind, isObject} from 'amis';
 import {
   BasePlugin,
   EditorManager,
@@ -30,11 +30,18 @@ import {
 } from '../../builder';
 import {
   getEventControlConfig,
-  getArgsWrapper
+  getArgsWrapper,
+  getActionCommonProps,
+  buildLinkActionDesc
 } from '../../renderer/event-control/helper';
-import {CRUD2Schema} from 'amis/lib/renderers/CRUD2';
+import {CRUD2Schema} from 'amis';
 import {deepRemove, findObj, findSchema} from './utils';
-import {ToolsConfig, FiltersConfig, OperatorsConfig} from './constants';
+import {
+  ToolsConfig,
+  FiltersConfig,
+  OperatorsConfig,
+  DefaultMaxDisplayRows
+} from './constants';
 import {FieldSetting} from '../../renderer/FieldSetting';
 
 import type {IFormItemStore, IFormStore} from 'amis-core';
@@ -81,7 +88,7 @@ export class BaseCRUDPlugin extends BasePlugin {
 
   $schema = '/schemas/CRUD2Schema.json';
 
-  docLink = '/amis/zh-CN/components/crud2';
+  docLink = '/amis/zh-CN/components/table2';
 
   tags = ['数据容器'];
 
@@ -108,11 +115,12 @@ export class BaseCRUDPlugin extends BasePlugin {
           actionType: 'search',
           actionLabel: '数据查询',
           description: '使用指定条件完成列表数据查询',
-          descDetail: (info: any) => {
+          descDetail: (info: any, context: any, props: any) => {
             return (
-              <div>
-                <span className="variable-right">{info?.__rendererLabel}</span>
-                触发数据查询
+              <div className="action-desc">
+                触发
+                {buildLinkActionDesc(props.manager, info)}
+                数据查询
               </div>
             );
           },
@@ -129,11 +137,12 @@ export class BaseCRUDPlugin extends BasePlugin {
           actionType: 'loadMore',
           actionLabel: '加载更多',
           description: '加载更多条数据到列表容器',
-          descDetail: (info: any) => {
+          descDetail: (info: any, context: any, props: any) => {
             return (
-              <div>
-                <span className="variable-right">{info?.__rendererLabel}</span>
-                加载更多数据
+              <div className="action-desc">
+                加载
+                {buildLinkActionDesc(props.manager, info)}
+                更多数据
               </div>
             );
           }
@@ -147,6 +156,12 @@ export class BaseCRUDPlugin extends BasePlugin {
           actionType: 'stopAutoRefresh',
           actionLabel: '停止自动刷新',
           description: '停止自动刷新'
+        },
+        {
+          actionType: 'reload',
+          actionLabel: '重新加载',
+          description: '触发组件数据刷新并重新渲染',
+          ...getActionCommonProps('reload')
         },
         ...(actions || [])
       ],
@@ -164,7 +179,7 @@ export class BaseCRUDPlugin extends BasePlugin {
         }
       },
       className:
-        'ae-Scaffold-Modal ae-Scaffold-Modal--CRUD ae-Scaffold-Modal-content AMISCSSWrapper', //  ae-formItemControl
+        'ae-Scaffold-Modal ae-Scaffold-Modal--CRUD ae-Scaffold-Modal-content :AMISCSSWrapper', //  ae-formItemControl
       stepsBody: true,
       canSkip: true,
       canRebuild: true,
@@ -197,7 +212,7 @@ export class BaseCRUDPlugin extends BasePlugin {
               (builder, builderKey) => {
                 return {
                   type: 'container',
-                  visibleOn: `!data.dsType || data.dsType === '${builderKey}'`,
+                  visibleOn: `!this.dsType || this.dsType === '${builderKey}'`,
                   body: flattenDeep([
                     builder.makeSourceSettingForm({
                       feat: DSFeatureEnum.List,
@@ -217,7 +232,7 @@ export class BaseCRUDPlugin extends BasePlugin {
               }
             ),
             getSchemaTpl('primaryField', {
-              visibleOn: `!data.dsType || data.dsType !== '${ModelDSBuilderKey}'`
+              visibleOn: `!this.dsType || this.dsType !== '${ModelDSBuilderKey}'`
             })
           ]
         },
@@ -428,7 +443,7 @@ export class BaseCRUDPlugin extends BasePlugin {
             tabs.push({
               title: item.label,
               icon: item.icon,
-              visibleOn: `(!data.dsType || data.dsType === '${builderKey}') && ${extraVisibleOn}`,
+              visibleOn: `(!this.dsType || this.dsType === '${builderKey}') && ${extraVisibleOn}`,
               body: tabContent
                 .filter(Boolean)
                 .map(formItem => ({...formItem, mode: 'normal'}))
@@ -473,7 +488,7 @@ export class BaseCRUDPlugin extends BasePlugin {
   baseCRUDPanelBody = (context: BuildPanelEventContext) => {
     return getSchemaTpl('tabs', [
       this.renderPropsTab(context),
-      this.renderStylesTab(context),
+      // this.renderStylesTab(context),
       this.renderEventTab(context)
     ]);
   };
@@ -507,7 +522,8 @@ export class BaseCRUDPlugin extends BasePlugin {
             {
               title: '状态',
               body: [getSchemaTpl('hidden'), getSchemaTpl('visible')]
-            }
+            },
+            this.renderMockPropsCollapse(context)
           ].filter(Boolean)
         )
       ]
@@ -557,9 +573,9 @@ export class BaseCRUDPlugin extends BasePlugin {
         (builder, builderKey) => {
           return {
             type: 'container',
-            visibleOn: `data.dsType == null ? '${builderKey}' === '${
+            visibleOn: `this.dsType == null ? '${builderKey}' === '${
               defaultDsType || ApiDSBuilderKey
-            }' : data.dsType === '${builderKey}'`,
+            }' : this.dsType === '${builderKey}'`,
             body: builder.makeSourceSettingForm({
               feat: 'List',
               renderer: 'crud',
@@ -601,7 +617,7 @@ export class BaseCRUDPlugin extends BasePlugin {
           type: 'container',
           className: 'ae-ExtendMore mb-3',
           visibleOn:
-            "data.selectable || (data.rowSelection && data.rowSelection?.type !== 'radio')",
+            "this.selectable || (this.rowSelection && this.rowSelection?.type !== 'radio')",
           body: [
             getSchemaTpl('switch', {
               name: 'multiple',
@@ -720,8 +736,8 @@ export class BaseCRUDPlugin extends BasePlugin {
 
   /** 分页类别 */
   renderPaginationCollapse(context: BuildPanelEventContext) {
-    const isPagination = 'data.loadType === "pagination"';
-    const isInfinity = 'data.loadType === "more"';
+    const isPagination = 'this.loadType === "pagination"';
+    const isInfinity = 'this.loadType === "more"';
 
     return {
       order: 30,
@@ -750,7 +766,7 @@ export class BaseCRUDPlugin extends BasePlugin {
             return data;
           },
           onChange: (value: string, oldValue: any, model: any, form: any) => {
-            const schema = form.data;
+            const schema = cloneDeep(form.data);
             if (oldValue) {
               deepRemove(schema, item => {
                 return oldValue === 'more'
@@ -790,6 +806,11 @@ export class BaseCRUDPlugin extends BasePlugin {
 
               this.addFeatToToolbar(schema, newCompSchema, 'footer', 'right');
             }
+            form.setValues({
+              perPage: value !== 'more' ? undefined : schema.perPage,
+              footerToolbar: schema.footerToolbar,
+              headerToolbar: schema.headerToolbar
+            });
           }
         },
         getSchemaTpl('switch', {
@@ -803,7 +824,7 @@ export class BaseCRUDPlugin extends BasePlugin {
             '过滤时刷新',
             '在开启前端分页时，表头过滤后是否重新请求初始化 API'
           ),
-          visibleOn: isPagination + ' && data.loadDataOnce'
+          visibleOn: isPagination + ' && this.loadDataOnce'
         }),
         getSchemaTpl('switch', {
           name: 'keepItemSelectionOnPageChange',
@@ -825,7 +846,7 @@ export class BaseCRUDPlugin extends BasePlugin {
           type: 'input-number',
           label: tipedLabel(
             '每页数量',
-            '无限加载时，根据此项设置其每页加载数量，留空即不限制'
+            '无限加载时，根据此项设置其每页加载数量，留空则默认10条'
           ),
           clearValueOnEmpty: true,
           clearable: true,
@@ -838,7 +859,7 @@ export class BaseCRUDPlugin extends BasePlugin {
           block: true,
           className: 'mb-1',
           level: 'enhance',
-          visibleOn: 'data.loadType === "pagination"',
+          visibleOn: 'this.loadType === "pagination"',
           onClick: () => {
             const findPage: any = findSchema(
               context?.node?.schema ?? {},
@@ -869,7 +890,7 @@ export class BaseCRUDPlugin extends BasePlugin {
           type: 'ae-switch-more',
           mode: 'normal',
           formType: 'extend',
-          visibleOn: 'data.api',
+          visibleOn: 'this.api',
           label: tipedLabel(
             '接口轮询',
             '开启初始化接口轮询，开启后会按照设定的时间间隔轮询调用接口'
@@ -884,13 +905,13 @@ export class BaseCRUDPlugin extends BasePlugin {
                 step: 10,
                 min: 1000
               },
-              getSchemaTpl('tplFormulaControl', {
+              getSchemaTpl('expressionFormulaControl', {
                 name: 'stopAutoRefreshWhen',
                 label: tipedLabel(
                   '停止条件',
                   '定时刷新停止表达式，条件满足后则停止定时刷新，否则会持续轮询调用初始化接口。'
                 ),
-                visibleOn: '!!data.interval'
+                visibleOn: '!!this.interval'
               }),
               getSchemaTpl('switch', {
                 name: 'stopAutoRefreshWhenModalIsOpen',
@@ -907,6 +928,36 @@ export class BaseCRUDPlugin extends BasePlugin {
           label: tipedLabel('静默拉取', '刷新时是否隐藏加载动画'),
           pipeIn: defaultValue(false)
         })
+      ]
+    };
+  }
+
+  renderMockPropsCollapse(context: BuildPanelEventContext) {
+    return {
+      title: 'Mock配置',
+      order: 35,
+      body: [
+        {
+          type: 'switch',
+          label: tipedLabel(
+            '数据Mock',
+            '开启后，当数据源为空时，会使用 Mock 数据'
+          ),
+          name: 'editorSetting.mock.enable',
+          value: true
+        },
+        {
+          type: 'input-number',
+          label: tipedLabel(
+            '最大展示行数',
+            '设置后，会按照设置数量展示数据，可以提高设计态渲染速度，降低表格高度，便于布局设置。设置为<code>-1</code>则不限制'
+          ),
+          name: 'editorSetting.mock.maxDisplayRows',
+          step: 1,
+          min: -1,
+          resetValue: -1,
+          value: DefaultMaxDisplayRows
+        }
       ]
     };
   }
@@ -955,7 +1006,7 @@ export class BaseCRUDPlugin extends BasePlugin {
   }
 
   /** 重新构建 API */
-  panelFormPipeOut = async (schema: any) => {
+  panelFormPipeOut = async (schema: any, oldSchema: any) => {
     const entity = schema?.api?.entity;
 
     if (!entity || schema?.dsType !== ModelDSBuilderKey) {
@@ -963,12 +1014,38 @@ export class BaseCRUDPlugin extends BasePlugin {
     }
 
     const builder = this.dsManager.getBuilderBySchema(schema);
+    const observedFields = [
+      'api',
+      'quickSaveApi',
+      'quickSaveItemApi',
+      'columns',
+      'dsType',
+      'primaryField',
+      'filter',
+      'headerToolbar',
+      'footerToolbar',
+      'columns'
+    ];
+    const diff = DeepDiff.diff(
+      pick(oldSchema, observedFields),
+      pick(schema, observedFields)
+    );
+
+    if (!diff) {
+      return schema;
+    }
 
     try {
       const updatedSchema = await builder.buildApiSchema({
         schema,
         renderer: 'crud',
-        sourceKey: 'api'
+        sourceKey: 'api',
+        apiSettings: {
+          diffConfig: {
+            enable: true,
+            schemaDiff: diff
+          }
+        }
       });
       return updatedSchema;
     } catch (e) {
@@ -1058,7 +1135,11 @@ export class BaseCRUDPlugin extends BasePlugin {
     }
   }
 
-  async buildDataSchemas(node: EditorNodeType, region?: EditorNodeType) {
+  async buildDataSchemas(
+    node: EditorNodeType,
+    region?: EditorNodeType,
+    trigger?: EditorNodeType
+  ) {
     const child: EditorNodeType = node.children.find(
       item => !!~['table2', 'cards', 'list'].indexOf(item.type)
     );
@@ -1067,17 +1148,24 @@ export class BaseCRUDPlugin extends BasePlugin {
       return;
     }
 
-    const childDataSchema = await child.info.plugin.buildDataSchemas(
+    const tmpSchema = await child.info.plugin.buildDataSchemas?.(
       child,
-      region
+      region,
+      trigger,
+      node
     );
+
+    const childDataSchema = {
+      ...tmpSchema,
+      ...(tmpSchema?.$id ? {} : {$id: `${child.id}-${child.type}`})
+    };
+
     const items =
       childDataSchema?.properties?.rows ?? childDataSchema?.properties?.items;
     const schema: any = {
       $id: 'crud2',
       type: 'object',
       properties: {
-        ...items?.properties,
         items: {
           ...items,
           title: '全部数据'

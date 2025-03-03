@@ -45,6 +45,7 @@ export * from './Form/InputRange'; // 滑块
 export * from './Form/InputRating'; // 评分
 export * from './Form/InputCity'; // 城市选择
 export * from './Form/Transfer'; // 穿梭器
+export * from './Form/TransferPicker'; // 穿梭选择器
 export * from './Form/TabsTransfer'; // 组合穿梭器
 export * from './Form/InputColor'; // 颜色框
 export * from './Form/ConditionBuilder'; // 条件组合
@@ -63,6 +64,8 @@ export * from './Form/UUID'; // UUID
 export * from './Form/LocationPicker'; // 地理位置
 export * from './Form/InputSubForm'; // 子表单项
 export * from './Form/Hidden'; // 隐藏域
+export * from './Form/InputSignature'; // 签名面板
+export * from './Form/Static'; // 静态展示框
 
 // 功能
 export * from './Button'; // 按钮
@@ -105,6 +108,7 @@ export * from './Images'; // 图片集
 export * from './Time'; // 时间展示
 export * from './Date'; // 日期展示
 export * from './Datetime'; // 日期时间展示
+export * from './Calendar'; // 日历日程展示
 export * from './Tag'; // 标签
 export * from './Json'; // JSON展示
 export * from './Progress'; // 进度展示
@@ -115,7 +119,9 @@ export * from './Divider'; // 分隔线
 export * from './CodeView'; // 代码高亮
 export * from './Markdown';
 export * from './Collapse'; // 折叠器
+export * from './Slider'; // 滑动条
 export * from './OfficeViewer'; // 文档预览
+export * from './PdfViewer'; // PDF预览
 export * from './Log'; // 日志
 
 // 其他
@@ -135,7 +141,6 @@ export * from './Form/InputMonthRange';
 export * from './Form/InputPassword';
 export * from './Form/InputQuarter';
 export * from './Form/InputQuarterRange';
-export * from './Form/Static';
 export * from './Form/InputTime';
 export * from './Form/InputTimeRange';
 export * from './Form/TreeSelect';
@@ -156,3 +161,5 @@ export * from './Reset';
 export * from './Submit';
 export * from './Wrapper';
 export * from './ColumnToggler';
+
+export * from './GlobalVar';

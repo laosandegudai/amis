@@ -3,12 +3,11 @@
  */
 
 import flatten from 'lodash/flatten';
-import {
-  getEventControlConfig,
-  SUPPORT_STATIC_FORMITEM_CMPTS
-} from '../renderer/event-control/helper';
+import {NO_SUPPORT_STATIC_FORMITEM_CMPTS} from '../renderer/event-control/constants';
+import {getEventControlConfig} from '../renderer/event-control/helper';
 import {getSchemaTpl, isObject, tipedLabel} from 'amis-editor-core';
 import type {BaseEventContext} from 'amis-editor-core';
+import {getRendererByName} from 'amis-core';
 
 // 默认动作
 export const BUTTON_DEFAULT_ACTION = {
@@ -199,7 +198,9 @@ export const formItemControl: (
   context?: BaseEventContext
 ) => Array<any> = (panels, context) => {
   const type = context?.schema?.type || '';
-  const supportStatic = SUPPORT_STATIC_FORMITEM_CMPTS.includes(type);
+  const render = getRendererByName(type);
+  const supportStatic =
+    !!render?.isFormItem && !NO_SUPPORT_STATIC_FORMITEM_CMPTS.includes(type);
   const collapseProps = {
     type: 'collapse',
     headingClassName: 'ae-formItemControl-header ae-Collapse-header',
@@ -253,11 +254,12 @@ export const formItemControl: (
           key: 'status',
           body: normalizeBodySchema(
             [
+              getSchemaTpl('visible'),
               getSchemaTpl('hidden'),
+              getSchemaTpl('clearValueOnHidden'),
               supportStatic ? getSchemaTpl('static') : null,
               // TODO: 下面的部分表单项才有，是不是判断一下是否是表单项
-              getSchemaTpl('disabled'),
-              getSchemaTpl('clearValueOnHidden')
+              getSchemaTpl('disabled')
             ],
             panels?.status?.body,
             panels?.status?.replace,
@@ -322,7 +324,7 @@ export const formItemControl: (
               getSchemaTpl('horizontal', {
                 label: '',
                 visibleOn:
-                  'data.mode == "horizontal" && data.label !== false && data.horizontal'
+                  'this.mode == "horizontal" && this.label !== false && this.horizontal'
               }),
               // renderer.sizeMutable !== false
               //   ? getSchemaTpl('formItemSize')
@@ -400,23 +402,11 @@ export function remarkTpl(config: {
       : config.label,
     bulk: false,
     name: config.name,
-    pipeIn: (value: any) => !!value,
-    pipeOut: (value: any) => {
-      // 更新内容
-      if (isObject(value)) {
-        return value;
-      }
-      // 关到开
-      if (value) {
-        return {
-          icon: 'fa fa-question-circle',
-          trigger: ['hover'],
-          className: 'Remark--warning',
-          placement: 'top'
-        };
-      }
-      // 开到关
-      return undefined;
+    defaultData: {
+      icon: 'fa fa-question-circle',
+      trigger: ['hover'],
+      className: 'Remark--warning',
+      placement: 'top'
     },
     form: {
       size: 'md',
@@ -429,7 +419,7 @@ export function remarkTpl(config: {
       },
       body: {
         type: 'grid',
-        className: 'pt-4 right-panel-pop AMISCSSWrapper',
+        className: 'pt-4 right-panel-pop :AMISCSSWrapper',
         gap: 'lg',
         columns: [
           {
@@ -479,17 +469,16 @@ export function remarkTpl(config: {
               getSchemaTpl('icon'),
               {
                 name: 'className',
-                label: 'CSS 类名',
-                type: 'input-text',
-                labelRemark: BaseLabelMark(
+                label: tipedLabel(
+                  'CSS 类名',
                   '有哪些辅助类 CSS 类名？请前往 <a href="https://baidu.gitee.io/amis/zh-CN/style/index" target="_blank">样式说明</a>，除此之外你可以添加自定义类名，然后在系统配置中添加自定义样式。'
-                )
+                ),
+                type: 'input-text'
               },
               {
                 name: 'trigger',
                 type: 'select',
-                label: '触发方式',
-                labelRemark: BaseLabelMark('浮层触发方式默认值为鼠标悬停'),
+                label: tipedLabel('触发方式', '浮层触发方式默认值为鼠标悬停'),
                 multiple: true,
                 pipeIn: (value: any) =>
                   Array.isArray(value) ? value.join(',') : [],

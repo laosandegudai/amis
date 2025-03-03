@@ -18,26 +18,42 @@ export interface TransferPickerProps extends Omit<TransferProps, 'itemRender'> {
   borderMode?: 'full' | 'half' | 'none';
 
   onFocus?: () => void;
-
+  onItemClick?: (item: Object) => void;
   onBlur?: () => void;
   popOverContainer?: any;
 }
 
-export class TransferPicker extends React.Component<TransferPickerProps> {
+export interface TransferPickerState {
+  tempValue?: any;
+}
+
+export class TransferPicker extends React.Component<
+  TransferPickerProps,
+  TransferPickerState
+> {
+  state: TransferPickerState = {
+    tempValue: null
+  };
   optionModified = false;
   @autobind
   handleConfirm(value: any) {
+    this.setState({
+      tempValue: null
+    });
     this.props.onChange?.(value, this.optionModified);
     this.optionModified = false;
   }
 
   @autobind
-  onFoucs() {
+  onFocus() {
     this.props.onFocus?.();
   }
 
   @autobind
   onBlur() {
+    this.setState({
+      tempValue: null
+    });
     this.props.onBlur?.();
   }
 
@@ -49,6 +65,7 @@ export class TransferPicker extends React.Component<TransferPickerProps> {
       disabled,
       className,
       onChange,
+      onItemClick,
       size,
       borderMode,
       labelField = 'label',
@@ -56,13 +73,23 @@ export class TransferPicker extends React.Component<TransferPickerProps> {
       popOverContainer,
       maxTagCount,
       overflowTagPopover,
+      placeholder,
       ...rest
     } = this.props;
+
+    const tp = {
+      value: this.state.tempValue || value,
+      onChange: (value: any) => {
+        this.setState({
+          tempValue: value
+        });
+      }
+    };
 
     return (
       <PickerContainer
         title={__('Select.placeholder')}
-        onFocus={this.onFoucs}
+        onFocus={this.onFocus}
         onClose={this.onBlur}
         mobileUI={mobileUI}
         popOverContainer={popOverContainer}
@@ -84,13 +111,13 @@ export class TransferPicker extends React.Component<TransferPickerProps> {
                   this.optionModified = true;
                   setState({options, value});
                 } else {
-                  onChange(value);
+                  tp.onChange(value);
                 }
               }}
             />
           );
         }}
-        value={value}
+        value={tp.value}
         onConfirm={this.handleConfirm}
         size={size}
       >
@@ -103,9 +130,10 @@ export class TransferPicker extends React.Component<TransferPickerProps> {
             )}
             allowInput={false}
             result={value}
+            onItemClick={onItemClick}
             onResultChange={onChange}
             onResultClick={onClick}
-            placeholder={__('Select.placeholder')}
+            placeholder={placeholder ?? __('Select.placeholder')}
             disabled={disabled}
             borderMode={borderMode}
             itemRender={option => (

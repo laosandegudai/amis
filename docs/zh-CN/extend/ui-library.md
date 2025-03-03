@@ -95,7 +95,7 @@ let amisJSON = {
 渲染 amis 的时候通过 `onBroadcast` 监听内部广播。
 
 ```tsx
-import {render as renderAmis} 'amis';
+import {render as renderAmis} from 'amis';
 
 function DemoComponent() {
   function handleBroadcast(type: string, rawEvent: any, data: any) {
@@ -138,7 +138,7 @@ let amisScoped = amis.embed('#root', {
 });
 ```
 
-具体有哪些可以参考 `https://github.com/baidu/amis/blob/master/src/index.tsx`
+具体有哪些可以参考 [https://github.com/baidu/amis/blob/master/packages/amis/src/index.tsx](https://github.com/baidu/amis/blob/master/packages/amis/src/index.tsx)
 
 ## React 中引入 amis 的组件
 

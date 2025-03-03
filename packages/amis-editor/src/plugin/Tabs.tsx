@@ -17,8 +17,8 @@ import findIndex from 'lodash/findIndex';
 import {RegionWrapper as Region} from 'amis-editor-core';
 import {Tab} from 'amis';
 import {tipedLabel} from 'amis-editor-core';
-import {ValidatorTag} from '../validator';
 import {
+  buildLinkActionDesc,
   getArgsWrapper,
   getEventControlConfig
 } from '../renderer/event-control/helper';
@@ -42,13 +42,21 @@ export class TabsPlugin extends BasePlugin {
     tabs: [
       {
         title: '选项卡1',
-        body: '内容1'
+        body: []
       },
       {
         title: '选项卡2',
-        body: '内容2'
+        body: []
       }
-    ]
+    ],
+    mountOnEnter: true,
+    themeCss: {
+      titleControlClassName: {
+        'font:default': {
+          'text-align': 'center'
+        }
+      }
+    }
   };
   previewSchema = {
     ...this.scaffold
@@ -88,6 +96,28 @@ export class TabsPlugin extends BasePlugin {
           }
         }
       ]
+    },
+    {
+      eventName: 'delete',
+      eventLabel: '选项卡删除',
+      description: '选项卡删除',
+      dataSchema: [
+        {
+          type: 'object',
+          properties: {
+            data: {
+              type: 'object',
+              title: '数据',
+              properties: {
+                value: {
+                  type: 'string',
+                  title: '选项卡索引'
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   ];
 
@@ -95,12 +125,13 @@ export class TabsPlugin extends BasePlugin {
     {
       actionType: 'changeActiveKey',
       actionLabel: '激活指定选项卡',
-      description: '修改当前激活tab项的key',
+      description: '修改当前激活tab项',
       config: ['activeKey'],
-      descDetail: (info: any) => {
+      descDetail: (info: any, context: any, props: any) => {
         return (
-          <div>
-            激活第
+          <div className="action-desc">
+            激活
+            {buildLinkActionDesc(props.manager, info)}第
             <span className="variable-left variable-right">
               {info?.args?.activeKey}
             </span>
@@ -114,7 +145,41 @@ export class TabsPlugin extends BasePlugin {
           label: '激活项',
           variables: '${variables}',
           size: 'lg',
-          mode: 'horizontal'
+          mode: 'horizontal',
+          horizontal: {
+            left: 'normal'
+          }
+        })
+      )
+    },
+    {
+      actionType: 'deleteTab',
+      actionLabel: '删除指定选项卡',
+      description: '删除指定hash的tab项',
+      descDetail: (info: any, context: any, props: any) => {
+        return (
+          <div>
+            删除
+            {buildLinkActionDesc(props.manager, info)}
+            hash为
+            <span className="variable-left variable-right">
+              {info?.args?.deleteHash}
+            </span>
+            的tab项
+          </div>
+        );
+      },
+      schema: getArgsWrapper(
+        getSchemaTpl('formulaControl', {
+          name: 'deleteHash',
+          label: '删除项',
+          variables: '${variables}',
+          size: 'lg',
+          mode: 'horizontal',
+          placeholder: '请输入hash值',
+          horizontal: {
+            left: 'normal'
+          }
         })
       )
     }
@@ -123,7 +188,7 @@ export class TabsPlugin extends BasePlugin {
   panelJustify = true;
   panelBodyCreator = (context: BaseEventContext) => {
     const isNewTabMode =
-      'data.tabsMode !=="vertical" && data.tabsMode !=="sidebar" && data.tabsMode !=="chrome"';
+      'this.tabsMode !=="vertical" && this.tabsMode !=="sidebar" && this.tabsMode !=="chrome"';
 
     return getSchemaTpl('tabs', [
       {
@@ -144,11 +209,13 @@ export class TabsPlugin extends BasePlugin {
                 minLength: 1,
                 scaffold: {
                   title: '选项卡',
-                  body: {
-                    type: 'tpl',
-                    tpl: '内容',
-                    inline: false
-                  }
+                  body: [
+                    {
+                      type: 'tpl',
+                      tpl: '内容',
+                      inline: false
+                    }
+                  ]
                 },
                 items: [
                   getSchemaTpl('title', {
@@ -190,7 +257,8 @@ export class TabsPlugin extends BasePlugin {
                 placeholder: '默认激活的选项卡',
                 pipeOut: (data: string) =>
                   data === '' || isNaN(Number(data)) ? data : Number(data)
-              }
+              },
+              getSchemaTpl('closable')
             ]
           },
           getSchemaTpl('status'),
@@ -230,7 +298,7 @@ export class TabsPlugin extends BasePlugin {
               body: [
                 {
                   name: 'tabsMode',
-                  label: '样式',
+                  label: '展示形式',
                   type: 'select',
                   options: [
                     {
@@ -281,35 +349,58 @@ export class TabsPlugin extends BasePlugin {
                   label: '标题区位置',
                   name: 'sidePosition',
                   pipeIn: defaultValue('left'),
-                  visibleOn: 'data.tabsMode === "sidebar"',
+                  visibleOn: 'this.tabsMode === "sidebar"',
                   clearValueOnHidden: true
                 })
               ]
             },
-            getSchemaTpl('style:classNames', {
-              isFormItem: false,
-              schema: [
-                getSchemaTpl('className', {
-                  name: 'linksClassName',
-                  label: '标题区'
+            getSchemaTpl('theme:base', {
+              classname: 'titleControlClassName',
+              title: '标题样式',
+              hidePaddingAndMargin: true,
+              hideRadius: true,
+              hideShadow: true,
+              hideBorder: true,
+              hideBackground: true,
+              state: ['default', 'hover', 'focused', 'disabled'],
+              extra: [
+                getSchemaTpl('theme:select', {
+                  label: '宽度',
+                  name: 'themeCss.titleControlClassName.width'
                 }),
-
-                getSchemaTpl('className', {
-                  name: 'toolbarClassName',
-                  label: '工具栏'
-                }),
-
-                getSchemaTpl('className', {
-                  name: 'contentClassName',
-                  label: '内容区'
-                }),
-
-                getSchemaTpl('className', {
-                  name: 'showTipClassName',
-                  label: '提示',
-                  visibleOn: 'data.showTip',
-                  clearValueOnHidden: true
+                getSchemaTpl('theme:font', {
+                  label: '文字',
+                  name: 'themeCss.titleControlClassName.font'
                 })
+              ]
+            }),
+            getSchemaTpl('theme:base', {
+              classname: 'toolbarControlClassName',
+              title: '工具栏样式'
+            }),
+            getSchemaTpl('theme:base', {
+              classname: 'contentControlClassName',
+              title: '内容区样式'
+            }),
+            getSchemaTpl('theme:singleCssCode', {
+              selectors: [
+                {
+                  label: '选项卡基本样式',
+                  isRoot: true,
+                  selector: '.cxd-Tabs'
+                },
+                {
+                  label: '选项卡工具栏样式',
+                  selector: '.cxd-Tabs-toolbar'
+                },
+                {
+                  label: '选项卡标题样式',
+                  selector: '.cxd-Tabs-link'
+                },
+                {
+                  label: '选项卡内容区样式',
+                  selector: '.cxd-Tabs-content'
+                }
               ]
             })
           ])
@@ -368,13 +459,13 @@ export class TabsPlugin extends BasePlugin {
                         label: '位置',
                         name: 'iconPosition',
                         pipeIn: defaultValue('left'),
-                        visibleOn: 'data.icon',
+                        visibleOn: 'this.icon',
                         clearValueOnHidden: true
                       })
                     ]
                   }
                 },
-
+                getSchemaTpl('closable'),
                 {
                   label: tipedLabel(
                     'Hash',
@@ -415,8 +506,9 @@ export class TabsPlugin extends BasePlugin {
         {
           title: '外观',
           body: getSchemaTpl('collapseGroup', [
-            getSchemaTpl('style:classNames', {
-              isFormItem: false
+            getSchemaTpl('theme:base', {
+              classname: 'panelControlClassName',
+              title: '基本样式'
             })
           ])
         }

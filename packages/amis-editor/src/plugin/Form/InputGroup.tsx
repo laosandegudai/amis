@@ -8,6 +8,7 @@ import {
   tipedLabel
 } from 'amis-editor-core';
 import {ValidatorTag} from '../../validator';
+import {generateId} from '../../util';
 
 export class InputGroupControlPlugin extends BasePlugin {
   static id = 'InputGroupControlPlugin';
@@ -22,6 +23,7 @@ export class InputGroupControlPlugin extends BasePlugin {
   icon = 'fa fa-object-group';
   pluginIcon = 'input-group-plugin';
   description = '输入组合，支持多种类型的控件组合';
+  searchKeywords = '输入框组合';
   docLink = '/amis/zh-CN/components/form/input-group';
   tags = ['表单项'];
   scaffold = {
@@ -32,11 +34,13 @@ export class InputGroupControlPlugin extends BasePlugin {
       {
         type: 'input-text',
         inputClassName: 'b-r-none p-r-none',
+        id: generateId(),
         name: 'input-group'
       },
       {
         type: 'submit',
         label: '提交',
+        id: generateId(),
         level: 'primary'
       }
     ]

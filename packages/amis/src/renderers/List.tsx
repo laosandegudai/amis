@@ -2,7 +2,12 @@ import React from 'react';
 import {findDOMNode} from 'react-dom';
 import Sortable from 'sortablejs';
 import omit from 'lodash/omit';
-import {filterClassNameObject} from 'amis-core';
+import {
+  ScopedContext,
+  filterClassNameObject,
+  getMatchedEventTargets,
+  getPropValue
+} from 'amis-core';
 import {Button, Spinner, Checkbox, Icon, SpinnerExtraProps} from 'amis-ui';
 import {
   ListStore,
@@ -43,8 +48,9 @@ import {
 } from '../Schema';
 import {ActionSchema} from './Action';
 import {SchemaRemark} from './Remark';
-import type {IItem} from 'amis-core';
+import type {IItem, IScopedContext} from 'amis-core';
 import type {OnEventProps} from 'amis-core';
+import find from 'lodash/find';
 
 /**
  * 不指定类型默认就是文本
@@ -202,6 +208,11 @@ export interface ListSchema extends BaseSchema {
   affixHeader?: boolean;
 
   /**
+   * 是否固底
+   */
+  affixFooter?: boolean;
+
+  /**
    * 配置某项是否可以点选
    */
   itemCheckableOn?: SchemaExpression;
@@ -243,12 +254,23 @@ export interface ListProps
     SpinnerExtraProps {
   store: IListStore;
   selectable?: boolean;
+
+  // 已选清单
   selected?: Array<any>;
   draggable?: boolean;
+
+  // 行数据集合
+  items?: Array<object>;
+
+  // 原始数据集合，前端分页时用来保存原始数据
+  fullItems?: Array<object>;
+
   onSelect: (
     selectedItems: Array<object>,
     unSelectedItems: Array<object>
   ) => void;
+  // 单条修改时触发
+  onItemChange?: (item: object, diff: object, rowIndex: string) => void;
   onSave?: (
     items: Array<object> | object,
     diff: Array<object> | object,
@@ -345,13 +367,14 @@ export default class List extends React.Component<ListProps, object> {
 
   static syncItems(store: IListStore, props: ListProps, prevProps?: ListProps) {
     const source = props.source;
-    const value = props.value || props.items;
+    const value = getPropValue(props, (props: ListProps) => props.items);
     let items: Array<object> = [];
     let updateItems = false;
 
     if (
       Array.isArray(value) &&
-      (!prevProps || (prevProps.value || prevProps.items) !== value)
+      (!prevProps ||
+        getPropValue(prevProps, (props: ListProps) => props.items) !== value)
     ) {
       items = value;
       updateItems = true;
@@ -361,15 +384,15 @@ export default class List extends React.Component<ListProps, object> {
         ? resolveVariableAndFilter(source, prevProps.data, '| raw')
         : null;
 
-      if (prev && prev === resolved) {
+      if (prev === resolved) {
         updateItems = false;
-      } else if (Array.isArray(resolved)) {
-        items = resolved;
+      } else {
+        items = Array.isArray(resolved) ? resolved : [];
         updateItems = true;
       }
     }
 
-    updateItems && store.initItems(items);
+    updateItems && store.initItems(items, props.fullItems, props.selected);
     Array.isArray(props.selected) &&
       store.updateSelected(props.selected, props.valueField);
     return updateItems;
@@ -430,7 +453,11 @@ export default class List extends React.Component<ListProps, object> {
     return findDOMNode(this);
   }
 
-  handleAction(e: React.UIEvent<any>, action: ActionObject, ctx: object) {
+  handleAction(
+    e: React.UIEvent<any> | undefined,
+    action: ActionObject,
+    ctx: object
+  ) {
     const {data, dispatchEvent, onAction, onEvent} = this.props;
     const hasClickActions =
       onEvent &&
@@ -496,7 +523,7 @@ export default class List extends React.Component<ListProps, object> {
           api: saveImmediately.api,
           reload: options?.reload
         },
-        values
+        item.locals
       );
       return;
     }
@@ -532,7 +559,8 @@ export default class List extends React.Component<ListProps, object> {
     const unModifiedItems = store.items
       .filter(item => !item.modified)
       .map(item => item.data);
-    onSave(
+
+    return onSave(
       items,
       diff,
       itemIndexes,
@@ -560,11 +588,25 @@ export default class List extends React.Component<ListProps, object> {
     store.reset();
   }
 
-  bulkUpdate(value: object, items: Array<object>) {
-    const {store} = this.props;
+  bulkUpdate(value: any, items: Array<object>) {
+    // const {store} = this.props;
 
-    const items2 = store.items.filter(item => ~items.indexOf(item.pristine));
-    items2.forEach(item => item.change(value));
+    // const items2 = store.items.filter(item => ~items.indexOf(item.pristine));
+    // items2.forEach(item => item.change(value));
+
+    const {store, primaryField} = this.props;
+
+    if (primaryField && value.ids) {
+      const ids = value.ids.split(',');
+      const rows = store.items.filter(item =>
+        find(ids, (id: any) => id && id == item.data[primaryField])
+      );
+      const newValue = {...value, ids: undefined};
+      rows.forEach(item => item.change(newValue));
+    } else if (Array.isArray(items)) {
+      const rows = store.items.filter(item => ~items.indexOf(item.pristine));
+      rows.forEach(item => item.change(value));
+    }
   }
 
   getSelected() {
@@ -602,7 +644,12 @@ export default class List extends React.Component<ListProps, object> {
 
           const parent = e.to as HTMLElement;
           if (e.oldIndex < parent.childNodes.length - 1) {
-            parent.insertBefore(e.item, parent.childNodes[e.oldIndex]);
+            parent.insertBefore(
+              e.item,
+              parent.childNodes[
+                e.oldIndex > e.newIndex ? e.oldIndex + 1 : e.oldIndex
+              ]
+            );
           } else {
             parent.appendChild(e.item);
           }
@@ -752,9 +799,7 @@ export default class List extends React.Component<ListProps, object> {
       ? headerToolbarRender(
           {
             ...this.props,
-            selectedItems: store.selectedItems.map(item => item.data),
-            items: store.items.map(item => item.data),
-            unSelectedItems: store.unSelectedItems.map(item => item.data)
+            ...store.eventContext
           },
           this.renderToolbar
         )
@@ -795,7 +840,8 @@ export default class List extends React.Component<ListProps, object> {
       render,
       showFooter,
       store,
-      classnames: cx
+      classnames: cx,
+      affixFooter
     } = this.props;
 
     if (showFooter === false) {
@@ -806,31 +852,42 @@ export default class List extends React.Component<ListProps, object> {
       ? footerToolbarRender(
           {
             ...this.props,
-            selectedItems: store.selectedItems.map(item => item.data),
-            items: store.items.map(item => item.data),
-            unSelectedItems: store.unSelectedItems.map(item => item.data)
+            ...store.eventContext
           },
           this.renderToolbar
         )
       : null;
     const actions = this.renderActions('footer');
 
+    const footerNode =
+      footer && (!Array.isArray(footer) || footer.length) ? (
+        <div
+          className={cx(
+            'List-footer',
+            footerClassName,
+            affixFooter ? 'List-footer--affix' : ''
+          )}
+          key="footer"
+        >
+          {render('footer', footer)}
+        </div>
+      ) : null;
+
     const toolbarNode =
       actions || child ? (
         <div
-          className={cx('List-toolbar', footerClassName)}
+          className={cx(
+            'List-toolbar',
+            footerClassName,
+            !footerNode && affixFooter ? 'List-footToolbar--affix' : ''
+          )}
           key="footer-toolbar"
         >
           {actions}
           {child}
         </div>
       ) : null;
-    const footerNode =
-      footer && (!Array.isArray(footer) || footer.length) ? (
-        <div className={cx('List-footer', footerClassName)} key="footer">
-          {render('footer', footer)}
-        </div>
-      ) : null;
+
     return footerNode && toolbarNode
       ? [toolbarNode, footerNode]
       : footerNode || toolbarNode || null;
@@ -919,7 +976,8 @@ export default class List extends React.Component<ListProps, object> {
       checkOnItemClick,
       itemAction,
       classnames: cx,
-      translate: __
+      translate: __,
+      testIdBuilder
     } = this.props;
     const hasClickActions =
       onEvent &&
@@ -939,6 +997,7 @@ export default class List extends React.Component<ListProps, object> {
           'is-modified': item.modified,
           'is-moved': item.moved
         }),
+        testIdBuilder: testIdBuilder?.getChild(index),
         selectable: store.selectable,
         checkable: item.checkable,
         multiple,
@@ -973,7 +1032,6 @@ export default class List extends React.Component<ListProps, object> {
       hideCheckToggler,
       checkOnItemClick,
       itemAction,
-      affixOffsetTop,
       affixHeader,
       env,
       classnames: cx,
@@ -997,10 +1055,7 @@ export default class List extends React.Component<ListProps, object> {
         ref={this.bodyRef}
       >
         {affixHeader ? (
-          <div
-            className={cx('List-fixedTop')}
-            style={{top: affixOffsetTop ?? env?.affixOffsetTop ?? 0}}
-          >
+          <div className={cx('List-fixedTop')}>
             {header}
             {heading}
           </div>
@@ -1046,6 +1101,153 @@ export class ListRenderer extends List {
   body?: SchemaNode;
   actions?: Array<ActionObject>;
   onCheck: (item: IItem) => void;
+
+  static contextType = ScopedContext;
+  declare context: React.ContextType<typeof ScopedContext>;
+
+  constructor(props: ListProps, scoped: IScopedContext) {
+    super(props);
+
+    scoped.registerComponent(this);
+  }
+
+  componentWillUnmount(): void {
+    super.componentWillUnmount?.();
+    this.context.unRegisterComponent(this);
+  }
+
+  receive(values: any, subPath?: string) {
+    const scoped = this.context as IScopedContext;
+
+    /**
+     * 因为List在scope上注册，导致getComponentByName查询组件时会优先找到List，和CRUD联动的动作都会失效
+     * 这里先做兼容处理，把动作交给上层的CRUD处理
+     */
+    if (this.props?.host) {
+      // CRUD会把自己透传给List，这样可以保证找到CRUD
+      return this.props.host.receive?.(values, subPath);
+    }
+
+    if (subPath) {
+      return scoped.send(subPath, values);
+    }
+  }
+
+  async reload(
+    subPath?: string,
+    query?: any,
+    ctx?: any,
+    silent?: boolean,
+    replace?: boolean,
+    args?: any
+  ) {
+    const {store} = this.props;
+    if (args?.index || args?.condition) {
+      // 局部刷新
+      // todo 后续考虑添加局部刷新
+      // const targets = await getMatchedEventTargets<IItem>(
+      //   store.items,
+      //   ctx || this.props.data,
+      //   args.index,
+      //   args?.condition
+      // );
+      // await Promise.all(targets.map(target => this.loadDeferredRow(target)));
+      return;
+    }
+
+    const scoped = this.context as IScopedContext;
+
+    if (this.props?.host) {
+      // CRUD会把自己透传给List，这样可以保证找到CRUD
+      return this.props?.host.reload?.(subPath, query, ctx);
+    }
+
+    if (subPath) {
+      return scoped.reload(subPath, ctx);
+    }
+  }
+
+  async setData(
+    values: any,
+    replace?: boolean,
+    index?: number | string,
+    condition?: any
+  ) {
+    const {store} = this.props;
+
+    if (index !== undefined || condition !== undefined) {
+      const targets = await getMatchedEventTargets<IItem>(
+        store.items,
+        this.props.data,
+        index,
+        condition
+      );
+      targets.forEach(target => {
+        target.updateData(values);
+      });
+    } else if (this.props?.host) {
+      // 如果在 CRUD 里面，优先让 CRUD 去更新状态
+      return this.props.host.setData?.(values, replace, index, condition);
+    } else {
+      return store.updateData(values, undefined, replace);
+    }
+  }
+
+  getData() {
+    const {store, data} = this.props;
+    return store.getData(data);
+  }
+
+  hasModifiedItems() {
+    return this.props.store.modified;
+  }
+
+  async doAction(
+    action: ActionObject,
+    ctx: any,
+    throwErrors: boolean,
+    args: any
+  ) {
+    const {store, valueField, data} = this.props;
+
+    const actionType = action?.actionType;
+    switch (actionType) {
+      case 'selectAll':
+        store.clear();
+        store.toggleAll();
+        this.syncSelected();
+        break;
+      case 'clearAll':
+        store.clear();
+        this.syncSelected();
+        break;
+      case 'select':
+        const rows = await getMatchedEventTargets<IItem>(
+          store.items,
+          ctx || this.props.data,
+          args.index,
+          args.condition,
+          args.selected
+        );
+        store.updateSelected(
+          rows.map(item => item.data),
+          valueField
+        );
+        this.syncSelected();
+        break;
+      case 'initDrag':
+        store.startDragging();
+        break;
+      case 'cancelDrag':
+        store.stopDragging();
+        break;
+      case 'submitQuickEdit':
+        await this.handleSave();
+        break;
+      default:
+        return this.handleAction(undefined, action, data);
+    }
+  }
 }
 
 export interface ListItemProps
@@ -1144,7 +1346,8 @@ export class ListItem extends React.Component<ListItemProps> {
       hideCheckToggler,
       checkOnItemClick,
       classnames: cx,
-      classPrefix: ns
+      classPrefix: ns,
+      testIdBuilder
     } = this.props;
 
     if (dragging) {
@@ -1163,6 +1366,7 @@ export class ListItem extends React.Component<ListItemProps> {
             checked={selected}
             onChange={this.handleCheck}
             inline
+            testIdBuilder={testIdBuilder?.getChild('checkbox')}
           />
         </div>
       );
@@ -1275,7 +1479,8 @@ export class ListItem extends React.Component<ListItemProps> {
                 'ListItem-fieldValue',
                 filterClassNameObject(field.className, data)
               ),
-              value: field.name ? resolveVariable(field.name, data) : undefined,
+              // 同 Cell 一样， 这里不要下发 value
+              // value: field.name ? resolveVariable(field.name, data) : undefined,
               onAction: this.handleAction,
               onQuickChange: this.handleQuickChange
             }
@@ -1364,8 +1569,7 @@ export class ListItem extends React.Component<ListItemProps> {
 }
 
 @Renderer({
-  test: /(^|\/)(?:list|list-group)\/(?:.*\/)?list-item$/,
-  name: 'list-item'
+  type: 'list-item'
 })
 export class ListItemRenderer extends ListItem {
   static propsList = ['multiple', ...ListItem.propsList];

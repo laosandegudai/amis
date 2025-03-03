@@ -2,6 +2,7 @@ import {types, SnapshotIn, Instance} from 'mobx-state-tree';
 import {iRendererStore} from './iRenderer';
 import type {IFormStore, IFormItemStore} from './form';
 import {getStoreById} from './manager';
+import {countTree} from '../utils/helper';
 
 export const UniqueGroup = types
   .model('UniqueGroup', {
@@ -34,7 +35,8 @@ export const ComboStore = iRendererStore
     minLength: 0,
     maxLength: 0,
     length: 0,
-    activeKey: 0
+    activeKey: 0,
+    memberValidMap: types.optional(types.frozen(), {})
   })
   .views(self => {
     function getForms() {
@@ -58,7 +60,10 @@ export const ComboStore = iRendererStore
               return;
             }
 
-            let total = item.items[0].options.length;
+            let total = countTree(
+              item.items[0].options,
+              item => typeof item.value !== 'undefined'
+            );
             let current = item.items.reduce((total, item) => {
               return total + item.selectedOptions.length;
             }, 0);
@@ -166,13 +171,21 @@ export const ComboStore = iRendererStore
       self.activeKey = key;
     }
 
+    function setMemberValid(valid: boolean, index: number) {
+      self.memberValidMap = {
+        ...self.memberValidMap,
+        [index]: valid
+      };
+    }
+
     return {
       config,
       setActiveKey,
       bindUniuqueItem,
       unBindUniuqueItem,
       addForm,
-      onChildStoreDispose
+      onChildStoreDispose,
+      setMemberValid
     };
   });
 

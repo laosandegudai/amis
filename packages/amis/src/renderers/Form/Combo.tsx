@@ -1,6 +1,8 @@
 import React from 'react';
 import {findDOMNode} from 'react-dom';
 import cloneDeep from 'lodash/cloneDeep';
+import isNumber from 'lodash/isNumber';
+import get from 'lodash/get';
 import {
   FormItem,
   FormControlProps,
@@ -8,7 +10,11 @@ import {
   resolveEventData,
   ApiObject,
   FormHorizontal,
-  evalExpressionWithConditionBuilder
+  evalExpressionWithConditionBuilderAsync,
+  IFormStore,
+  getVariable,
+  IFormItemStore,
+  deleteVariable
 } from 'amis-core';
 import {ActionObject, Api} from 'amis-core';
 import {ComboStore, IComboStore} from 'amis-core';
@@ -37,7 +43,11 @@ import {isEffectiveApi, str2AsyncFunction} from 'amis-core';
 import {Alert2} from 'amis-ui';
 import memoize from 'lodash/memoize';
 import {Icon} from 'amis-ui';
-import {isAlive} from 'mobx-state-tree';
+import {
+  isAlive,
+  clone as cloneModel,
+  destroy as destroyModel
+} from 'mobx-state-tree';
 import {
   FormBaseControlSchema,
   SchemaApi,
@@ -48,7 +58,9 @@ import {
 import {ListenerAction} from 'amis-core';
 import type {SchemaTokenizeableString} from '../../Schema';
 import isPlainObject from 'lodash/isPlainObject';
-import {isMobile} from 'amis-core';
+import isEqual from 'lodash/isEqual';
+
+import type {TestIdBuilder} from 'amis-core';
 
 export type ComboCondition = {
   test: string;
@@ -68,6 +80,7 @@ export type ComboSubControl = SchemaObject & {
    * 列类名，可以用来修改这类宽度。
    */
   columnClassName?: SchemaClassName;
+  testid?: string;
 };
 
 /**
@@ -276,9 +289,10 @@ export interface ComboControlSchema extends FormBaseControlSchema {
     maxLengthValidateFailed?: string;
   };
   updatePristineAfterStoreDataReInit?: boolean;
+  testIdBuilder?: TestIdBuilder;
 }
 
-export type ComboRendererEvent = 'add' | 'delete' | 'tabsChange';
+export type ComboRendererEvent = 'add' | 'delete' | 'tabsChange' | 'dragEnd';
 
 function pickVars(vars: any, fields: Array<string>) {
   return fields.reduce((data: any, key: string) => {
@@ -368,7 +382,6 @@ export default class ComboControl extends React.Component<ComboProps> {
     'itemsWrapperClassName'
   ];
 
-  subForms: Array<any> = [];
   subFormDefaultValues: Array<{
     index: number;
     values: any;
@@ -395,6 +408,7 @@ export default class ComboControl extends React.Component<ComboProps> {
     this.dragTipRef = this.dragTipRef.bind(this);
     this.flush = this.flush.bind(this);
     this.handleComboTypeChange = this.handleComboTypeChange.bind(this);
+    this.handleSubFormValid = this.handleSubFormValid.bind(this);
     this.defaultValue = {
       ...props.scaffold
     };
@@ -495,16 +509,26 @@ export default class ComboControl extends React.Component<ComboProps> {
     return value;
   }
 
-  doAction(action: ListenerAction, args: any) {
+  doAction(
+    action: ListenerAction,
+    data: any,
+    throwErrors: boolean = false,
+    args?: any
+  ) {
     const actionType = action?.actionType as string;
-    const {onChange, resetValue} = this.props;
+    const {onChange, resetValue, formStore, store, name} = this.props;
 
     if (actionType === 'addItem') {
       this.addItemValue(args?.item ?? {});
     } else if (actionType === 'clear') {
       onChange('');
     } else if (actionType === 'reset') {
-      onChange(resetValue ?? '');
+      const pristineVal =
+        getVariable(
+          formStore?.pristine ?? store?.parentStore?.pristine,
+          name
+        ) ?? resetValue;
+      onChange(pristineVal ?? '');
     }
   }
 
@@ -534,8 +558,11 @@ export default class ComboControl extends React.Component<ComboProps> {
   }
 
   getValueAsArray(props = this.props) {
-    const {flat, joinValues, delimiter, type} = props;
-    let value = props.value;
+    const {flat, joinValues, delimiter, type, formItem} = props;
+    // 因为 combo 多个子表单可能同时发生变化。
+    // onChagne 触发多次，上次变更还没应用到 props.value 上来，这次触发变更就会包含历史数据，把上次触发的数据给重置成旧的了。
+    // 通过 props.getValue() 拿到的是最新的
+    let value = props.getValue();
 
     if (joinValues && flat && typeof value === 'string') {
       value = value.split(delimiter || ',');
@@ -594,7 +621,8 @@ export default class ComboControl extends React.Component<ComboProps> {
       scaffold,
       disabled,
       submitOnChange,
-      dispatchEvent
+      dispatchEvent,
+      store
     } = this.props;
 
     if (disabled) {
@@ -629,11 +657,14 @@ export default class ComboControl extends React.Component<ComboProps> {
       value = value.join(delimiter || ',');
     }
 
+    let activeIndex = this.keys.length - 1;
     if (addattop === true) {
       this.keys.unshift(this.keys.pop()!);
       value.unshift(value.pop());
+      activeIndex = 0;
     }
 
+    store.setActiveKey(activeIndex);
     this.props.onChange(value, submitOnChange, true);
   }
 
@@ -706,11 +737,30 @@ export default class ComboControl extends React.Component<ComboProps> {
   }
 
   handleChange(values: any, diff: any, {index}: any) {
-    const {flat, store, joinValues, delimiter, disabled, submitOnChange, type} =
-      this.props;
+    const {
+      flat,
+      store,
+      joinValues,
+      delimiter,
+      disabled,
+      submitOnChange,
+      type,
+      syncFields,
+      name
+    } = this.props;
 
     if (disabled) {
       return;
+    }
+
+    // 不要递归更新自己
+    if (Array.isArray(syncFields)) {
+      syncFields.forEach(field => {
+        if (name?.startsWith(field)) {
+          values = {...values};
+          deleteVariable(values, name);
+        }
+      });
     }
 
     let value = this.getValueAsArray();
@@ -788,6 +838,11 @@ export default class ComboControl extends React.Component<ComboProps> {
   }
 
   handleSingleFormChange(values: object) {
+    if (this.props.value === null && isEqual(this.defaultValue, values)) {
+      // 由清空触发，忽略
+      return;
+    }
+
     this.props.onChange(
       {
         ...values
@@ -795,6 +850,11 @@ export default class ComboControl extends React.Component<ComboProps> {
       this.props.submitOnChange,
       true
     );
+  }
+
+  handleSubFormValid(valid: boolean, {index}: any) {
+    const {store} = this.props;
+    store.setMemberValid(valid, index);
   }
 
   handleFormInit(values: any, {index}: any) {
@@ -806,8 +866,26 @@ export default class ComboControl extends React.Component<ComboProps> {
       formInited,
       onChange,
       submitOnChange,
-      setPrinstineValue
+      setPrinstineValue,
+      formItem,
+      name,
+      syncFields
     } = this.props;
+
+    // 不要递归更新自己
+    if (Array.isArray(syncFields)) {
+      syncFields.forEach(field => {
+        if (name?.startsWith(field)) {
+          values = {...values};
+          deleteVariable(values, name);
+        }
+      });
+    }
+
+    // 已经开始验证了，那么打开成员的时候，就要验证一下。
+    if (formItem?.validated) {
+      this.subForms[index]?.validate(true, false, false);
+    }
 
     this.subFormDefaultValues.push({
       index,
@@ -881,7 +959,14 @@ export default class ComboControl extends React.Component<ComboProps> {
   }
 
   validate(): any {
-    const {messages, nullable, translate: __} = this.props;
+    const {
+      messages,
+      nullable,
+      value: rawValue,
+      translate: __,
+      store,
+      flat
+    } = this.props;
     const value = this.getValueAsArray();
     const minLength = this.resolveVariableProps(this.props, 'minLength');
     const maxLength = this.resolveVariableProps(this.props, 'maxLength');
@@ -896,23 +981,72 @@ export default class ComboControl extends React.Component<ComboProps> {
         (messages && messages.maxLengthValidateFailed) || 'Combo.maxLength',
         {maxLength}
       );
-    } else if (this.subForms.length && (!nullable || value)) {
-      return Promise.all(this.subForms.map(item => item.validate())).then(
-        values => {
-          if (~values.indexOf(false)) {
-            return __(
-              (messages && messages.validateFailed) || 'validateFailed'
-            );
-          }
+    } else if (nullable && !rawValue) {
+      return; // 不校验
+    } else if (value.length) {
+      const subForms = this.subForms;
+      return Promise.all(
+        value.map(async (values: any, index: number) => {
+          const subForm = subForms[index];
+          if (subForm) {
+            return subForm.validate(true, false, false);
+          } else {
+            // 那些还没有渲染出来的数据
+            // 因为有可能存在分页，有可能存在懒加载，所以没办法直接用 subForm 去校验了
+            // todo 唯一校验会失效，如果 combo 中某个字段是唯一的，这个校验方式有问题
+            const subForm = subForms[Object.keys(subForms)[0] as any];
+            if (subForm) {
+              const form: IFormStore = subForm.props.store;
+              let valid = false;
+              for (let formitem of form.items) {
+                const cloned: IFormItemStore = cloneModel(formitem);
+                /** 开启flat后subForm的值会挂在字段"flat"下，所以不需要基于 name 取值 */
+                let derivedValue: any = flat
+                  ? values
+                  : getVariable(values, formitem.name, false);
 
-          return;
+                if (formitem.extraName && !flat) {
+                  derivedValue = [
+                    getVariable(values, formitem.name, false),
+                    getVariable(values, formitem.extraName, false)
+                  ];
+                }
+
+                cloned.changeTmpValue(derivedValue, 'dataChanged');
+                valid = await cloned.validate(values);
+                destroyModel(cloned);
+                if (valid === false) {
+                  break;
+                }
+              }
+
+              store.setMemberValid(valid, index);
+              return valid;
+            }
+          }
+        })
+      ).then(values => {
+        if (~values.indexOf(false)) {
+          return __((messages && messages.validateFailed) || 'validateFailed');
         }
-      );
+
+        return;
+      });
+    } else if (this.subForms.length) {
+      return Promise.all(
+        this.subForms.map(item => item.validate(true, false, false))
+      ).then(values => {
+        if (~values.indexOf(false)) {
+          return __((messages && messages.validateFailed) || 'validateFailed');
+        }
+
+        return;
+      });
     }
   }
 
-  flush() {
-    this.subForms.forEach(form => form.flush());
+  async flush() {
+    await Promise.all(this.subForms.map(form => form.flush()));
   }
 
   dragTipRef(ref: any) {
@@ -945,7 +1079,12 @@ export default class ComboControl extends React.Component<ComboProps> {
           // 换回来
           const parent = e.to as HTMLElement;
           if (e.oldIndex < parent.childNodes.length - 1) {
-            parent.insertBefore(e.item, parent.childNodes[e.oldIndex]);
+            parent.insertBefore(
+              e.item,
+              parent.childNodes[
+                e.oldIndex > e.newIndex ? e.oldIndex + 1 : e.oldIndex
+              ]
+            );
           } else {
             parent.appendChild(e.item);
           }
@@ -958,6 +1097,17 @@ export default class ComboControl extends React.Component<ComboProps> {
           newValue.splice(e.newIndex, 0, newValue.splice(e.oldIndex, 1)[0]);
           this.keys.splice(e.newIndex, 0, this.keys.splice(e.oldIndex, 1)[0]);
           this.props.onChange(newValue, submitOnChange, true);
+
+          this.props.dispatchEvent(
+            'dragEnd',
+            resolveEventData(this.props, {
+              item: newValue[e.newIndex],
+              value: newValue,
+              index: e.newIndex,
+              oldValue: value,
+              oldIndex: e.oldIndex
+            })
+          );
         }
       }
     );
@@ -968,23 +1118,28 @@ export default class ComboControl extends React.Component<ComboProps> {
   }
 
   refsMap: {
-    [propName: number]: any;
+    [propName: string]: any;
   } = {};
 
   makeFormRef = memoize(
     (index: number) => (ref: any) => this.formRef(ref, index)
   );
 
+  get subForms() {
+    return Object.keys(this.refsMap)
+      .map(key => parseInt(key, 10))
+      .sort()
+      .map(key => this.refsMap[key]);
+  }
+
   formRef(ref: any, index: number = 0) {
     if (ref) {
       while (ref && ref.getWrappedInstance) {
         ref = ref.getWrappedInstance();
       }
-      this.subForms[index] = ref;
       this.refsMap[index] = ref;
     } else {
       const form = this.refsMap[index];
-      this.subForms = this.subForms.filter(item => item !== form);
       this.subFormDefaultValues = this.subFormDefaultValues.filter(
         ({index: dIndex}) => dIndex !== index
       );
@@ -1113,10 +1268,9 @@ export default class ComboControl extends React.Component<ComboProps> {
     const {onChange} = this.props;
     onChange(null);
 
-    Array.isArray(this.subForms) &&
-      this.subForms.forEach(subForm => {
-        subForm.clearErrors();
-      });
+    this.subForms.forEach(subForm => {
+      subForm.clearErrors();
+    });
   }
 
   renderPlaceholder() {
@@ -1153,7 +1307,8 @@ export default class ComboControl extends React.Component<ComboProps> {
       changeImmediately,
       addBtnText,
       static: isStatic,
-      translate: __
+      translate: __,
+      testIdBuilder
     } = this.props;
 
     let items = this.props.items;
@@ -1181,6 +1336,7 @@ export default class ComboControl extends React.Component<ComboProps> {
         mode={tabsStyle}
         activeKey={store.activeKey}
         onSelect={this.handleTabSelect}
+        testIdBuilder={testIdBuilder}
         additionBtns={
           !disabled && addable !== false && store.addable ? (
             <li className={cx(`Tabs-link ComboTabs-addLink`)}>
@@ -1191,6 +1347,7 @@ export default class ComboControl extends React.Component<ComboProps> {
       >
         {value.map((value: any, index: number) => {
           const data = this.formatValue(value, index);
+          const tabTIDBuilder = testIdBuilder?.getChild(`tab-${index}`);
           let condition: ComboCondition | null | undefined = null;
           let toolbar = undefined;
           if (
@@ -1207,6 +1364,7 @@ export default class ComboControl extends React.Component<ComboProps> {
                 )}
                 data-tooltip={__('delete')}
                 data-position="bottom"
+                {...tabTIDBuilder?.getChild('delBtn').getTestId()}
               >
                 {deleteIcon ? (
                   <i className={deleteIcon} />
@@ -1253,6 +1411,13 @@ export default class ComboControl extends React.Component<ComboProps> {
               // 不能按需渲染，因为 unique 会失效。
               mountOnEnter={!hasUnique}
               unmountOnExit={false}
+              className={
+                store.memberValidMap[index] === false ? 'has-error' : ''
+              }
+              tabClassName={
+                store.memberValidMap[index] === false ? 'has-error' : ''
+              }
+              testIdBuilder={tabTIDBuilder}
             >
               {condition && typeSwitchable !== false ? (
                 <div className={cx('Combo-itemTag')}>
@@ -1272,7 +1437,7 @@ export default class ComboControl extends React.Component<ComboProps> {
               ) : null}
               <div className={cx(`Combo-itemInner`)}>
                 {finnalControls ? (
-                  this.renderItems(finnalControls, data, index)
+                  this.renderItems(finnalControls, data, index, value)
                 ) : (
                   <Alert2 level="warning" className="m-b-none">
                     {__('Combo.invalidData')}
@@ -1303,9 +1468,10 @@ export default class ComboControl extends React.Component<ComboProps> {
       removable,
       deleteBtn,
       mobileUI,
-      data
+      data,
+      testIdBuilder
     } = this.props;
-
+    const delTestIdBuilder = testIdBuilder?.getChild(`delete-btn-${index}`);
     const finnalRemovable =
       store.removable !== false && // minLength ?
       !disabled && // 控件自身是否禁用
@@ -1332,6 +1498,7 @@ export default class ComboControl extends React.Component<ComboProps> {
             'Combo-delController',
             deleteBtn ? deleteBtn.className : ''
           ),
+          testIdBuilder: delTestIdBuilder,
           onClick: (e: any) => {
             if (!deleteBtn.onClick) {
               this.deleteItem(index);
@@ -1369,7 +1536,8 @@ export default class ComboControl extends React.Component<ComboProps> {
         type: 'button',
         className: cx('Combo-delController'),
         label: deleteBtn,
-        onClick: this.deleteItem.bind(this, index)
+        onClick: this.deleteItem.bind(this, index),
+        testIdBuilder: delTestIdBuilder
       });
     }
 
@@ -1381,6 +1549,7 @@ export default class ComboControl extends React.Component<ComboProps> {
         className={cx(`Combo-delBtn ${!store.removable ? 'is-disabled' : ''}`)}
         data-tooltip={!mobileUI ? __('delete') : null}
         data-position="bottom"
+        {...delTestIdBuilder?.getTestId()}
       >
         {deleteIcon ? (
           <i className={deleteIcon} />
@@ -1408,10 +1577,12 @@ export default class ComboControl extends React.Component<ComboProps> {
       addIcon,
       conditions,
       translate: __,
-      tabsMode
+      tabsMode,
+      testIdBuilder
     } = this.props;
 
     const hasConditions = Array.isArray(conditions) && conditions.length;
+    const addBtnTestIdBuilder = testIdBuilder?.getChild('add-button');
     return (
       <>
         {store.addable &&
@@ -1426,7 +1597,8 @@ export default class ComboControl extends React.Component<ComboProps> {
                 level: 'info',
                 size: 'sm',
                 closeOnClick: true,
-                btnClassName: addButtonClassName
+                btnClassName: addButtonClassName,
+                testIdBuilder: addBtnTestIdBuilder
               },
               {
                 buttons: conditions?.map(item => ({
@@ -1447,12 +1619,14 @@ export default class ComboControl extends React.Component<ComboProps> {
             render('add-button', {
               ...addBtn,
               type: 'button',
+              testIdBuilder: addBtnTestIdBuilder,
               onClick: () => this.addItem()
             })
           ) : (
             <Button
               className={cx(`Combo-addBtn`, addButtonClassName)}
               onClick={this.addItem}
+              testIdBuilder={addBtnTestIdBuilder}
             >
               {addIcon ? <Icon icon="plus-fine" className="icon" /> : null}
               <span>{__(addButtonText || 'add')}</span>
@@ -1485,7 +1659,8 @@ export default class ComboControl extends React.Component<ComboProps> {
       itemClassName,
       itemsWrapperClassName,
       static: isStatic,
-      mobileUI
+      mobileUI,
+      store
     } = this.props;
 
     let items = this.props.items;
@@ -1543,7 +1718,11 @@ export default class ComboControl extends React.Component<ComboProps> {
 
               return (
                 <div
-                  className={cx(`Combo-item`, itemClassName)}
+                  className={cx(
+                    `Combo-item`,
+                    itemClassName,
+                    store.memberValidMap[index] === false ? 'has-error' : ''
+                  )}
                   key={this.keys[index]}
                 >
                   {!isStatic && !disabled && draggable && thelist.length > 1 ? (
@@ -1579,7 +1758,7 @@ export default class ComboControl extends React.Component<ComboProps> {
                   ) : null}
                   <div className={cx(`Combo-itemInner`)}>
                     {finnalControls ? (
-                      this.renderItems(finnalControls, data, index)
+                      this.renderItems(finnalControls, data, index, value)
                     ) : (
                       <Alert2 level="warning" className="m-b-none">
                         {__('Combo.invalidData')}
@@ -1622,11 +1801,14 @@ export default class ComboControl extends React.Component<ComboProps> {
       nullable,
       translate: __,
       itemClassName,
-      mobileUI
+      mobileUI,
+      store
     } = this.props;
 
     let items = this.props.items;
-    const data = isObject(value) ? this.formatValue(value) : this.defaultValue;
+    const data = isObject(value)
+      ? this.formatValue(value)
+      : this.formatValue(this.defaultValue);
     let condition: ComboCondition | null = null;
 
     if (Array.isArray(conditions) && conditions.length) {
@@ -1646,7 +1828,13 @@ export default class ComboControl extends React.Component<ComboProps> {
           disabled ? 'is-disabled' : ''
         )}
       >
-        <div className={cx(`Combo-item`, itemClassName)}>
+        <div
+          className={cx(
+            `Combo-item`,
+            itemClassName,
+            store.memberValidMap[0] === false ? 'has-error' : ''
+          )}
+        >
           {condition && typeSwitchable !== false ? (
             <div className={cx('Combo-itemTag')}>
               <label>{__('Combo.type')}</label>
@@ -1682,7 +1870,12 @@ export default class ComboControl extends React.Component<ComboProps> {
   }
 
   // 为了给 editor 重写使用
-  renderItems(finnalControls: ComboSubControl[], data: object, index?: number) {
+  renderItems(
+    finnalControls: ComboSubControl[],
+    data: object,
+    index?: number,
+    originData?: any
+  ) {
     const {
       classnames: cx,
       formClassName,
@@ -1698,8 +1891,19 @@ export default class ComboControl extends React.Component<ComboProps> {
       lazyLoad,
       translate: __,
       static: isStatic,
+      testIdBuilder,
       updatePristineAfterStoreDataReInit
     } = this.props;
+    const finnalItems = Array.isArray(finnalControls)
+      ? finnalControls.map((item, itemIndex) => {
+          const indexKey = index !== undefined && index >= 0 ? `-${index}` : '';
+          const key = `item-${item.testid || item.id || itemIndex}` + indexKey;
+          return {
+            ...item,
+            testIdBuilder: testIdBuilder?.getChild(key)
+          };
+        })
+      : finnalControls;
 
     // 单个
     if (!multiple) {
@@ -1707,7 +1911,7 @@ export default class ComboControl extends React.Component<ComboProps> {
         'single',
         {
           type: 'form',
-          body: finnalControls,
+          body: finnalItems,
           wrapperComponent: 'div',
           wrapWithPanel: false,
           mode: multiLine ? subFormMode || 'normal' : 'row',
@@ -1715,13 +1919,20 @@ export default class ComboControl extends React.Component<ComboProps> {
           className: cx(`Combo-form`, formClassName)
         },
         {
+          index: 0,
           disabled: disabled,
           static: isStatic,
           data,
+          originData,
           onChange: this.handleSingleFormChange,
           ref: this.makeFormRef(0),
+          onValidChange: this.handleSubFormValid,
           onInit: this.handleSingleFormInit,
           canAccessSuperData,
+          lazyChange: changeImmediately ? false : true,
+          formLazyChange: false,
+          value: undefined,
+          formItemValue: undefined,
           formStore: undefined,
           updatePristineAfterStoreDataReInit:
             updatePristineAfterStoreDataReInit ?? false
@@ -1732,7 +1943,7 @@ export default class ComboControl extends React.Component<ComboProps> {
         `multiple/${index}`,
         {
           type: 'form',
-          body: finnalControls,
+          body: finnalItems,
           wrapperComponent: 'div',
           wrapWithPanel: false,
           mode: tabsMode ? subFormMode : multiLine ? subFormMode : 'row',
@@ -1744,11 +1955,13 @@ export default class ComboControl extends React.Component<ComboProps> {
           disabled,
           static: isStatic,
           data,
+          originData,
           onChange: this.handleChange,
           onInit: this.handleFormInit,
           onAction: this.handleAction,
           onRadioChange: this.handleRadioChange,
           ref: this.makeFormRef(index),
+          onValidChange: this.handleSubFormValid,
           canAccessSuperData,
           lazyChange: changeImmediately ? false : true,
           formLazyChange: false,
@@ -1840,7 +2053,7 @@ export class ComboControlRenderer extends ComboControl {
       } else if (condition !== undefined) {
         for (let i = 0; i < len; i++) {
           const item = items[i];
-          const isUpdate = await evalExpressionWithConditionBuilder(
+          const isUpdate = await evalExpressionWithConditionBuilderAsync(
             condition,
             item
           );

@@ -13,6 +13,7 @@ import {evalExpression} from '../utils/tpl';
 
 export const Item = types
   .model('Item', {
+    storeType: 'Item',
     id: types.identifier,
     pristine: types.frozen(),
     data: types.frozen(),
@@ -45,8 +46,7 @@ export const Item = types
           index: self.index,
 
           // 只有table时，也可以获取选中行
-          selectedItems: listStore.selectedItems.map(item => item.data),
-          unSelectedItems: listStore.unSelectedItems.map(item => item.data)
+          ...listStore.eventContext
         }),
         self.data
       );
@@ -80,6 +80,16 @@ export const Item = types
     reset() {
       self.newIndex = self.index;
       self.data = self.pristine;
+    },
+    updateData({children, ...rest}: any) {
+      self.data = {
+        ...self.data,
+        ...rest
+      };
+
+      // if (Array.isArray(children)) {
+
+      // }
     }
   }));
 
@@ -90,6 +100,13 @@ export const ListStore = iRendererStore
   .named('ListStore')
   .props({
     items: types.array(Item),
+
+    // 记录原始列表和原始选中的列表
+    // 因为如果是前端分页，上层 crud 或者 input-table 下发到这层的
+    // 是某个页区间的数据，这个时候 items 和 selectedItems 会少很多条
+    fullItems: types.optional(types.array(types.frozen()), []),
+    fullSelectedItems: types.optional(types.array(types.frozen()), []),
+
     selectedItems: types.array(types.reference(Item)),
     primaryField: 'id',
     orderBy: '',
@@ -160,6 +177,45 @@ export const ListStore = iRendererStore
 
       get movedItems() {
         return getMovedItems();
+      },
+
+      /**
+       * 构建事件的上下文数据
+       * @param buildChain
+       * @returns
+       */
+      get eventContext() {
+        const context = {
+          selectedItems: self.selectedItems.map(item => item.data),
+          selectedIndexes: self.selectedItems.map(item => item.index),
+          items: self.items.map(item => item.data),
+          unSelectedItems: this.unSelectedItems.map(item => item.data)
+        };
+
+        // 如果是前端分页情况，需要根据全量数据计算
+        // 如果不是前端分页，数据都没有返回，那种就没办法支持全量数据信息了
+        if (self.fullItems.length > self.items.length) {
+          // todo 这里的选择顺序会一直变，这个有影响吗?
+          const selectedItems = self.fullSelectedItems
+            .filter(
+              item =>
+                !self.items.find(
+                  row => row.pristine === (item.__pristine || item)
+                )
+            )
+            .concat(context.selectedItems);
+
+          context.selectedItems = selectedItems;
+          context.items = self.fullItems.concat();
+          context.unSelectedItems = self.fullItems.filter(
+            item => !selectedItems.includes(item)
+          );
+          context.selectedIndexes = selectedItems.map(item =>
+            self.fullItems.indexOf(item.__pristine || item)
+          );
+        }
+
+        return context;
       }
     };
   })
@@ -185,7 +241,11 @@ export const ListStore = iRendererStore
         (self.itemDraggableOn = config.itemDraggableOn);
     }
 
-    function initItems(items: Array<object>) {
+    function initItems(
+      items: Array<object>,
+      fullItems?: Array<any>,
+      fullSelectedItems?: Array<any>
+    ) {
       let arr = items.map((item, key) => {
         item = isObject(item)
           ? item
@@ -198,32 +258,42 @@ export const ListStore = iRendererStore
           id: guid(),
           index: key,
           newIndex: key,
-          pristine: item,
-          data: item,
-          modified: false
+          pristine: (item as any).__pristine || item,
+          data: item
         };
       });
       self.selectedItems.clear();
       self.items.replace(arr as Array<IItem>);
       self.dragging = false;
+      Array.isArray(fullItems) && self.fullItems.replace(fullItems);
+      Array.isArray(fullSelectedItems) &&
+        self.fullSelectedItems.replace(fullSelectedItems);
     }
 
     function updateSelected(selected: Array<any>, valueField?: string) {
       self.selectedItems.clear();
-      self.items.forEach(item => {
-        if (~selected.indexOf(item.pristine)) {
-          self.selectedItems.push(item);
-        } else if (
-          find(selected, a => {
-            const selectValue = a[valueField || 'value'];
-            const itemValue = item.pristine[valueField || 'value'];
-            return self.strictMode
-              ? selectValue === itemValue
-              : selectValue == itemValue;
-          })
-        ) {
-          self.selectedItems.push(item);
+      selected.forEach(item => {
+        let resolved = self.items.find(a => a.pristine === item);
+
+        // 先严格比较，
+        if (!resolved) {
+          resolved = self.items.find(a => {
+            const selectValue = item[valueField || 'value'];
+            const itemValue = a.pristine[valueField || 'value'];
+            return selectValue === itemValue;
+          });
         }
+
+        // 再宽松比较
+        if (!resolved) {
+          resolved = self.items.find(a => {
+            const selectValue = item[valueField || 'value'];
+            const itemValue = a.pristine[valueField || 'value'];
+            return selectValue == itemValue;
+          });
+        }
+
+        resolved && self.selectedItems.push(resolved);
       });
     }
 
@@ -279,6 +349,10 @@ export const ListStore = iRendererStore
       self.dragging = !self.dragging;
     }
 
+    function startDragging() {
+      self.dragging = true;
+    }
+
     function stopDragging() {
       self.dragging = false;
     }
@@ -294,7 +368,14 @@ export const ListStore = iRendererStore
       self.items.replace(newItems);
     }
 
+    function getData(superData: any): any {
+      return createObject(superData, {
+        ...self.eventContext
+      });
+    }
+
     return {
+      getData,
       update,
       initItems,
       updateSelected,
@@ -306,6 +387,7 @@ export const ListStore = iRendererStore
       setOrderByInfo,
       reset,
       toggleDragging,
+      startDragging,
       stopDragging,
       exchange
     };

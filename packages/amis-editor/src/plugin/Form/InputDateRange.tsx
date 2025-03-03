@@ -1,14 +1,22 @@
-import {defaultValue, getSchemaTpl, tipedLabel} from 'amis-editor-core';
-import {registerEditorPlugin} from 'amis-editor-core';
-import {BasePlugin, BaseEventContext} from 'amis-editor-core';
-
-import {ValidatorTag} from '../../validator';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
-import {FormulaDateType} from '../../renderer/FormulaControl';
-import {RendererPluginAction, RendererPluginEvent} from 'amis-editor-core';
+import {
+  defaultValue,
+  getSchemaTpl,
+  tipedLabel,
+  registerEditorPlugin,
+  BasePlugin,
+  BaseEventContext,
+  RendererPluginAction,
+  RendererPluginEvent
+} from 'amis-editor-core';
 import {getRendererByName} from 'amis-core';
 import omit from 'lodash/omit';
 import type {Schema} from 'amis';
+import {ValidatorTag} from '../../validator';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../../renderer/event-control/helper';
+import {FormulaDateType} from '../../renderer/FormulaControl';
 
 const formatX = [
   {
@@ -194,7 +202,7 @@ export class DateRangeControlPlugin extends BasePlugin {
   isBaseComponent = true;
   // 添加源对应组件中文名称 & type字段
   searchKeywords =
-    '日期范围框、input-datetime-range、日期时间范围、input-time-range、时间范围、input-month-range、月份范围、input-quarter-range、季度范围、input-year-range、年范围';
+    '日期范围框、input-datetime-range、日期时间范围、input-time-range、时间范围、input-month-range、月份范围、input-quarter-range、季度范围、input-year-range、年范围、年份范围';
   description =
     '日期范围选择，可通过<code>minDate</code>、<code>maxDate</code>设定最小、最大日期';
   docLink = '/amis/zh-CN/components/form/input-date-range';
@@ -294,17 +302,20 @@ export class DateRangeControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清空输入框内容'
+      description: '清空输入框内容',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '将值重置为resetValue，若没有配置resetValue，则清空'
+      description: '将值重置为初始值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -404,7 +415,9 @@ export class DateRangeControlPlugin extends BasePlugin {
                 getSchemaTpl('clearable', {
                   pipeIn: defaultValue(true)
                 }),
-
+                getSchemaTpl('inputForbid', {
+                  pipeIn: defaultValue(false)
+                }),
                 getSchemaTpl('valueFormula', {
                   rendererSchema: (schema: Schema) => ({
                     ...schema,
@@ -506,7 +519,14 @@ export class DateRangeControlPlugin extends BasePlugin {
             },
             getSchemaTpl('status', {isFormItem: true}),
             getSchemaTpl('validation', {
-              tag: ValidatorTag.Date
+              tag: ValidatorTag.Date,
+              rendererSchema: (schema: Schema) => {
+                return {
+                  ...schema,
+                  label: '值内容',
+                  validateName: 'equals'
+                };
+              }
             })
           ],
           {...context?.schema, configTitle: 'props'}

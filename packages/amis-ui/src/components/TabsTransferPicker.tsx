@@ -28,7 +28,7 @@ export class TransferPicker extends React.Component<TabsTransferPickerProps> {
   }
 
   @autobind
-  onFoucs() {
+  onFocus() {
     this.props.onFocus?.();
   }
 
@@ -51,6 +51,7 @@ export class TransferPicker extends React.Component<TabsTransferPickerProps> {
       popOverContainer,
       maxTagCount,
       overflowTagPopover,
+      placeholder,
       ...rest
     } = this.props;
 
@@ -59,7 +60,7 @@ export class TransferPicker extends React.Component<TabsTransferPickerProps> {
         title={__('Select.placeholder')}
         mobileUI={mobileUI}
         popOverContainer={popOverContainer}
-        onFocus={this.onFoucs}
+        onFocus={this.onFocus}
         onClose={this.onBlur}
         bodyRender={({onClose, value, onChange, setState, ...states}) => {
           return (
@@ -100,7 +101,7 @@ export class TransferPicker extends React.Component<TabsTransferPickerProps> {
             result={value}
             onResultChange={onChange}
             onResultClick={onClick}
-            placeholder={__('Select.placeholder')}
+            placeholder={placeholder ?? __('Select.placeholder')}
             disabled={disabled}
             itemRender={option => (
               <span>{(option && option[labelField]) || 'undefiend'}</span>

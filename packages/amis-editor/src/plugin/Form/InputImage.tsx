@@ -5,28 +5,31 @@ import {
   RendererPluginEvent,
   BasePlugin,
   BaseEventContext,
-  registerEditorPlugin
+  registerEditorPlugin,
+  tipedLabel
 } from 'amis-editor-core';
-import {tipedLabel} from 'amis-editor-core';
-import {getEventControlConfig} from '../../renderer/event-control/helper';
+import {
+  getEventControlConfig,
+  getActionCommonProps
+} from '../../renderer/event-control/helper';
 import {ValidatorTag} from '../../validator';
 
 const addBtnCssClassName = 'themeCss.addBtnControlClassName';
 const IconCssClassName = 'themeCss.iconControlClassName';
-const editorPath = 'inputImage.base';
+const editorPath = '--inputImage-base';
 const inputStateFunc = (visibleOn: string, state: string) => {
   return [
     getSchemaTpl('theme:border', {
       name: `${addBtnCssClassName}.border:${state}`,
       visibleOn: visibleOn,
-      editorThemePath: `${editorPath}.${state}.body.border`
+      editorValueToken: `${editorPath}-${state}`
     }),
     getSchemaTpl('theme:colorPicker', {
       label: '文字',
       name: `${addBtnCssClassName}.color:${state}`,
       labelMode: 'input',
       visibleOn: visibleOn,
-      editorThemePath: `${editorPath}.${state}.body.color`
+      editorValueToken: `${editorPath}-${state}-color`
     }),
     getSchemaTpl('theme:colorPicker', {
       label: '背景',
@@ -35,14 +38,14 @@ const inputStateFunc = (visibleOn: string, state: string) => {
       needGradient: true,
       needImage: true,
       visibleOn: visibleOn,
-      editorThemePath: `${editorPath}.${state}.body.bg-color`
+      editorValueToken: `${editorPath}-${state}-bg-color`
     }),
     getSchemaTpl('theme:colorPicker', {
       label: '图标',
       name: `${addBtnCssClassName}.icon-color:${state}`,
       labelMode: 'input',
       visibleOn: visibleOn,
-      editorThemePath: `${editorPath}.${state}.body.icon-color`
+      editorValueToken: `${editorPath}-${state}-icon-color`
     })
   ];
 };
@@ -189,12 +192,14 @@ export class ImageControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空数据',
-      description: '清除选择的文件'
+      description: '清除选择的文件',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -238,7 +243,7 @@ export class ImageControlPlugin extends BasePlugin {
               },
 
               getSchemaTpl('uploadType', {
-                visibleOn: 'data.submitType === "asUpload" || !data.submitType',
+                visibleOn: 'this.submitType === "asUpload" || !this.submitType',
                 pipeIn: (value: any, form: any) => value || 'fileReceptor',
                 pipeOut: (value: any, form: any) => value || 'fileReceptor'
               }),
@@ -250,13 +255,13 @@ export class ImageControlPlugin extends BasePlugin {
                   '文件接收器',
                   '文件接收接口，默认不填则上传到 hiphoto'
                 ),
-                visibleOn: 'data.uploadType === "fileReceptor"',
+                visibleOn: 'this.uploadType === "fileReceptor"',
                 value: '/api/upload',
                 __isUpload: true
               }),
 
               getSchemaTpl('bos', {
-                visibleOn: 'data.uploadType === "bos"'
+                visibleOn: 'this.uploadType === "bos"'
               }),
 
               getSchemaTpl('proxy', {
@@ -267,7 +272,7 @@ export class ImageControlPlugin extends BasePlugin {
               getSchemaTpl('multiple', {
                 patch: {
                   value: false,
-                  visibleOn: '!data.crop',
+                  visibleOn: '!this.crop',
                   label: tipedLabel('可多选', '开启后，不能同时开启裁剪功能')
                 },
                 body: [
@@ -302,7 +307,7 @@ export class ImageControlPlugin extends BasePlugin {
               // {
               //   type: 'container',
               //   className: 'ae-ExtendMore mb-3',
-              //   visibleOn: 'data.compress',
+              //   visibleOn: 'this.compress',
               //   name: 'compressOptions',
               //   body: [
               //     {
@@ -326,7 +331,7 @@ export class ImageControlPlugin extends BasePlugin {
 
               getSchemaTpl('switch', {
                 name: 'crop',
-                visibleOn: '!data.multiple',
+                visibleOn: '!this.multiple',
                 label: tipedLabel('开启裁剪', '开启后，不能同时开启多选模式'),
                 pipeIn: (value: any) => !!value
               }),
@@ -334,7 +339,7 @@ export class ImageControlPlugin extends BasePlugin {
               {
                 type: 'container',
                 className: 'ae-ExtendMore mb-3',
-                visibleOn: 'data.crop',
+                visibleOn: 'this.crop',
                 body: [
                   {
                     name: 'crop.aspectRatio',
@@ -365,6 +370,18 @@ export class ImageControlPlugin extends BasePlugin {
                       {label: '绘图区域', value: 1}
                     ],
                     pipeOut: valuePipeOut
+                  },
+                  {
+                    name: 'cropQuality',
+                    type: 'input-number',
+                    label: tipedLabel(
+                      '压缩质量',
+                      '裁剪后会重新生成，体积可能会变大，需要设置压缩质量降低体积，数值越小压缩率越高'
+                    ),
+                    step: 0.1,
+                    min: 0.1,
+                    max: 1,
+                    value: 0.7
                   }
                 ]
               },
@@ -372,13 +389,25 @@ export class ImageControlPlugin extends BasePlugin {
               getSchemaTpl('switch', {
                 name: 'limit',
                 label: '图片限制',
-                pipeIn: (value: any) => !!value
+                pipeIn: (value: any) => !!value,
+                onChange: (
+                  value: any,
+                  oldValue: boolean,
+                  model: any,
+                  form: any
+                ) => {
+                  if (!value) {
+                    form.setValues({
+                      maxSize: undefined
+                    });
+                  }
+                }
               }),
 
               {
                 type: 'container',
                 className: 'ae-ExtendMore mb-3',
-                visibleOn: 'data.limit',
+                visibleOn: 'this.limit',
                 body: [
                   {
                     name: 'maxSize',
@@ -467,7 +496,7 @@ export class ImageControlPlugin extends BasePlugin {
               body: [
                 {
                   type: 'select',
-                  name: 'editorState',
+                  name: '__editorState',
                   label: '状态',
                   selectFirst: true,
                   options: [
@@ -486,15 +515,15 @@ export class ImageControlPlugin extends BasePlugin {
                   ]
                 },
                 ...inputStateFunc(
-                  "${editorState == 'default' || !editorState}",
+                  "${__editorState == 'default' || !__editorState}",
                   'default'
                 ),
-                ...inputStateFunc("${editorState == 'hover'}", 'hover'),
-                ...inputStateFunc("${editorState == 'active'}", 'active'),
+                ...inputStateFunc("${__editorState == 'hover'}", 'hover'),
+                ...inputStateFunc("${__editorState == 'active'}", 'active'),
                 getSchemaTpl('theme:radius', {
                   name: `${addBtnCssClassName}.border-radius`,
                   label: '圆角',
-                  editorThemePath: `${editorPath}.default.body.border`
+                  editorValueToken: `${editorPath}-default`
                 }),
                 {
                   name: `${addBtnCssClassName}.--inputImage-base-default-icon`,
@@ -505,12 +534,12 @@ export class ImageControlPlugin extends BasePlugin {
                 getSchemaTpl('theme:select', {
                   name: `${IconCssClassName}.iconSize`,
                   label: '图标大小',
-                  editorThemePath: `${editorPath}.default.body.icon-size`
+                  editorValueToken: `${editorPath}-default-icon-size`
                 }),
                 getSchemaTpl('theme:select', {
                   name: `${IconCssClassName}.margin-bottom`,
                   label: '图标底边距',
-                  editorThemePath: `${editorPath}.default.body.icon-margin`
+                  editorValueToken: `${editorPath}-default-icon-margin`
                 })
               ]
             },

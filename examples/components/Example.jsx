@@ -32,6 +32,7 @@ import FormLayoutTestSchema from './Form/layoutTest';
 import Definitions from './Form/Definitions';
 import AnchorNav from './Form/AnchorNav';
 import InputKVSSchema from './Form/InputKVS';
+import TimelineSchema from "./Timeline";
 import Tree from './Form/Tree';
 
 import TableCrudSchema from './CRUD/Table';
@@ -57,6 +58,8 @@ import LoadOnceTableCrudSchema from './CRUD/LoadOnce';
 import ExportCSVExcelSchema from './CRUD/ExportCSVExcel';
 import CRUDDynamicSchema from './CRUD/Dynamic';
 import CRUDSimplePagerSchema from './CRUD/SimplePager';
+import CRUDParsePrimitiveQuerySchema from './CRUD/ParsePrimitiveQuery';
+import CRUDMatchFuncSchema from './CRUD/MatchFunc';
 import ItemActionchema from './CRUD/ItemAction';
 import SdkTest from './Sdk/Test';
 import JSONSchemaForm from './Form/Schem';
@@ -128,6 +131,7 @@ import Tab3Schema from './Tabs/Tab3';
 import Loading from './Loading';
 import CodeSchema from './Code';
 import OfficeViewer from './OfficeViewer';
+import PdfViewer from './PdfViewer';
 import InputTableEvent from './EventAction/cmpt-event-action/InputTableEvent';
 import WizardPage from './WizardPage';
 
@@ -437,9 +441,20 @@ export const examples = [
             component: makeSchemaRenderer(PopOverCrudSchema)
           },
           {
-            label: '一次性加载',
-            path: '/examples/crud/load-once',
-            component: makeSchemaRenderer(LoadOnceTableCrudSchema)
+            label: '前端分页',
+            icon: 'fa fa-list-ol',
+            children: [
+              {
+                label: '一次性加载',
+                path: '/examples/crud/load-once',
+                component: makeSchemaRenderer(LoadOnceTableCrudSchema)
+              },
+              {
+                label: '匹配函数',
+                path: '/examples/crud/match-func',
+                component: makeSchemaRenderer(CRUDMatchFuncSchema)
+              }
+            ]
           },
           {
             label: '点击联动',
@@ -460,6 +475,11 @@ export const examples = [
             label: '简单分页',
             path: '/examples/crud/simple-pager',
             component: makeSchemaRenderer(CRUDSimplePagerSchema)
+          },
+          {
+            label: '解析Query参数',
+            path: '/examples/crud/parse-primitive-query',
+            component: makeSchemaRenderer(CRUDParsePrimitiveQuerySchema)
           }
           // {
           //     label: '测试',
@@ -649,12 +669,7 @@ export const examples = [
               {
                 label: '更新全局变量数据',
                 path: '/examples/action/setdata/variable',
-                component: makeSchemaRenderer(
-                  SetVariable.schema,
-                  SetVariable.props ?? {},
-                  true,
-                  SetVariable.env
-                )
+                component: makeSchemaRenderer(SetVariable)
               }
             ]
           },
@@ -895,6 +910,13 @@ export const examples = [
       },
 
       {
+        label: 'Pdf 预览',
+        icon: 'fa fa-file-pdf',
+        path: '/examples/pdf-viewer',
+        component: makeSchemaRenderer(PdfViewer)
+      },
+
+      {
         label: '多 loading',
         icon: 'fa fa-spinner',
         path: '/examples/loading',
@@ -922,6 +944,12 @@ export const examples = [
         icon: 'fa fa-desktop',
         path: '/examples/wizard-page',
         component: makeSchemaRenderer(WizardPage)
+      },
+      {
+        label: '时间轴',
+        icon: 'fa fa-list-ol',
+        path: '/examples/timeline',
+        component: makeSchemaRenderer(TimelineSchema)
       }
 
       // {

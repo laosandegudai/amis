@@ -1,17 +1,18 @@
-import {EditorNodeType, getSchemaTpl} from 'amis-editor-core';
-import {registerEditorPlugin} from 'amis-editor-core';
 import {
+  EditorManager,
+  EditorNodeType,
+  getSchemaTpl,
+  tipedLabel,
   BasePlugin,
-  BasicSubRenderInfo,
-  RendererEventContext,
-  SubRendererInfo,
-  BaseEventContext
+  BaseEventContext,
+  registerEditorPlugin,
+  RendererPluginAction,
+  RendererPluginEvent
 } from 'amis-editor-core';
-
 import {formItemControl} from '../../component/BaseControl';
-import {RendererPluginAction, RendererPluginEvent} from 'amis-editor-core';
-import {resolveOptionType} from '../../util';
+import {resolveOptionEventDataSchame, resolveOptionType} from '../../util';
 import type {Schema} from 'amis';
+import {getActionCommonProps} from '../../renderer/event-control/helper';
 
 export class TagControlPlugin extends BasePlugin {
   static id = 'TagControlPlugin';
@@ -26,6 +27,7 @@ export class TagControlPlugin extends BasePlugin {
   icon = 'fa fa-tag';
   pluginIcon = 'input-tag-plugin';
   description = '配置 options 可以实现选择选项';
+  searchKeywords = '标签选择器';
   docLink = '/amis/zh-CN/components/form/input-tag';
   tags = ['表单项'];
   scaffold = {
@@ -60,83 +62,85 @@ export class TagControlPlugin extends BasePlugin {
       eventName: 'change',
       eventLabel: '值变化',
       description: '选中值变化',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'array',
-                  title: '当前标签值'
+      dataSchema: (manager: EditorManager) => {
+        const {value, selectedItems, items} = resolveOptionEventDataSchame(
+          manager,
+          true
+        );
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value,
+                  selectedItems,
+                  items
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     },
     {
       eventName: 'focus',
       eventLabel: '获取焦点',
       description: '获取焦点',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'string',
-                  title: '当前标签值'
-                },
-                selectedItems: {
-                  type: 'array',
-                  title: '选中的标签'
-                },
-                items: {
-                  type: 'array',
-                  title: '标签列表'
+      dataSchema: (manager: EditorManager) => {
+        const {value, selectedItems, items} = resolveOptionEventDataSchame(
+          manager,
+          true
+        );
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value,
+                  selectedItems,
+                  items
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     },
     {
       eventName: 'blur',
       eventLabel: '失去焦点',
       description: '失去焦点',
-      dataSchema: [
-        {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'object',
-              title: '数据',
-              properties: {
-                value: {
-                  type: 'string',
-                  title: '当前标签值'
-                },
-                selectedItems: {
-                  type: 'array',
-                  title: '选中的标签'
-                },
-                items: {
-                  type: 'array',
-                  title: '标签列表'
+      dataSchema: (manager: EditorManager) => {
+        const {value, selectedItems, items} = resolveOptionEventDataSchame(
+          manager,
+          true
+        );
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  value,
+                  selectedItems,
+                  items
                 }
               }
             }
           }
-        }
-      ]
+        ];
+      }
     }
   ];
 
@@ -145,17 +149,20 @@ export class TagControlPlugin extends BasePlugin {
     {
       actionType: 'clear',
       actionLabel: '清空',
-      description: '清除选中值'
+      description: '清除选中值',
+      ...getActionCommonProps('clear')
     },
     {
       actionType: 'reset',
       actionLabel: '重置',
-      description: '重置为默认值'
+      description: '重置为默认值',
+      ...getActionCommonProps('reset')
     },
     {
       actionType: 'setValue',
       actionLabel: '赋值',
-      description: '触发组件数据更新'
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
     }
   ];
 
@@ -179,6 +186,12 @@ export class TagControlPlugin extends BasePlugin {
             getSchemaTpl('joinValues'),
             getSchemaTpl('delimiter'),
             getSchemaTpl('extractValue'),
+            {
+              type: 'input-number',
+              name: 'max',
+              label: tipedLabel('最大标签数量', '最多选择的标签数量'),
+              min: 1
+            },
             getSchemaTpl('autoFillApi', {
               visibleOn:
                 '!this.autoFill || this.autoFill.scene && this.autoFill.action'
@@ -203,7 +216,7 @@ export class TagControlPlugin extends BasePlugin {
   };
 
   buildDataSchemas(node: EditorNodeType, region: EditorNodeType) {
-    const type = resolveOptionType(node.schema?.options);
+    const type = resolveOptionType(node.schema);
     // todo:异步数据case
     let dataSchema: any = {
       type,

@@ -25,7 +25,7 @@ exports[`doAction:form clear 1`] = `
           </button>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -34,7 +34,7 @@ exports[`doAction:form clear 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -278,6 +278,7 @@ exports[`doAction:form clear 1`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="name"
                   data-role="form-item"
                 >
                   <label
@@ -285,7 +286,7 @@ exports[`doAction:form clear 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           姓名：
@@ -329,44 +330,253 @@ exports[`doAction:form clear 1`] = `
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`doAction:form force validate before submit 1`] = `
+<div>
+  <div
+    class="cxd-Page"
+  >
+    <div
+      class="cxd-Page-content"
+    >
+      <div
+        class="cxd-Page-main"
+      >
+        <div
+          class="cxd-Page-body"
+          role="page-body"
+        >
+          <div
+            class="cxd-Panel cxd-Panel--default cxd-Panel--form"
+            data-role="container"
+          >
             <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
+              class="cxd-Panel-heading"
             >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
+              <h3
+                class="cxd-Panel-title"
               >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
+                <span
+                  class="cxd-TplField fr-view"
+                >
+                  <span>
+                    表单
+                  </span>
+                </span>
+              </h3>
+            </div>
+            <div
+              class="cxd-Panel-body"
+            >
+              <form
+                class="cxd-Form cxd-Form--normal"
+                novalidate=""
               >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
+                <input
+                  style="display: none;"
+                  type="submit"
                 />
-                
-  
-              </div>
-              
-  
+                <div
+                  class="cxd-Form-item cxd-Form-item--normal is-error has-error--equalsField"
+                  data-amis-name="value1"
+                  data-role="form-item"
+                >
+                  <div
+                    class="cxd-Form-control is-error has-error--equalsField cxd-TextControl"
+                  >
+                    <div
+                      class="cxd-TextControl-input"
+                    >
+                      <input
+                        autocomplete="off"
+                        class=""
+                        name="value1"
+                        placeholder=""
+                        size="10"
+                        type="text"
+                        value="1"
+                      />
+                    </div>
+                  </div>
+                  <ul
+                    class="cxd-Form-feedback"
+                  >
+                    <li>
+                      输入的数据与 value2 值不一致
+                    </li>
+                  </ul>
+                </div>
+                <div
+                  class="cxd-Form-item cxd-Form-item--normal is-error has-error--equalsField"
+                  data-amis-name="value2"
+                  data-role="form-item"
+                >
+                  <div
+                    class="cxd-Form-control is-error has-error--equalsField cxd-TextControl"
+                  >
+                    <div
+                      class="cxd-TextControl-input"
+                    >
+                      <input
+                        autocomplete="off"
+                        class=""
+                        name="value2"
+                        placeholder=""
+                        size="10"
+                        type="text"
+                        value=""
+                      />
+                    </div>
+                  </div>
+                  <ul
+                    class="cxd-Form-feedback"
+                  >
+                    <li>
+                      输入的数据与 value1 值不一致
+                    </li>
+                  </ul>
+                </div>
+              </form>
+            </div>
+            <div
+              class="cxd-Panel-footerWrap"
+            >
               <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
+                class="cxd-Panel-btnToolbar cxd-Panel-footer"
+              >
+                <button
+                  class="cxd-Button cxd-Button--primary cxd-Button--size-default"
+                  type="submit"
+                >
+                  <span>
+                    提交
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`doAction:form force validate before submit 2`] = `
+<div>
+  <div
+    class="cxd-Page"
+  >
+    <div
+      class="cxd-Page-content"
+    >
+      <div
+        class="cxd-Page-main"
+      >
+        <div
+          class="cxd-Page-body"
+          role="page-body"
+        >
+          <div
+            class="cxd-Panel cxd-Panel--default cxd-Panel--form"
+            data-role="container"
+          >
+            <div
+              class="cxd-Panel-heading"
+            >
+              <h3
+                class="cxd-Panel-title"
+              >
+                <span
+                  class="cxd-TplField fr-view"
+                >
+                  <span>
+                    表单
+                  </span>
+                </span>
+              </h3>
+            </div>
+            <div
+              class="cxd-Panel-body"
+            >
+              <form
+                class="cxd-Form cxd-Form--normal"
+                novalidate=""
+              >
+                <input
+                  style="display: none;"
+                  type="submit"
+                />
+                <div
+                  class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="value1"
+                  data-role="form-item"
+                >
+                  <div
+                    class="cxd-Form-control cxd-TextControl"
+                  >
+                    <div
+                      class="cxd-TextControl-input"
+                    >
+                      <input
+                        autocomplete="off"
+                        class=""
+                        name="value1"
+                        placeholder=""
+                        size="10"
+                        type="text"
+                        value="1"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="value2"
+                  data-role="form-item"
+                >
+                  <div
+                    class="cxd-Form-control cxd-TextControl"
+                  >
+                    <div
+                      class="cxd-TextControl-input"
+                    >
+                      <input
+                        autocomplete="off"
+                        class=""
+                        name="value2"
+                        placeholder=""
+                        size="10"
+                        type="text"
+                        value="1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div
+              class="cxd-Panel-footerWrap"
+            >
+              <div
+                class="cxd-Panel-btnToolbar cxd-Panel-footer"
+              >
+                <button
+                  class="cxd-Button cxd-Button--primary cxd-Button--size-default"
+                  type="submit"
+                >
+                  <span>
+                    提交
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -401,7 +611,7 @@ exports[`doAction:form reset 1`] = `
           </button>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -410,7 +620,7 @@ exports[`doAction:form reset 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -442,6 +652,7 @@ exports[`doAction:form reset 1`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="name"
                   data-role="form-item"
                 >
                   <label
@@ -449,7 +660,7 @@ exports[`doAction:form reset 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           姓名：
@@ -478,6 +689,7 @@ exports[`doAction:form reset 1`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="author"
                   data-role="form-item"
                 >
                   <label
@@ -485,7 +697,7 @@ exports[`doAction:form reset 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           作者：
@@ -530,45 +742,6 @@ exports[`doAction:form reset 1`] = `
                 </div>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -602,7 +775,7 @@ exports[`doAction:form reset 2`] = `
           </button>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -611,7 +784,7 @@ exports[`doAction:form reset 2`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -643,6 +816,7 @@ exports[`doAction:form reset 2`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="name"
                   data-role="form-item"
                 >
                   <label
@@ -650,7 +824,7 @@ exports[`doAction:form reset 2`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           姓名：
@@ -678,6 +852,7 @@ exports[`doAction:form reset 2`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="author"
                   data-role="form-item"
                 >
                   <label
@@ -685,7 +860,7 @@ exports[`doAction:form reset 2`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           作者：
@@ -729,45 +904,6 @@ exports[`doAction:form reset 2`] = `
                 </button>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -801,7 +937,7 @@ exports[`doAction:form setValue 1`] = `
           </button>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -810,7 +946,7 @@ exports[`doAction:form setValue 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -831,6 +967,7 @@ exports[`doAction:form setValue 1`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="name"
                   data-role="form-item"
                 >
                   <label
@@ -838,7 +975,7 @@ exports[`doAction:form setValue 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           姓名：
@@ -866,6 +1003,7 @@ exports[`doAction:form setValue 1`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal"
+                  data-amis-name="email"
                   data-role="form-item"
                 >
                   <label
@@ -873,7 +1011,7 @@ exports[`doAction:form setValue 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           邮箱：
@@ -917,45 +1055,6 @@ exports[`doAction:form setValue 1`] = `
                 </button>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -997,7 +1096,7 @@ exports[`doAction:form static&nonstatic 1`] = `
           </button>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -1006,7 +1105,7 @@ exports[`doAction:form static&nonstatic 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -1027,6 +1126,7 @@ exports[`doAction:form static&nonstatic 1`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--horizontal"
+                  data-amis-name="text"
                   data-role="form-item"
                 >
                   <label
@@ -1034,7 +1134,7 @@ exports[`doAction:form static&nonstatic 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           输入框
@@ -1069,45 +1169,6 @@ exports[`doAction:form static&nonstatic 1`] = `
                   </span>
                 </button>
               </div>
-            </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
             </div>
           </div>
         </div>
@@ -1150,7 +1211,7 @@ exports[`doAction:form static&nonstatic 2`] = `
           </button>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -1159,7 +1220,7 @@ exports[`doAction:form static&nonstatic 2`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -1180,6 +1241,7 @@ exports[`doAction:form static&nonstatic 2`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--horizontal"
+                  data-amis-name="text"
                   data-role="form-item"
                 >
                   <label
@@ -1187,7 +1249,7 @@ exports[`doAction:form static&nonstatic 2`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           输入框
@@ -1235,45 +1297,6 @@ exports[`doAction:form static&nonstatic 2`] = `
                 </button>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -1307,6 +1330,7 @@ exports[`doAction:form submit 1`] = `
           </button>
           <div
             class="cxd-Form-item cxd-Form-item--normal"
+            data-amis-name="submit_info"
             data-role="form-item"
           >
             <label
@@ -1314,7 +1338,7 @@ exports[`doAction:form submit 1`] = `
             >
               <span>
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     提交信息：
@@ -1353,7 +1377,7 @@ exports[`doAction:form submit 1`] = `
           </div>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -1362,7 +1386,7 @@ exports[`doAction:form submit 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -1383,6 +1407,7 @@ exports[`doAction:form submit 1`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-error is-required has-error--isRequired"
+                  data-amis-name="name"
                   data-role="form-item"
                 >
                   <label
@@ -1390,7 +1415,7 @@ exports[`doAction:form submit 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           姓名：
@@ -1430,6 +1455,7 @@ exports[`doAction:form submit 1`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-error is-required has-error--isRequired"
+                  data-amis-name="email"
                   data-role="form-item"
                 >
                   <label
@@ -1437,7 +1463,7 @@ exports[`doAction:form submit 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           邮箱：
@@ -1493,45 +1519,6 @@ exports[`doAction:form submit 1`] = `
                 </button>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -1565,6 +1552,7 @@ exports[`doAction:form submit 2`] = `
           </button>
           <div
             class="cxd-Form-item cxd-Form-item--normal"
+            data-amis-name="submit_info"
             data-role="form-item"
           >
             <label
@@ -1572,7 +1560,7 @@ exports[`doAction:form submit 2`] = `
             >
               <span>
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     提交信息：
@@ -1600,7 +1588,7 @@ exports[`doAction:form submit 2`] = `
           </div>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -1609,7 +1597,7 @@ exports[`doAction:form submit 2`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -1630,6 +1618,7 @@ exports[`doAction:form submit 2`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-error is-required has-error--isRequired"
+                  data-amis-name="name"
                   data-role="form-item"
                 >
                   <label
@@ -1637,7 +1626,7 @@ exports[`doAction:form submit 2`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           姓名：
@@ -1677,6 +1666,7 @@ exports[`doAction:form submit 2`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-error is-required has-error--isRequired"
+                  data-amis-name="email"
                   data-role="form-item"
                 >
                   <label
@@ -1684,7 +1674,7 @@ exports[`doAction:form submit 2`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           邮箱：
@@ -1740,45 +1730,6 @@ exports[`doAction:form submit 2`] = `
                 </button>
               </div>
             </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -1812,6 +1763,7 @@ exports[`doAction:form submit 3`] = `
           </button>
           <div
             class="cxd-Form-item cxd-Form-item--normal"
+            data-amis-name="submit_info"
             data-role="form-item"
           >
             <label
@@ -1819,7 +1771,7 @@ exports[`doAction:form submit 3`] = `
             >
               <span>
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     提交信息：
@@ -1856,7 +1808,7 @@ exports[`doAction:form submit 3`] = `
           </div>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -1865,7 +1817,7 @@ exports[`doAction:form submit 3`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -1886,6 +1838,7 @@ exports[`doAction:form submit 3`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-required"
+                  data-amis-name="name"
                   data-role="form-item"
                 >
                   <label
@@ -1893,7 +1846,7 @@ exports[`doAction:form submit 3`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           姓名：
@@ -1926,6 +1879,7 @@ exports[`doAction:form submit 3`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-required"
+                  data-amis-name="email"
                   data-role="form-item"
                 >
                   <label
@@ -1933,7 +1887,7 @@ exports[`doAction:form submit 3`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           邮箱：
@@ -1981,45 +1935,6 @@ exports[`doAction:form submit 3`] = `
                   </span>
                 </button>
               </div>
-            </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
             </div>
           </div>
         </div>
@@ -2054,6 +1969,7 @@ exports[`doAction:form validate 1`] = `
           </button>
           <div
             class="cxd-Form-item cxd-Form-item--normal"
+            data-amis-name="validate_info"
             data-role="form-item"
           >
             <label
@@ -2061,7 +1977,7 @@ exports[`doAction:form validate 1`] = `
             >
               <span>
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     验证信息：
@@ -2100,7 +2016,7 @@ exports[`doAction:form validate 1`] = `
           </div>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -2109,7 +2025,7 @@ exports[`doAction:form validate 1`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -2130,6 +2046,7 @@ exports[`doAction:form validate 1`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-error is-required has-error--isRequired"
+                  data-amis-name="name"
                   data-role="form-item"
                 >
                   <label
@@ -2137,7 +2054,7 @@ exports[`doAction:form validate 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           姓名：
@@ -2177,6 +2094,7 @@ exports[`doAction:form validate 1`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-error is-required has-error--isRequired"
+                  data-amis-name="email"
                   data-role="form-item"
                 >
                   <label
@@ -2184,7 +2102,7 @@ exports[`doAction:form validate 1`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           邮箱：
@@ -2239,45 +2157,6 @@ exports[`doAction:form validate 1`] = `
                   </span>
                 </button>
               </div>
-            </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
             </div>
           </div>
         </div>
@@ -2312,6 +2191,7 @@ exports[`doAction:form validate 2`] = `
           </button>
           <div
             class="cxd-Form-item cxd-Form-item--normal"
+            data-amis-name="validate_info"
             data-role="form-item"
           >
             <label
@@ -2319,7 +2199,7 @@ exports[`doAction:form validate 2`] = `
             >
               <span>
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     验证信息：
@@ -2358,7 +2238,7 @@ exports[`doAction:form validate 2`] = `
           </div>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -2367,7 +2247,7 @@ exports[`doAction:form validate 2`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -2388,6 +2268,7 @@ exports[`doAction:form validate 2`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-error is-required has-error--isRequired"
+                  data-amis-name="name"
                   data-role="form-item"
                 >
                   <label
@@ -2395,7 +2276,7 @@ exports[`doAction:form validate 2`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           姓名：
@@ -2435,6 +2316,7 @@ exports[`doAction:form validate 2`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-error is-required has-error--isRequired"
+                  data-amis-name="email"
                   data-role="form-item"
                 >
                   <label
@@ -2442,7 +2324,7 @@ exports[`doAction:form validate 2`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           邮箱：
@@ -2497,45 +2379,6 @@ exports[`doAction:form validate 2`] = `
                   </span>
                 </button>
               </div>
-            </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
             </div>
           </div>
         </div>
@@ -2570,6 +2413,7 @@ exports[`doAction:form validate 3`] = `
           </button>
           <div
             class="cxd-Form-item cxd-Form-item--normal"
+            data-amis-name="validate_info"
             data-role="form-item"
           >
             <label
@@ -2577,7 +2421,7 @@ exports[`doAction:form validate 3`] = `
             >
               <span>
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     验证信息：
@@ -2611,7 +2455,7 @@ exports[`doAction:form validate 3`] = `
           </div>
           <div
             class="cxd-Panel cxd-Panel--default cxd-Panel--form"
-            style="position: relative;"
+            data-role="container"
           >
             <div
               class="cxd-Panel-heading"
@@ -2620,7 +2464,7 @@ exports[`doAction:form validate 3`] = `
                 class="cxd-Panel-title"
               >
                 <span
-                  class="cxd-TplField"
+                  class="cxd-TplField fr-view"
                 >
                   <span>
                     表单
@@ -2641,6 +2485,7 @@ exports[`doAction:form validate 3`] = `
                 />
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-required"
+                  data-amis-name="name"
                   data-role="form-item"
                 >
                   <label
@@ -2648,7 +2493,7 @@ exports[`doAction:form validate 3`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           姓名：
@@ -2681,6 +2526,7 @@ exports[`doAction:form validate 3`] = `
                 </div>
                 <div
                   class="cxd-Form-item cxd-Form-item--normal is-required"
+                  data-amis-name="email"
                   data-role="form-item"
                 >
                   <label
@@ -2688,7 +2534,7 @@ exports[`doAction:form validate 3`] = `
                   >
                     <span>
                       <span
-                        class="cxd-TplField"
+                        class="cxd-TplField fr-view"
                       >
                         <span>
                           邮箱：
@@ -2736,45 +2582,6 @@ exports[`doAction:form validate 3`] = `
                   </span>
                 </button>
               </div>
-            </div>
-            <div
-              class="resize-sensor"
-              style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: scroll; z-index: -1; visibility: hidden;"
-            >
-              
-  
-              <div
-                class="resize-sensor-expand"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0px; top: 0px; width: 10px; height: 10px;"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-shrink"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;"
-              >
-                
-    
-                <div
-                  style="position: absolute; left: 0; top: 0; width: 200%; height: 200%"
-                />
-                
-  
-              </div>
-              
-  
-              <div
-                class="resize-sensor-appear"
-                style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: scroll; z-index: -1; visibility: hidden;animation-name: apearSensor; animation-duration: 0.2s;"
-              />
             </div>
           </div>
         </div>

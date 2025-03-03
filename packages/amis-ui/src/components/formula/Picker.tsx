@@ -1,15 +1,11 @@
 import {
+  anyChanged,
   isExpression,
   resolveVariableAndFilterForAsync,
   uncontrollable
 } from 'amis-core';
 import React from 'react';
-import {
-  FormulaEditor,
-  FormulaEditorProps,
-  FuncGroup,
-  VariableItem
-} from './Editor';
+import {FormulaEditor, FormulaEditorProps} from './Editor';
 import {
   autobind,
   noop,
@@ -27,6 +23,7 @@ import {Icon} from '../icons';
 import Modal from '../Modal';
 import PopUp from '../PopUp';
 import FormulaInput from './Input';
+import {FuncGroup, VariableItem} from './CodeEditor';
 
 export const InputSchemaType = [
   'text',
@@ -35,7 +32,8 @@ export const InputSchemaType = [
   'date',
   'time',
   'datetime',
-  'select'
+  'select',
+  'custom'
 ] as const;
 
 export type FormulaPickerInputSettingType = (typeof InputSchemaType)[number];
@@ -107,11 +105,6 @@ export interface FormulaPickerProps
   disabled?: boolean;
 
   /**
-   * 是否允许输入，否需要点击fx在弹窗中输入
-   */
-  allowInput?: boolean;
-
-  /**
    * 占位文本
    */
   placeholder?: string;
@@ -137,14 +130,29 @@ export interface FormulaPickerProps
   inputSettings?: FormulaPickerInputSettings;
 
   /**
+   * 其他类型渲染器
+   */
+  customInputRender?: (props: {
+    value: any;
+    onChange: (value: any) => void;
+    className?: string;
+    inputSettings: FormulaPickerInputSettings;
+  }) => JSX.Element;
+
+  /**
    * 公式弹出的时候，可以外部设置 variables 和 functions
    */
   onPickerOpen?: (props: FormulaPickerProps) => any;
+
+  functionsFilter?: (functions: Array<FuncGroup>) => Array<FuncGroup>;
 
   children?: (props: {
     onClick: (e: React.MouseEvent) => void;
     setState: (state: any) => void;
     isOpened: boolean;
+    value: any;
+    onChange: (value: any) => void;
+    disabled?: boolean;
   }) => JSX.Element;
 
   onConfirm?: (value?: any) => void;
@@ -163,6 +171,7 @@ export interface FormulaPickerState {
   isOpened: boolean;
   value: any;
   editorValue: string;
+  onConfirm?: (value?: any) => void;
   isError: boolean | string;
   variables?: Array<VariableItem>;
   functions?: Array<FuncGroup>;
@@ -179,6 +188,7 @@ export class FormulaPicker extends React.Component<
     evalMode: true
   };
 
+  unmounted = false;
   constructor(props: FormulaPickerProps) {
     super(props);
     this.props.onRef && this.props.onRef(this);
@@ -191,21 +201,89 @@ export class FormulaPicker extends React.Component<
     };
   }
 
-  componentDidUpdate(prevProps: FormulaPickerProps) {
+  async componentDidMount() {
+    const {variables, data} = this.props;
+    if (typeof variables === 'function') {
+      const list = await variables(this.props);
+      this.setState({variables: list});
+    } else if (typeof variables === 'string' && isExpression(variables)) {
+      const result = await resolveVariableAndFilterForAsync(
+        variables,
+        data,
+        '|raw'
+      );
+      this.setState({variables: result});
+    }
+    this.buildFunctions();
+  }
+
+  async componentDidUpdate(prevProps: FormulaPickerProps) {
     const {value} = this.props;
 
-    if (value !== prevProps.value) {
+    if (value !== prevProps.value && !this.state.isOpened) {
       this.setState({
         value: typeof value === 'string' || !this.isTextInput() ? value : '',
         editorValue: this.value2EditorValue(this.props)
       });
     }
+
+    if (anyChanged(['variables', 'data'], this.props, prevProps)) {
+      const {variables, data} = this.props;
+      if (Array.isArray(variables) && variables !== prevProps.variables) {
+        this.setState({variables});
+      } else if (typeof variables === 'function') {
+        const list = await variables(this.props);
+        this.setState({variables: list});
+      } else if (typeof variables === 'string' && isExpression(variables)) {
+        const result = await resolveVariableAndFilterForAsync(
+          variables,
+          data,
+          '|raw'
+        );
+        this.setState({variables: result});
+      }
+    }
+
+    if (prevProps.functions !== this.props.functions) {
+      this.buildFunctions();
+    }
+  }
+
+  componentWillUnmount(): void {
+    this.unmounted = true;
+  }
+
+  async buildFunctions(
+    functions = this.props.functions,
+    setState = true
+  ): Promise<any> {
+    const functionList = await FormulaEditor.buildFunctions(
+      functions,
+      this.props.functionsFilter
+    );
+    if (this.unmounted) {
+      return;
+    }
+
+    if (!setState) {
+      return functionList;
+    }
+
+    this.setState({
+      functions: functionList
+    });
   }
 
   value2EditorValue(props: FormulaPickerProps) {
-    const {value} = props;
+    const {value, mixedMode, inputSettings} = props;
 
-    if (!this.isTextInput()) {
+    if (
+      mixedMode &&
+      typeof value === 'string' &&
+      /^\s*\$\{([\s\S]+)\}\s*$/.test(value)
+    ) {
+      return RegExp.$1;
+    } else if (typeof value !== 'string') {
       let editorValue = '';
 
       try {
@@ -213,20 +291,15 @@ export class FormulaPicker extends React.Component<
       } catch (error) {}
 
       return editorValue;
+    } else {
+      return value
+        ? mixedMode
+          ? isExpression(value)
+            ? `\`${value.replace(/`/g, '\\`')}\``
+            : JSON.stringify(value)
+          : value
+        : '';
     }
-
-    if (props.mixedMode) {
-      if (
-        typeof props.value === 'string' &&
-        /^\s*\$\{(.+?)\}\s*$/.test(props.value)
-      ) {
-        return RegExp.$1;
-      } else {
-        return '';
-      }
-    }
-
-    return String(props.value || '');
   }
 
   isTextInput() {
@@ -248,22 +321,6 @@ export class FormulaPicker extends React.Component<
     } else {
       this.props.onChange?.(value);
     }
-  }
-
-  @autobind
-  renderFormulaValue(item: any) {
-    const {allowInput, classnames: cx} = this.props;
-    const html = {__html: item.html};
-    if (allowInput) {
-      return '';
-    }
-
-    return (
-      <div
-        className={cx('FormulaPicker-ResultBox')}
-        dangerouslySetInnerHTML={html}
-      ></div>
-    );
   }
 
   @autobind
@@ -290,45 +347,61 @@ export class FormulaPicker extends React.Component<
     const {translate: __, inputSettings} = this.props;
     const {editorValue} = this.state;
 
-    if (this.isTextInput()) {
-      return this.confirm(editorValue);
-    } else if (inputSettings) {
+    let ast: any;
+    try {
+      ast = parse(editorValue, {
+        // mixedMode 弹窗中的一定是表达式
+        evalMode: this.props.mixedMode ? true : this.props.evalMode,
+        allowFilter: false
+      });
+    } catch (error) {
+      this.setState({isError: error?.message ?? true});
+      return;
+    }
+
+    if (
+      inputSettings?.type &&
+      ['boolean', 'number'].includes(inputSettings?.type)
+    ) {
       let result = editorValue;
-      const schemaType = inputSettings?.type;
+      // const schemaType = inputSettings?.type;
 
-      try {
-        const ast = parse(editorValue, {evalMode: true, allowFilter: false});
-
-        if (
-          schemaType === 'select' &&
-          inputSettings.multiple &&
-          ast.type === 'array'
-        ) {
-          result = ast.members.map((i: any) => i.value);
-        } else if (ast.type === 'literal' || ast.type === 'string') {
-          result = ast.value ?? '';
-        }
-      } catch (error) {
-        this.setState({isError: error?.message ?? true});
-        return;
+      if (ast.type === 'literal' || ast.type === 'string') {
+        result = ast.value ?? '';
       }
 
       this.setState({isError: false});
       return this.confirm(result);
     }
+    return this.confirm(editorValue, ast);
   }
 
-  confirm(value: string) {
+  confirm(value: any, ast?: any) {
     const {mixedMode} = this.props;
+    const stateOnConfirm = this.state.onConfirm;
     const validate = this.validate(value);
 
     if (validate === true) {
-      this.setState(
-        {value: mixedMode && value ? `\${${value}}` : value},
-        () => {
-          this.close(undefined, () => this.handleConfirm());
-        }
-      );
+      let result = value;
+
+      if (mixedMode && typeof value === 'string') {
+        result =
+          ast?.type === 'string'
+            ? ast.value
+            : ast?.type === 'template' &&
+              ast.body.length === 1 &&
+              ast.body[0].type === 'template_raw'
+            ? ast.body[0].value
+            : `\${${value}}`;
+      }
+
+      this.setState({value: result, onConfirm: undefined}, () => {
+        this.close(undefined, () => {
+          stateOnConfirm
+            ? stateOnConfirm(this.state.value)
+            : this.handleConfirm();
+        });
+      });
     } else {
       this.setState({isError: validate});
     }
@@ -336,25 +409,21 @@ export class FormulaPicker extends React.Component<
 
   @autobind
   async handleClick() {
-    const {variables, data} = this.props;
-    if (typeof variables === 'function') {
-      const list = await variables(this.props);
-      this.setState({variables: list});
-    } else if (typeof variables === 'string' && isExpression(variables)) {
-      const result = await resolveVariableAndFilterForAsync(
-        variables,
-        data,
-        '|raw'
-      );
-      this.setState({variables: result});
-    }
+    return this.openEditor(this.value2EditorValue(this.props));
+  }
 
+  @autobind
+  async openEditor(editorValue: string, onConfirm?: (value: any) => void) {
     const state = {
       ...(await this.props.onPickerOpen?.(this.props)),
-      editorValue: this.value2EditorValue(this.props),
-      isOpened: true
+      editorValue,
+      isOpened: true,
+      onConfirm
     };
 
+    if (state.functions) {
+      state.functions = await this.buildFunctions(state.functions, false);
+    }
     this.setState(state);
   }
 
@@ -411,7 +480,8 @@ export class FormulaPicker extends React.Component<
     try {
       value &&
         parse(value, {
-          evalMode: this.props.mixedMode ? true : this.props.evalMode,
+          // mixedMode 值是模版， 要 ${} 包裹表达式
+          evalMode: this.props.mixedMode ? false : this.props.evalMode,
           allowFilter: false
         });
 
@@ -430,7 +500,6 @@ export class FormulaPicker extends React.Component<
       classnames: cx,
       translate: __,
       disabled,
-      allowInput = true,
       className,
       style,
       onChange,
@@ -452,6 +521,7 @@ export class FormulaPicker extends React.Component<
       popOverContainer,
       mobileUI,
       inputSettings,
+      customInputRender,
       ...rest
     } = this.props;
     const {isOpened, value, editorValue, isError} = this.state;
@@ -463,7 +533,10 @@ export class FormulaPicker extends React.Component<
           children({
             isOpened: this.state.isOpened,
             onClick: this.handleClick,
-            setState: this.updateState
+            setState: this.updateState,
+            value,
+            onChange: this.handleInputChange,
+            disabled
           })
         ) : (
           <div
@@ -482,6 +555,7 @@ export class FormulaPicker extends React.Component<
                 className={cx('FormulaPicker-action', 'w-full')}
                 level={level}
                 size={btnSize}
+                active={!!value}
                 onClick={this.handleClick}
               >
                 {iconElement ? (
@@ -509,31 +583,25 @@ export class FormulaPicker extends React.Component<
             )}
             {mode === 'input-button' && (
               <>
-                <ResultBox
+                <FormulaInput
                   className={cx(
                     'FormulaPicker-input',
                     isOpened ? 'is-active' : '',
                     !!isError ? 'is-error' : ''
                   )}
-                  allowInput={allowInput}
+                  inputSettings={inputSettings}
+                  customInputRender={customInputRender}
                   clearable={clearable}
+                  evalMode={mixedMode ? false : evalMode}
+                  variables={this.state.variables!}
+                  functions={this.state.functions ?? functions}
                   value={value}
-                  result={
-                    allowInput
-                      ? void 0
-                      : FormulaEditor.highlightValue(
-                          value,
-                          this.state.variables!,
-                          this.props.evalMode
-                        )
-                  }
-                  itemRender={this.renderFormulaValue}
-                  onResultChange={noop}
                   onChange={this.handleInputChange}
                   disabled={disabled}
                   borderMode={borderMode}
                   placeholder={placeholder}
                 />
+
                 <Button
                   className={cx('FormulaPicker-action')}
                   onClick={this.handleClick}
@@ -556,13 +624,12 @@ export class FormulaPicker extends React.Component<
                     !!isError ? 'is-error' : ''
                   )}
                   inputSettings={inputSettings}
-                  allowInput={allowInput}
+                  customInputRender={customInputRender}
                   clearable={clearable}
-                  evalMode={evalMode}
-                  mixedMode={mixedMode}
+                  evalMode={mixedMode ? false : evalMode}
                   variables={this.state.variables!}
+                  functions={this.state.functions ?? functions}
                   value={value}
-                  itemRender={this.renderFormulaValue}
                   onChange={this.handleInputChange}
                   disabled={disabled}
                   borderMode={borderMode}

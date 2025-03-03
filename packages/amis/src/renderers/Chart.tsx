@@ -8,7 +8,8 @@ import {
   loadScript,
   buildStyle,
   CustomStyle,
-  setThemeClassName
+  setThemeClassName,
+  str2function
 } from 'amis-core';
 import {ServiceStore, IServiceStore} from 'amis-core';
 
@@ -36,6 +37,7 @@ import {ActionSchema} from './Action';
 import {isAlive} from 'mobx-state-tree';
 import debounce from 'lodash/debounce';
 import pick from 'lodash/pick';
+import isString from 'lodash/isString';
 import {ApiObject} from 'amis-core';
 
 const DEFAULT_EVENT_PARAMS = [
@@ -53,7 +55,7 @@ const DEFAULT_EVENT_PARAMS = [
 
 /**
  * Chart 图表渲染器。
- * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/carousel
+ * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/chart
  */
 export interface ChartSchema extends BaseSchema {
   /**
@@ -144,7 +146,7 @@ export interface ChartSchema extends BaseSchema {
   /**
    * 获取 geo json 文件的地址
    */
-  mapURL?: string;
+  mapURL?: SchemaApi;
 
   /**
    * 地图名称
@@ -236,6 +238,7 @@ export class Chart extends React.Component<ChartProps> {
     this.reloadEcharts = debounce(this.reloadEcharts.bind(this), 300); //过于频繁更新 ECharts 会报错
     this.handleClick = this.handleClick.bind(this);
     this.dispatchEvent = this.dispatchEvent.bind(this);
+    this.loadChartMapData = this.loadChartMapData.bind(this);
     this.mounted = true;
 
     props.config && this.renderChart(props.config);
@@ -281,6 +284,20 @@ export class Chart extends React.Component<ChartProps> {
         filter(prevProps.trackExpression, prevProps.data)
     ) {
       this.renderChart(props.config || {});
+    } else if (
+      isApiOutdated(prevProps.mapURL, props.mapURL, prevProps.data, props.data)
+    ) {
+      const {source, data, api, config} = props;
+      this.loadChartMapData(() => {
+        if (source && isPureVariable(source)) {
+          const ret = resolveVariableAndFilter(source, data, '| raw');
+          ret && this.renderChart(ret);
+        } else if (api) {
+          this.reload();
+        } else if (config) {
+          this.renderChart(config || {});
+        }
+      });
     }
   }
 
@@ -288,6 +305,24 @@ export class Chart extends React.Component<ChartProps> {
     this.mounted = false;
     (this.reloadEcharts as any).cancel();
     clearTimeout(this.timer);
+  }
+
+  async loadChartMapData(callBackFn?: () => void) {
+    const {env, data} = this.props;
+    let {mapName, mapURL} = this.props;
+    if (mapURL && mapName && (window as any).echarts) {
+      if (isPureVariable(mapName)) {
+        mapName = resolveVariableAndFilter(mapName, data);
+      }
+      const mapGeoResult = await env.fetcher(mapURL as Api, data);
+      if (!mapGeoResult.ok) {
+        console.warn('fetch map geo error ' + mapURL);
+      }
+      (window as any).echarts.registerMap(mapName!, mapGeoResult.data);
+    }
+    if (callBackFn) {
+      callBackFn();
+    }
   }
 
   async handleClick(ctx: object) {
@@ -354,18 +389,7 @@ export class Chart extends React.Component<ChartProps> {
         (window as any).ecStat = ecStat?.default || ecStat;
 
         if (mapURL && mapName) {
-          if (isPureVariable(mapURL)) {
-            mapURL = resolveVariableAndFilter(mapURL, data);
-          }
-          if (isPureVariable(mapName)) {
-            mapName = resolveVariableAndFilter(mapName, data);
-          }
-          const mapGeoResult = await env.fetcher(mapURL as Api, data);
-          if (!mapGeoResult.ok) {
-            console.warn('fetch map geo error ' + mapURL);
-          }
-
-          echarts.registerMap(mapName!, mapGeoResult.data);
+          await this.loadChartMapData();
         }
 
         if (loadBaiduMap) {
@@ -404,7 +428,7 @@ export class Chart extends React.Component<ChartProps> {
         this.echarts = (echarts as any).init(ref, theme);
 
         if (typeof onChartMount === 'string') {
-          onChartMount = new Function('chart', 'echarts') as any;
+          onChartMount = str2function(onChartMount, 'chart', 'echarts') as any;
         }
 
         onChartMount?.(this.echarts, echarts);
@@ -444,14 +468,14 @@ export class Chart extends React.Component<ChartProps> {
     });
   }
 
-  reload(
+  async reload(
     subpath?: string,
     query?: any,
     ctx?: any,
     silent?: boolean,
     replace?: boolean
   ) {
-    const {api, env, store, interval, translate: __} = this.props;
+    const {api, env, store, translate: __} = this.props;
 
     if (query) {
       return this.receive(query, undefined, replace);
@@ -468,54 +492,61 @@ export class Chart extends React.Component<ChartProps> {
     this.echarts?.showLoading();
 
     store.markFetching(true);
-    env
-      .fetcher(api, store.data, {
+    try {
+      const result = await env.fetcher(api, store.data, {
         cancelExecutor: (executor: Function) => (this.reloadCancel = executor)
-      })
-      .then(result => {
-        isAlive(store) && store.markFetching(false);
-
-        if (!result.ok) {
-          !(api as ApiObject)?.silent &&
-            env.notify(
-              'error',
-              (api as ApiObject)?.messages?.failed ??
-                (result.msg || __('fetchFailed')),
-              result.msgTimeout !== undefined
-                ? {
-                    closeButton: true,
-                    timeout: result.msgTimeout
-                  }
-                : undefined
-            );
-          return;
-        }
-        delete this.reloadCancel;
-
-        const data = normalizeApiResponseData(result.data);
-        // 说明返回的是数据接口。
-        if (!data.series && this.props.config) {
-          const ctx = createObject(this.props.data, data);
-          this.renderChart(this.props.config, ctx);
-        } else {
-          this.renderChart(result.data || {});
-        }
-
-        this.echarts?.hideLoading();
-
-        interval &&
-          this.mounted &&
-          (this.timer = setTimeout(this.reload, Math.max(interval, 1000)));
-      })
-      .catch(reason => {
-        if (env.isCancel(reason)) {
-          return;
-        }
-
-        isAlive(store) && store.markFetching(false);
-        !(api as ApiObject)?.silent && env.notify('error', reason);
-        this.echarts?.hideLoading();
       });
+
+      isAlive(store) && store.markFetching(false);
+
+      if (!result.ok) {
+        !(api as ApiObject)?.silent &&
+          env.notify(
+            'error',
+            (api as ApiObject)?.messages?.failed ??
+              (result.msg || __('fetchFailed')),
+            result.msgTimeout !== undefined
+              ? {
+                  closeButton: true,
+                  timeout: result.msgTimeout
+                }
+              : undefined
+          );
+        return;
+      }
+      delete this.reloadCancel;
+
+      const data = normalizeApiResponseData(result.data);
+      // 说明返回的是数据接口。
+      if (!data.series && this.props.config) {
+        const ctx = createObject(this.props.data, data);
+        this.renderChart(this.props.config, ctx);
+      } else {
+        this.renderChart(result.data || {});
+      }
+
+      this.echarts?.hideLoading();
+
+      let curInterval = this.props.interval;
+
+      if (curInterval && isString(curInterval)) {
+        curInterval = Number.parseInt(curInterval);
+      }
+
+      curInterval &&
+        this.mounted &&
+        (this.timer = setTimeout(this.reload, Math.max(curInterval, 1000)));
+
+      return store.data;
+    } catch (reason) {
+      if (env.isCancel(reason)) {
+        return;
+      }
+
+      isAlive(store) && store.markFetching(false);
+      !(api as ApiObject)?.silent && env.notify('error', reason);
+      this.echarts?.hideLoading();
+    }
   }
 
   receive(data: object, subPath?: string, replace?: boolean) {
@@ -614,8 +645,18 @@ export class Chart extends React.Component<ChartProps> {
         className={cx(
           `${ns}Chart`,
           className,
-          setThemeClassName('baseControlClassName', id, themeCss),
-          setThemeClassName('wrapperCustomStyle', id, wrapperCustomStyle)
+          setThemeClassName({
+            ...this.props,
+            name: 'baseControlClassName',
+            id,
+            themeCss
+          }),
+          setThemeClassName({
+            ...this.props,
+            name: 'wrapperCustomStyle',
+            id,
+            themeCss: wrapperCustomStyle
+          })
         )}
         style={styleVar}
       >
@@ -627,6 +668,7 @@ export class Chart extends React.Component<ChartProps> {
           )}
         />
         <CustomStyle
+          {...this.props}
           config={{
             wrapperCustomStyle,
             id,

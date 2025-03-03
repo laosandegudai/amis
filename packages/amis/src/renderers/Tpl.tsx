@@ -7,7 +7,7 @@ import {
   CustomStyle,
   setThemeClassName
 } from 'amis-core';
-import {filter, asyncFilter} from 'amis-core';
+import {filter, asyncFilter, TestIdBuilder} from 'amis-core';
 import isEmpty from 'lodash/isEmpty';
 import {anyChanged, getPropValue} from 'amis-core';
 import {escapeHtml} from 'amis-core';
@@ -52,6 +52,8 @@ export interface TplSchema extends BaseSchema {
    * 角标
    */
   badge?: BadgeObject;
+
+  testidBuilder?: TestIdBuilder;
 }
 
 export interface TplProps extends RendererProps, TplSchema {
@@ -71,6 +73,7 @@ export class Tpl extends React.Component<TplProps, TplState> {
 
   dom: any;
   mounted: boolean;
+  sn: number = 0;
 
   constructor(props: TplProps) {
     super(props);
@@ -83,8 +86,8 @@ export class Tpl extends React.Component<TplProps, TplState> {
   componentDidUpdate(prevProps: Readonly<TplProps>): void {
     const checkProps = ['tpl', 'html', 'text', 'raw', 'data', 'placeholder'];
     if (
-      checkProps.some(key => prevProps[key] !== this.props[key]) ||
-      getPropValue(prevProps) !== getPropValue(this.props)
+      checkProps.some(key => !Object.is(prevProps[key], this.props[key])) ||
+      !Object.is(getPropValue(prevProps), getPropValue(this.props))
     ) {
       this.updateContent();
     }
@@ -100,7 +103,13 @@ export class Tpl extends React.Component<TplProps, TplState> {
 
   @autobind
   async updateContent() {
+    let sn = ++this.sn;
     const content = await this.getAsyncContent();
+
+    // 解决异步时序问题，防止较早的运算覆盖较晚的运算结果
+    if (sn !== this.sn) {
+      return;
+    }
     this.mounted && this.setState({content});
   }
 
@@ -200,7 +209,8 @@ export class Tpl extends React.Component<TplProps, TplState> {
       id,
       wrapperCustomStyle,
       env,
-      themeCss
+      themeCss,
+      testIdBuilder
     } = this.props;
     const Component = wrapperComponent || (inline ? 'span' : 'div');
     const {content} = this.state;
@@ -216,16 +226,27 @@ export class Tpl extends React.Component<TplProps, TplState> {
     return (
       <Component
         className={cx(
-          'TplField',
+          'TplField fr-view',
           className,
-          setThemeClassName('baseControlClassName', id, themeCss),
-          setThemeClassName('wrapperCustomStyle', id, wrapperCustomStyle)
+          setThemeClassName({
+            ...this.props,
+            name: 'baseControlClassName',
+            id,
+            themeCss
+          }),
+          setThemeClassName({
+            ...this.props,
+            name: 'wrapperCustomStyle',
+            id,
+            themeCss: wrapperCustomStyle
+          })
         )}
         style={buildStyle(style, data)}
         {...(showNativeTitle ? {title: this.getTitle(content)} : {})}
         onClick={this.handleClick}
         onMouseEnter={this.handleMouseEnter}
         onMouseLeave={this.handleMouseLeave}
+        {...testIdBuilder?.getChild('tpl')?.getTestId()}
       >
         <span
           className={cln ? cx(cln) : undefined}
@@ -233,6 +254,7 @@ export class Tpl extends React.Component<TplProps, TplState> {
           dangerouslySetInnerHTML={{__html: env.filterHtml(content)}}
         ></span>
         <CustomStyle
+          {...this.props}
           config={{
             wrapperCustomStyle,
             id,
@@ -251,7 +273,8 @@ export class Tpl extends React.Component<TplProps, TplState> {
 }
 
 @Renderer({
-  test: /(^|\/)(?:tpl|html)$/,
+  type: 'tpl',
+  alias: ['html'],
   name: 'tpl'
 })
 // @ts-ignore 类型没搞定

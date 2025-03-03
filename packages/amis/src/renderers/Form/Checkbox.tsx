@@ -3,7 +3,11 @@ import {
   FormItem,
   FormControlProps,
   FormBaseControl,
-  resolveEventData
+  resolveEventData,
+  getVariable,
+  setThemeClassName,
+  CustomStyle,
+  formateCheckThemeCss
 } from 'amis-core';
 import cx from 'classnames';
 import {Checkbox} from 'amis-ui';
@@ -12,6 +16,7 @@ import {autobind, createObject} from 'amis-core';
 import {ActionObject} from 'amis-core';
 import {BaseSchema, FormBaseControlSchema} from '../../Schema';
 import {supportStatic} from './StaticHoc';
+import type {TestIdBuilder} from 'amis-core';
 
 export interface SchemaMap {
   checkbox: CheckboxControlSchema;
@@ -49,6 +54,7 @@ export interface CheckboxControlSchema extends FormBaseControlSchema {
   partial?: boolean;
   optionType?: 'default' | 'button';
   checked?: boolean;
+  testIdBuilder?: TestIdBuilder;
 }
 
 export interface CheckboxProps
@@ -68,13 +74,15 @@ export default class CheckboxControl extends React.Component<
   };
 
   doAction(action: ActionObject, data: object, throwErrors: boolean) {
-    const {resetValue, onChange} = this.props;
+    const {resetValue, onChange, formStore, store, name} = this.props;
     const actionType = action?.actionType as string;
 
     if (actionType === 'clear') {
       onChange('');
     } else if (actionType === 'reset') {
-      onChange(resetValue ?? '');
+      const pristineVal =
+        getVariable(formStore?.pristine ?? store?.pristine, name) ?? resetValue;
+      onChange(pristineVal ?? '');
     }
   }
 
@@ -139,11 +147,35 @@ export default class CheckboxControl extends React.Component<
       optionType,
       checked,
       labelClassName,
-      classPrefix: ns
+      testIdBuilder,
+      classPrefix: ns,
+      id,
+      env,
+      themeCss
     } = this.props;
 
+    const css = formateCheckThemeCss(themeCss, 'checkbox');
+
     return (
-      <div className={cx(`${ns}CheckboxControl`, className)}>
+      <div
+        className={cx(
+          `${ns}CheckboxControl`,
+          className,
+          setThemeClassName({
+            ...this.props,
+            name: [
+              'checkboxControlClassName',
+              'checkboxControlCheckedClassName',
+              'checkboxClassName',
+              'checkboxCheckedClassName',
+              'checkboxInnerClassName',
+              'checkboxShowClassName'
+            ],
+            id,
+            themeCss: css
+          })
+        )}
+      >
         <Checkbox
           inline
           value={value || ''}
@@ -155,9 +187,103 @@ export default class CheckboxControl extends React.Component<
           optionType={optionType}
           checked={checked}
           labelClassName={labelClassName}
+          testIdBuilder={testIdBuilder}
+          className="first last"
         >
           {option ? render('option', option) : null}
         </Checkbox>
+
+        <CustomStyle
+          {...this.props}
+          config={{
+            themeCss: css,
+            classNames: [
+              {
+                key: 'checkboxControlClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox:not(.checked):not(.disabled)`
+                  },
+                  hover: {
+                    suf: ` .${ns}Checkbox:not(.disabled):not(.checked)`
+                  },
+                  disabled: {
+                    inner: `.${ns}Checkbox.disabled:not(.checked)`
+                  }
+                }
+              },
+              {
+                key: 'checkboxControlCheckedClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox.checked:not(.disabled)`
+                  },
+                  hover: {
+                    suf: ` .${ns}Checkbox.checked:not(.disabled)`
+                  },
+                  disabled: {
+                    inner: `.${ns}Checkbox.checked.disabled`
+                  }
+                }
+              },
+              {
+                key: 'checkboxClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox:not(.checked):not(.disabled) > i`
+                  },
+                  hover: {
+                    suf: ` .${ns}Checkbox:not(.disabled):not(.checked)`,
+                    inner: '> i'
+                  },
+                  disabled: {
+                    inner: `.${ns}Checkbox.disabled:not(.checked) > i`
+                  }
+                }
+              },
+              {
+                key: 'checkboxCheckedClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox:not(.disabled) > i`
+                  },
+                  hover: {
+                    suf: ` .${ns}Checkbox:not(.disabled)`,
+                    inner: '> i'
+                  },
+                  disabled: {
+                    inner: `.${ns}Checkbox.disabled > i`
+                  }
+                }
+              },
+              {
+                key: 'checkboxInnerClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox:not(.disabled) > i .icon`
+                  },
+                  hover: {
+                    suf: ` .${ns}Checkbox:not(.disabled)`,
+                    inner: '> i .icon'
+                  },
+                  disabled: {
+                    inner: `.${ns}Checkbox.disabled > i .icon`
+                  }
+                }
+              },
+              {
+                key: 'checkboxShowClassName',
+                weights: {
+                  default: {
+                    inner: `.${ns}Checkbox > i`
+                  }
+                }
+              }
+            ],
+            id: id
+          }}
+          env={env}
+        />
       </div>
     );
   }
@@ -167,6 +293,7 @@ export default class CheckboxControl extends React.Component<
 @withBadge
 @FormItem({
   type: 'checkbox',
-  sizeMutable: false
+  sizeMutable: false,
+  thin: true
 })
 export class CheckboxControlRenderer extends CheckboxControl {}

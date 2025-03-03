@@ -10,7 +10,12 @@ import {
   RendererPluginAction,
   tipedLabel
 } from 'amis-editor-core';
-import {getEventControlConfig} from '../renderer/event-control/helper';
+import {
+  getEventControlConfig,
+  getActionCommonProps,
+  buildLinkActionDesc
+} from '../renderer/event-control/helper';
+
 export class NavPlugin extends BasePlugin {
   static id = 'NavPlugin';
   static scene = ['layout'];
@@ -29,6 +34,7 @@ export class NavPlugin extends BasePlugin {
   scaffold = {
     type: 'nav',
     stacked: true,
+    popupClassName: 'app-popover :AMISCSSWrapper',
     links: [
       {
         label: '页面1',
@@ -248,17 +254,28 @@ export class NavPlugin extends BasePlugin {
     {
       actionType: 'updateItems',
       actionLabel: '更新菜单项',
-      description: '触发组件更新菜单项'
+      description: '触发组件更新菜单项',
+      descDetail: (info: any, context: any, props: any) => {
+        return (
+          <div className="action-desc">
+            更新
+            {buildLinkActionDesc(props.manager, info)}
+            菜单项
+          </div>
+        );
+      }
     },
     {
       actionType: 'collapse',
       actionLabel: '菜单折叠',
-      description: '触发组件的折叠与展开'
+      description: '触发组件的折叠与展开',
+      ...getActionCommonProps('collapse')
     },
     {
       actionType: 'reload',
       actionLabel: '重新加载',
-      description: '触发组件数据刷新并重新渲染'
+      description: '触发组件数据刷新并重新渲染',
+      ...getActionCommonProps('reload')
     }
   ];
 
@@ -378,7 +395,7 @@ export class NavPlugin extends BasePlugin {
           // },
           {
             title: '状态',
-            body: [getSchemaTpl('hidden')]
+            body: [getSchemaTpl('visible'), getSchemaTpl('hidden')]
           }
         ])
       },

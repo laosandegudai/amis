@@ -5,13 +5,14 @@ export interface FilterMap {
 }
 
 export interface FunctionMap {
-  [propName: string]: (this: Evaluator, ast: Object, data: any) => any;
+  [propName: string]: (this: Evaluator, ...args: Array<any>) => any;
 }
 
 export interface FunctionDocItem {
   name: string; // 函数名
   example?: string; // 示例
   description?: string; // 描述
+  namespace?: string;
   [propName: string]: any;
 }
 export interface FunctionDocMap {
@@ -61,6 +62,8 @@ export interface LexerOptions {
    * ${abc | html}
    */
   allowFilter?: boolean;
+
+  isFilter?: (name: string) => boolean;
 }
 
 export type TokenTypeName =

@@ -1,11 +1,11 @@
 /**
  * @file 文字提示容器
  */
-
 import {registerEditorPlugin} from 'amis-editor-core';
 import {BasePlugin, RegionConfig, BaseEventContext} from 'amis-editor-core';
 import {defaultValue, getSchemaTpl} from 'amis-editor-core';
 import {tipedLabel} from 'amis-editor-core';
+import {generateId} from '../util';
 
 export class TooltipWrapperPlugin extends BasePlugin {
   static id = 'TooltipWrapperPlugin';
@@ -17,6 +17,7 @@ export class TooltipWrapperPlugin extends BasePlugin {
   name = '文字提示';
   description =
     '类似容器，可以将多个渲染器放置在一起，当用户鼠标悬停或者点击容器时，显示文字提示浮层';
+  searchKeywords = '文字提示容器';
   docLink = '/amis/zh-CN/components/tooltip';
   tags = ['功能'];
   icon = 'fa fa-comment-alt';
@@ -29,7 +30,8 @@ export class TooltipWrapperPlugin extends BasePlugin {
       {
         type: 'tpl',
         wrapperComponent: '',
-        tpl: '内容'
+        tpl: '内容',
+        id: generateId()
       }
     ],
     enterable: true,
@@ -237,24 +239,44 @@ export class TooltipWrapperPlugin extends BasePlugin {
                     name: 'showArrow',
                     inputClassName: 'is-inline'
                   },
-
                   {
-                    label: '延迟打开',
-                    type: 'input-number',
-                    min: 0,
-                    step: 100,
+                    type: 'input-group',
                     name: 'mouseEnterDelay',
-                    suffix: 'ms',
-                    pipeIn: defaultValue(0)
+                    label: '延迟打开',
+                    body: [
+                      {
+                        type: 'input-number',
+                        min: 0,
+                        step: 100,
+                        name: 'mouseEnterDelay',
+                        pipeIn: defaultValue(0)
+                      },
+                      {
+                        type: 'tpl',
+                        addOnclassName: 'border-0 bg-none',
+                        tpl: 'ms'
+                      }
+                    ]
                   },
                   {
-                    label: '延迟关闭',
-                    type: 'input-number',
-                    min: 0,
-                    step: 100,
+                    type: 'input-group',
                     name: 'mouseLeaveDelay',
-                    suffix: 'ms',
-                    pipeIn: defaultValue(0)
+                    label: '延迟关闭',
+                    body: [
+                      {
+                        label: '延迟关闭',
+                        type: 'input-number',
+                        min: 0,
+                        step: 100,
+                        name: 'mouseLeaveDelay',
+                        pipeIn: defaultValue(0)
+                      },
+                      {
+                        type: 'tpl',
+                        addOnclassName: 'border-0 bg-none',
+                        tpl: 'ms'
+                      }
+                    ]
                   }
                 ]
               }

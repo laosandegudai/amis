@@ -121,6 +121,7 @@ import {TransferPickerControlSchema} from './renderers/Form/TransferPicker';
 import {TabsTransferPickerControlSchema} from './renderers/Form/TabsTransferPicker';
 import {UserSelectControlSchema} from './renderers/Form/UserSelect';
 import {JSONSchemaEditorControlSchema} from './renderers/Form/JSONSchemaEditor';
+import {InputSignatureSchema} from './renderers/Form/InputSignature';
 import {TableSchema2} from './renderers/Table2';
 import {
   BaseSchemaWithoutType,
@@ -129,12 +130,13 @@ import {
   SchemaClassName,
   SchemaExpression
 } from 'amis-core';
-import type {FormSchemaBase} from 'amis-core';
+import type {FormSchemaBase, TestIdBuilder} from 'amis-core';
 import {MultilineTextSchema} from './renderers/MultilineText';
 import {DateRangeSchema} from './renderers/DateRange';
 import {PasswordSchema} from './renderers/Password';
 import {WordsSchema} from './renderers/Words';
 import {RadioControlSchema} from './renderers/Form/Radio';
+import {SliderSchema} from './renderers/Slider';
 
 // 每加个类型，这补充一下。
 export type SchemaType =
@@ -253,6 +255,10 @@ export type SchemaType =
   | 'input-formula'
   | 'diff-editor'
   | 'office-viewer'
+  | 'pdf-viewer'
+  | 'input-signature'
+  | 'input-verification-code'
+  | 'shape'
 
   // editor 系列
   | 'editor'
@@ -360,7 +366,8 @@ export type SchemaType =
   | 'native-time'
   | 'native-number'
   | 'code'
-  | 'tooltip-wrapper';
+  | 'tooltip-wrapper'
+  | 'slider';
 
 export type SchemaObject =
   | PageSchema
@@ -460,6 +467,7 @@ export type SchemaObject =
   | InputGroupControlSchema
   | ListControlSchema
   | JSONSchemaEditorControlSchema
+  | InputSignatureSchema
   | LocationControlSchema
   | UUIDControlSchema
   | MatrixControlSchema
@@ -492,7 +500,8 @@ export type SchemaObject =
   | DateRangeSchema
   | MultilineTextSchema
   | PasswordSchema
-  | WordsSchema;
+  | WordsSchema
+  | SliderSchema;
 
 export type SchemaCollection =
   | SchemaObject
@@ -617,6 +626,11 @@ export interface SchemaApiObject {
    * autoFill 是否显示自动填充错误提示
    */
   silent?: boolean;
+
+  /**
+   * 文件下载时，指定文件名
+   */
+  downloadFileName?: string;
 }
 
 export type SchemaApi = string | SchemaApiObject;
@@ -717,6 +731,8 @@ export type SchemaFunction = string | Function;
 
 export interface BaseSchema extends BaseSchemaWithoutType {
   type: SchemaType;
+
+  testid?: string;
 }
 
 export interface Option {

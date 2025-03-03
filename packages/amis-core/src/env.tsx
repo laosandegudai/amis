@@ -28,6 +28,8 @@ export interface WsObject {
 }
 
 export interface RendererEnv {
+  /* 强制隐藏组件内部的报错信息，会覆盖组件内部属性 */
+  forceSilenceInsideError?: boolean;
   session?: string;
   fetcher: (api: Api, data?: any, options?: object) => Promise<Payload>;
   isCancel: (val: any) => boolean;
@@ -73,9 +75,30 @@ export interface RendererEnv {
   copy?: (contents: string, format?: any) => void;
   getModalContainer?: () => HTMLElement;
   theme: ThemeInstance;
-  affixOffsetTop: number;
-  affixOffsetBottom: number;
+
+  /**
+   * @deprecated
+   * 请通过外层设置 `--affix-offset-top` css 变量设置
+   */
+  affixOffsetTop?: number;
+
+  /**
+   * @deprecated
+   * 请通过外层设置 `--affix-offset-bottom` css 变量设置
+   */
+  affixOffsetBottom?: number;
+
   richTextToken: string;
+
+  /**
+   * 默认的选址组件提供商，目前支持仅 baidu
+   */
+  locationPickerVendor?: string;
+
+  /**
+   * 选址组件的 ak
+   */
+  locationPickerAK?: string;
   loadRenderer: (
     schema: Schema,
     path: string,
@@ -113,6 +136,11 @@ export interface RendererEnv {
   enableAMISDebug?: boolean;
 
   /**
+   * 是否开启 testid 定位
+   */
+  enableTestid?: boolean;
+
+  /**
    * 替换文本，用于实现 URL 替换、语言替换等
    */
   replaceText?: {[propName: string]: any};
@@ -120,7 +148,9 @@ export interface RendererEnv {
   /**
    * 文本替换的黑名单，因为属性太多了所以改成黑名单的 flags
    */
-  replaceTextIgnoreKeys?: String[];
+  replaceTextIgnoreKeys?:
+    | String[]
+    | ((key: string, value: any, object: any) => boolean);
 
   /**
    * 解析url参数
@@ -133,6 +163,11 @@ export interface RendererEnv {
     action: ICmptAction,
     event: RendererEvent<any, any>
   ) => Promise<void | boolean>;
+
+  /**
+   * 渲染器包裹组件可以外部指定
+   */
+  SchemaRenderer?: React.ComponentType<any>;
 }
 
 export const EnvContext = React.createContext<RendererEnv | void>(undefined);
@@ -153,7 +188,7 @@ export function withRendererEnv<
 
   const result = hoistNonReactStatic(
     class extends React.Component<OuterProps> {
-      static displayName = `WithEnv(${
+      static displayName: string = `WithEnv(${
         ComposedComponent.displayName || ComposedComponent.name
       })`;
       static contextType = EnvContext;

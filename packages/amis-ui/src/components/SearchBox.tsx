@@ -2,13 +2,16 @@ import React from 'react';
 import isInteger from 'lodash/isInteger';
 import debounce from 'lodash/debounce';
 import moment from 'moment';
-import {ThemeProps, themeable} from 'amis-core';
+import {TestIdBuilder, ThemeProps, themeable} from 'amis-core';
 import {Icon} from './icons';
 import {uncontrollable} from 'amis-core';
 import {autobind} from 'amis-core';
 import {LocaleProps, localeable} from 'amis-core';
 import chain from 'lodash/chain';
 import Input from './Input';
+import Spinner from './Spinner';
+
+import {SpinnerExtraProps} from './Spinner';
 
 export interface HistoryRecord {
   /** 历史记录值 */
@@ -28,7 +31,10 @@ export interface SearchHistoryOptions {
   dropdownClassName?: string;
 }
 
-export interface SearchBoxProps extends ThemeProps, LocaleProps {
+export interface SearchBoxProps
+  extends ThemeProps,
+    LocaleProps,
+    SpinnerExtraProps {
   name?: string;
   disabled?: boolean;
   mini?: boolean;
@@ -42,13 +48,15 @@ export interface SearchBoxProps extends ThemeProps, LocaleProps {
   active?: boolean;
   defaultActive?: boolean;
   onActiveChange?: (active: boolean) => void;
-  onSearch?: (value: string) => void;
+  onSearch?: (value: string) => any;
   onCancel?: () => void;
   onFocus?: () => void;
   onBlur?: () => void;
   /** 历史记录配置 */
   history?: SearchHistoryOptions;
   clearAndSubmit?: boolean;
+  loading?: boolean;
+  testIdBuilder?: TestIdBuilder;
 }
 
 export interface SearchBoxState {
@@ -87,6 +95,7 @@ export class SearchBox extends React.Component<SearchBoxProps, SearchBoxState> {
   lazyEmitSearch = debounce(
     () => {
       const onSearch = this.props.onSearch;
+
       onSearch?.(this.state.inputValue ?? '');
     },
     250,
@@ -276,6 +285,7 @@ export class SearchBox extends React.Component<SearchBoxProps, SearchBoxState> {
   renderInput(isHistoryMode?: boolean) {
     const {
       classnames: cx,
+      classPrefix,
       active,
       name,
       className,
@@ -286,7 +296,10 @@ export class SearchBox extends React.Component<SearchBoxProps, SearchBoxState> {
       enhance,
       clearable,
       mobileUI,
-      translate: __
+      translate: __,
+      loading,
+      loadingConfig,
+      testIdBuilder
     } = this.props;
     const {isFocused, inputValue} = this.state;
     const {enable} = this.getHistoryOptions();
@@ -304,6 +317,7 @@ export class SearchBox extends React.Component<SearchBoxProps, SearchBoxState> {
           {'is-mobile': mobileUI}
         )}
         style={style}
+        {...testIdBuilder?.getTestId()}
       >
         <Input
           name={name}
@@ -316,17 +330,41 @@ export class SearchBox extends React.Component<SearchBoxProps, SearchBoxState> {
           onBlur={this.handleBlur}
           onChange={this.handleChange}
           onKeyDown={this.handleKeyDown}
+          testIdBuilder={testIdBuilder?.getChild('input')}
         />
 
         {!mini && clearable && inputValue && !disabled ? (
-          <div className={cx('SearchBox-clearable')} onClick={this.handleClear}>
+          <div
+            className={cx('SearchBox-clearable')}
+            onClick={this.handleClear}
+            {...testIdBuilder?.getChild('clear').getTestId()}
+          >
             <Icon icon="input-clear" className="icon" />
           </div>
         ) : null}
 
         {!mini ? (
-          <a className={cx('SearchBox-searchBtn')} onClick={this.handleSearch}>
-            <Icon icon="search" className="icon" />
+          <a
+            className={cx('SearchBox-searchBtn', {
+              'SearchBox-searchBtn--loading': loading
+            })}
+            onClick={this.handleSearch}
+            {...testIdBuilder?.getChild('search').getTestId()}
+          >
+            {loading ? (
+              <Spinner
+                classnames={cx}
+                classPrefix={classPrefix}
+                className={cx('SearchBox-spinner')}
+                spinnerClassName={cx('SearchBox-spinner-icon')}
+                disabled={disabled}
+                size="sm"
+                icon="loading-outline"
+                loadingConfig={loadingConfig}
+              />
+            ) : (
+              <Icon icon="search" className="icon" />
+            )}
           </a>
         ) : active ? (
           <a className={cx('SearchBox-cancelBtn')} onClick={this.handleCancel}>

@@ -230,7 +230,7 @@ order: 56
                     "value": "a"
                 },
                 {
-                    "label": "OptionB",
+                    "label": "OptionB (with long suffix for testing ellipsis)",
                     "value": "b"
                 },
                 {
@@ -439,6 +439,7 @@ order: 56
 | borderMode            | `"full"\| "half" \| "none"`               | `"full"`  | 输入框边框模式，全边框，还是半边框，或者没边框。                                            |
 | inputControlClassName | `string`                                  |           | control 节点的 CSS 类名                                                                     |
 | nativeInputClassName  | `string`                                  |           | 原生 input 标签的 CSS 类名                                                                  |
+| nativeAutoComplete    | `string`                                  | `off`     | 原生 input 标签的 `autoComplete` 属性，比如配置集成 `new-password`                          |
 
 ## 事件表
 
@@ -455,6 +456,165 @@ order: 56
 | change   | `[name]: string` 组件的值 | 值变化时触发                                   |
 | clear    | `[name]: string` 组件的值 | 点击清除按钮时触发                             |
 
+### enter
+
+选择器模式下，回车时触发。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+      {
+        "name": "text",
+        "type": "input-text",
+        "label": "text",
+        "options": [
+          {
+            "label": "aa",
+            "value": "aa"
+          },
+          {
+            "label": "bb",
+            "value": "bb"
+          }
+        ],
+        "onEvent": {
+            "enter": {
+                "actions": [
+                    {
+                      "actionType": "toast",
+                      "args": {
+                          "msg": "${event.data.value|json}"
+                      }
+                    }
+                ]
+            }
+        }
+      }
+    ]
+  }
+```
+
+### focus
+
+当设置 `showInput` 为 true 时，输入框获取焦点时触发。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+      {
+        "name": "text",
+        "type": "input-text",
+        "label": "text",
+        "onEvent": {
+            "focus": {
+                "actions": [
+                    {
+                      "actionType": "toast",
+                      "args": {
+                          "msg": "${event.data.value|json}"
+                      }
+                    }
+                ]
+            }
+        }
+      }
+    ]
+  }
+```
+
+### blur
+
+当设置 `showInput` 为 true 时，输入框失去焦点时触发。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+      {
+        "name": "text",
+        "type": "input-text",
+        "label": "text",
+        "onEvent": {
+            "blur": {
+                "actions": [
+                    {
+                      "actionType": "toast",
+                      "args": {
+                          "msg": "${event.data.value|json}"
+                      }
+                    }
+                ]
+            }
+        }
+      }
+    ]
+  }
+```
+
+### change
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+      {
+        "name": "text",
+        "type": "input-text",
+        "label": "text",
+        "onEvent": {
+            "change": {
+                "actions": [
+                    {
+                      "actionType": "toast",
+                      "args": {
+                          "msg": "${event.data.value|json}"
+                      }
+                    }
+                ]
+            }
+        }
+      }
+    ]
+  }
+```
+
+### clear
+
+配置`clearable`为 true，点击清除按钮时触发。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+      {
+        "name": "text",
+        "type": "input-text",
+        "label": "text",
+        "clearable": true,
+        "onEvent": {
+            "clear": {
+                "actions": [
+                    {
+                      "actionType": "toast",
+                      "args": {
+                          "msg": "${event.data.value|json}"
+                      }
+                    }
+                ]
+            }
+        }
+      }
+    ]
+  }
+```
+
 ## 动作表
 
 当前组件对外暴露以下特性动作，其他组件可以通过指定`actionType: 动作名称`、`componentId: 该组件id`来触发这些动作，动作配置可以通过`args: {动作配置项名称: xxx}`来配置具体的参数，详细请查看[事件动作](../../docs/concepts/event-action#触发其他组件的动作)。
@@ -466,3 +626,173 @@ order: 56
 | focus    | -                        | 获取焦点                                           |
 | reload   | -                        | 刷新（重新加载），只针对配置了`source`的输入框有效 |
 | setValue | `value: string` 更新的值 | 更新数据，开启`multiple`多选时用`,`分隔            |
+
+### clear
+
+如果配置了`clearValueOnEmpty: true`，则清空时将置为`undefined`，否则置为空字符串。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+            "name": "text",
+            "id": "clear_text",
+            "type": "input-text",
+            "label": "text",
+            "value": "清空我"
+        },
+        {
+            "type": "button",
+            "label": "清空",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "clear",
+                            "componentId": "clear_text"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+### reset
+
+如果配置了`resetValue`，则重置时使用`resetValue`的值，否则使用初始值。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+            "name": "text",
+            "id": "reset_text",
+            "type": "input-text",
+            "label": "text",
+            "value": "重置我"
+        },
+        {
+            "type": "button",
+            "label": "重置",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "reset",
+                            "componentId": "reset_text"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+### focus
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+            "name": "text",
+            "id": "focus_text",
+            "type": "input-text",
+            "label": "text",
+            "value": "聚焦我"
+        },
+        {
+            "type": "button",
+            "label": "聚焦",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "focus",
+                            "componentId": "focus_text"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+### reload
+
+只有选择器模式支持，即配置`source`，用于重新加载选择器的数据源。
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+            "name": "text",
+            "id": "reload_text",
+            "type": "input-text",
+            "label": "text",
+            "value": "a",
+            "source": "/api/mock2/form/getOptions?waitSeconds=1"
+        },
+        {
+            "type": "button",
+            "label": "重新加载",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "reload",
+                            "componentId": "reload_text"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+### setValue
+
+```schema: scope="body"
+{
+    "type": "form",
+    "debug": true,
+    "body": [
+        {
+            "name": "text",
+            "id": "setvalue_text",
+            "type": "input-text",
+            "label": "text",
+            "value": "amis"
+        },
+        {
+            "type": "button",
+            "label": "赋值",
+            "onEvent": {
+                "click": {
+                    "actions": [
+                        {
+                            "actionType": "setValue",
+                            "componentId": "setvalue_text",
+                            "args": {
+                                "value": "amis go go go!"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+```

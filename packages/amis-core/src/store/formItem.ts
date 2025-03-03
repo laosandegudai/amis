@@ -7,11 +7,13 @@ import {
   Instance
 } from 'mobx-state-tree';
 import isEqualWith from 'lodash/isEqualWith';
+import uniqWith from 'lodash/uniqWith';
 import {FormStore, IFormStore} from './form';
 import {str2rules, validate as doValidate} from '../utils/validations';
 import {Api, Payload, fetchOptions, ApiObject} from '../types';
 import {ComboStore, IComboStore, IUniqueGroup} from './combo';
 import {evalExpression} from '../utils/tpl';
+import {resolveVariableAndFilter} from '../utils/tpl-builtin';
 import {buildApi, isEffectiveApi} from '../utils/api';
 import findIndex from 'lodash/findIndex';
 import {
@@ -23,7 +25,11 @@ import {
   findTreeIndex,
   spliceTree,
   filterTree,
-  eachTree
+  eachTree,
+  mapTree,
+  setVariable,
+  cloneObject,
+  promisify
 } from '../utils/helper';
 import {flattenTree} from '../utils/helper';
 import find from 'lodash/find';
@@ -86,6 +92,7 @@ export const FormItemStore = StoreNode.named('FormItemStore')
     itemId: '', // 因为 name 可能会重名，所以加个 id 进来，如果有需要用来定位具体某一个
     unsetValueOnInvisible: false,
     itemsRef: types.optional(types.array(types.string), []),
+    inited: false,
     validated: false,
     validating: false,
     multiple: false,
@@ -95,6 +102,7 @@ export const FormItemStore = StoreNode.named('FormItemStore')
     joinValues: true,
     extractValue: false,
     options: types.optional(types.frozen<Array<any>>(), []),
+    optionsRaw: types.optional(types.frozen<Array<any>>(), []),
     expressionsInOptions: false,
     selectFirst: false,
     autoFill: types.frozen(),
@@ -110,7 +118,21 @@ export const FormItemStore = StoreNode.named('FormItemStore')
     /** 当前表单项所属的InputGroup父元素, 用于收集InputGroup的子元素 */
     inputGroupControl: types.optional(types.frozen(), {}),
     colIndex: types.frozen(),
-    rowIndex: types.frozen()
+    rowIndex: types.frozen(),
+    /** Transfer组件分页模式 */
+    pagination: types.optional(types.frozen(), {
+      enable: false,
+      /** 当前页数 */
+      page: 1,
+      /** 每页显示条数 */
+      perPage: 10,
+      /** 总条数 */
+      total: 0
+    }),
+    accumulatedOptions: types.optional(types.frozen<Array<any>>(), []),
+    popOverOpen: false,
+    popOverData: types.frozen(),
+    popOverSchema: types.frozen()
   })
   .views(self => {
     function getForm(): any {
@@ -172,6 +194,26 @@ export const FormItemStore = StoreNode.named('FormItemStore')
         return getLastOptionValue();
       },
 
+      /** 数据源接口数据是否开启分页 */
+      get enableSourcePagination(): boolean {
+        return !!self.pagination.enable;
+      },
+
+      /** 数据源接口开启分页时当前页码 */
+      get sourcePageNum(): number {
+        return self.pagination.page ?? 1;
+      },
+
+      /** 数据源接口开启分页时每页显示条数 */
+      get sourcePerPageNum(): number {
+        return self.pagination.perPage ?? 10;
+      },
+
+      /** 数据源接口开启分页时数据总条数 */
+      get sourceTotalNum(): number {
+        return self.pagination.total ?? 0;
+      },
+
       getSelectedOptions: (
         value: any = self.tmpValue,
         nodeValueArray?: any[] | undefined
@@ -227,9 +269,10 @@ export const FormItemStore = StoreNode.named('FormItemStore')
           }
 
           let unMatched = (valueArray && valueArray[index]) || item;
+          let hasValue = unMatched || unMatched === 0;
 
           if (
-            unMatched &&
+            hasValue &&
             (typeof unMatched === 'string' || typeof unMatched === 'number')
           ) {
             unMatched = {
@@ -237,7 +280,18 @@ export const FormItemStore = StoreNode.named('FormItemStore')
               [labelField || 'label']: item,
               __unmatched: true
             };
-          } else if (unMatched && extractValue) {
+
+            // 某些特殊情况，如select的autocomplete时
+            // 关键字没匹配到的项会被隐藏，不在filteredOptions中，导致匹配不到
+            // 此时需要从原始数据中查找，避免label丢失
+            const origin: any = self.selectedOptions
+              ? find(self.selectedOptions, optionValueCompare(item, valueField))
+              : null;
+
+            if (origin) {
+              unMatched[labelField] = origin[labelField];
+            }
+          } else if (hasValue && extractValue) {
             unMatched = {
               [valueField || 'value']: item,
               [labelField || 'label']: 'UnKnown',
@@ -245,7 +299,7 @@ export const FormItemStore = StoreNode.named('FormItemStore')
             };
           }
 
-          unMatched && selectedOptions.push(unMatched);
+          hasValue && selectedOptions.push(unMatched);
         });
 
         if (selectedOptions.length) {
@@ -258,22 +312,38 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       },
       splitExtraValue(value: any) {
         const delimiter = self.delimiter || ',';
-        const values = Array.isArray(value)
-          ? value
-          : typeof value === 'string'
-          ? value.split(delimiter || ',').map((v: string) => v.trim())
-          : [];
+        const values =
+          value === ''
+            ? ['', '']
+            : Array.isArray(value)
+            ? value
+            : typeof value === 'string'
+            ? value.split(delimiter || ',').map((v: string) => v.trim())
+            : [];
         return values;
+      },
+
+      getMergedData(data: any) {
+        const result = cloneObject(data);
+        setVariable(result, self.name, self.tmpValue);
+        setVariable(result, '__value', self.tmpValue);
+        setVariable(result, '__name', self.name);
+        return result;
       }
     };
   })
 
   .actions(self => {
     const form = self.form as IFormStore;
-    const dialogCallbacks = new SimpleMap<(result?: any) => void>();
+    const dialogCallbacks = new SimpleMap<
+      (confirmed?: any, result?: any) => void
+    >();
     let loadAutoUpdateCancel: Function | null = null;
 
+    const initHooks: Array<(store: any) => any> = [];
+
     function config({
+      name,
       extraName,
       required,
       unique,
@@ -297,8 +367,10 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       minLength,
       validateOnChange,
       label,
-      inputGroupControl
+      inputGroupControl,
+      pagination
     }: {
+      name?: string;
       extraName?: string;
       required?: boolean;
       unique?: boolean;
@@ -327,11 +399,17 @@ export const FormItemStore = StoreNode.named('FormItemStore')
         path: string;
         [propsName: string]: any;
       };
+      pagination?: {
+        enable?: boolean;
+        page?: number;
+        perPage?: number;
+      };
     }) {
       if (typeof rules === 'string') {
         rules = str2rules(rules);
       }
 
+      typeof name !== 'undefined' && (self.name = name);
       typeof extraName !== 'undefined' && (self.extraName = extraName);
       typeof type !== 'undefined' && (self.type = type);
       typeof id !== 'undefined' && (self.itemId = id);
@@ -360,6 +438,15 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       isObject(inputGroupControl) &&
         inputGroupControl?.name != null &&
         (self.inputGroupControl = inputGroupControl);
+
+      if (pagination && isObject(pagination) && !!pagination.enable) {
+        self.pagination = {
+          enable: true,
+          page: pagination.page ? pagination.page || 1 : 1,
+          perPage: pagination.perPage ? pagination.perPage || 10 : 10,
+          total: 0
+        };
+      }
 
       if (
         typeof rules !== 'undefined' ||
@@ -440,23 +527,28 @@ export const FormItemStore = StoreNode.named('FormItemStore')
           validateCancel = null;
         }
 
-        const json: Payload = yield getEnv(self).fetcher(
-          self.validateApi,
-          /** 如果配置validateApi，需要将用户最新输入同步到数据域内 */
-          createObject(data, {[self.name]: self.tmpValue}),
-          {
-            cancelExecutor: (executor: Function) => (validateCancel = executor)
-          }
-        );
-        validateCancel = null;
-
-        if (!json.ok && json.status === 422 && json.errors) {
-          addError(
-            String(
-              (self.validateApi as ApiObject)?.messages?.failed ??
-                (json.errors || json.msg || `表单项「${self.name}」校验失败`)
-            )
+        try {
+          const json: Payload = yield getEnv(self).fetcher(
+            self.validateApi,
+            /** 如果配置validateApi，需要将用户最新输入同步到数据域内 */
+            createObject(data, {[self.name]: self.tmpValue}),
+            {
+              cancelExecutor: (executor: Function) =>
+                (validateCancel = executor)
+            }
           );
+          validateCancel = null;
+
+          if (!json.ok && json.status === 422 && json.errors) {
+            addError(
+              String(
+                (self.validateApi as ApiObject)?.messages?.failed ??
+                  (json.errors || json.msg || `表单项「${self.name}」校验失败`)
+              )
+            );
+          }
+        } catch (err) {
+          addError(String(err));
         }
       }
 
@@ -531,7 +623,7 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       }
 
       for (let option of options) {
-        if (Array.isArray(option.children)) {
+        if (Array.isArray(option.children) && option.children.length) {
           const childFirst = getFirstAvaibleOption(option.children);
           if (childFirst !== undefined) {
             return childFirst;
@@ -542,6 +634,23 @@ export const FormItemStore = StoreNode.named('FormItemStore')
         ) {
           return option;
         }
+      }
+    }
+
+    function setPagination(params: {
+      page?: number;
+      perPage?: number;
+      total?: number;
+    }) {
+      const {page, perPage, total} = params || {};
+
+      if (self.enableSourcePagination) {
+        self.pagination = {
+          ...self.pagination,
+          ...(page != null && typeof page === 'number' ? {page} : {}),
+          ...(perPage != null && typeof perPage === 'number' ? {perPage} : {}),
+          ...(total != null && typeof total === 'number' ? {total} : {})
+        };
       }
     }
 
@@ -556,6 +665,15 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       options = filterTree(options, item => item);
       const originOptions = self.options.concat();
       self.options = options;
+      /** 开启分页后当前选项内容需要累加 */
+      self.accumulatedOptions = self.enableSourcePagination
+        ? uniqWith(
+            [...originOptions, ...options],
+            (lhs, rhs) =>
+              lhs[self.valueField ?? 'value'] ===
+              rhs[self.valueField ?? 'value']
+          )
+        : options;
       syncOptions(originOptions, data);
       let selectedOptions;
 
@@ -711,6 +829,14 @@ export const FormItemStore = StoreNode.named('FormItemStore')
 
       options = normalizeOptions(options as any, undefined, self.valueField);
 
+      if (self.enableSourcePagination) {
+        self.pagination = {
+          ...self.pagination,
+          page: parseInt(json.data?.page, 10) || 1,
+          total: parseInt(json.data?.total ?? json.data?.count, 10) || 0
+        };
+      }
+
       if (config?.extendsOptions && self.selectedOptions.length > 0) {
         self.selectedOptions.forEach((item: any) => {
           const exited = findTree(
@@ -735,11 +861,50 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       } else if (clearValue && !self.selectFirst) {
         self.selectedOptions.some((item: any) => item.__unmatched) &&
           onChange &&
-          onChange('', false, true);
+          onChange(
+            self.joinValues === false && self.multiple ? [] : '',
+            false,
+            true
+          );
       }
 
       return json;
     });
+
+    /**
+     * 从数据域加载选项数据源，注意这里默认source变量解析后是全量的数据源
+     */
+    function loadOptionsFromDataScope(
+      source: string,
+      ctx: Record<string, any>,
+      onChange?: (value: any) => void
+    ) {
+      let options: any[] = resolveVariableAndFilter(source, ctx, '| raw');
+
+      if (!Array.isArray(options)) {
+        return [];
+      }
+
+      options = normalizeOptions(options, undefined, self.valueField);
+
+      if (self.enableSourcePagination) {
+        self.pagination = {
+          ...self.pagination,
+          ...(ctx?.page ? {page: ctx?.page} : {}),
+          ...(ctx?.perPage ? {perPage: ctx?.perPage} : {}),
+          total: options.length
+        };
+
+        options = options.slice(
+          (self.pagination.page - 1) * self.pagination.perPage,
+          self.pagination.page * self.pagination.perPage
+        );
+      }
+
+      setOptions(options, onChange, ctx);
+
+      return options;
+    }
 
     const loadAutoUpdateData: (
       api: Api,
@@ -1206,9 +1371,10 @@ export const FormItemStore = StoreNode.named('FormItemStore')
           selectedOptions.push(flattened[idx]);
         } else {
           let unMatched = (value && value[index]) || item;
+          let hasValue = unMatched || unMatched === 0;
 
           if (
-            unMatched &&
+            hasValue &&
             (typeof unMatched === 'string' || typeof unMatched === 'number')
           ) {
             unMatched = {
@@ -1224,7 +1390,7 @@ export const FormItemStore = StoreNode.named('FormItemStore')
             if (orgin) {
               unMatched[labelField] = orgin[labelField];
             }
-          } else if (unMatched && self.extractValue) {
+          } else if (hasValue && self.extractValue) {
             unMatched = {
               [valueField]: item,
               [labelField]: 'UnKnown',
@@ -1232,7 +1398,7 @@ export const FormItemStore = StoreNode.named('FormItemStore')
             };
           }
 
-          unMatched && selectedOptions.push(unMatched);
+          hasValue && selectedOptions.push(unMatched);
         }
       });
 
@@ -1247,15 +1413,23 @@ export const FormItemStore = StoreNode.named('FormItemStore')
           group.items.forEach(item => {
             if (self !== item) {
               options.push(
-                ...item.selectedOptions.map((item: any) => item && item.value)
+                ...item.selectedOptions.map(
+                  (item: any) => item && item[valueField]
+                )
               );
             }
           });
 
-        if (filteredOptions.length) {
-          filteredOptions = filteredOptions.filter(
-            option => !~options.indexOf(option.value)
-          );
+        if (filteredOptions.length && options.length) {
+          filteredOptions = mapTree(filteredOptions, item => {
+            if (~options.indexOf(item[valueField])) {
+              return {
+                ...item,
+                disabled: true
+              };
+            }
+            return item;
+          });
         }
       }
 
@@ -1294,7 +1468,11 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       clearError();
     }
 
-    function openDialog(schema: any, ctx: any, callback?: (ret?: any) => void) {
+    function openDialog(
+      schema: any,
+      ctx: any,
+      callback?: (confirmed?: any, value?: any) => void
+    ) {
       if (schema.data) {
         self.dialogData = dataMapping(schema.data, ctx);
       } else {
@@ -1306,13 +1484,34 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       callback && dialogCallbacks.set(self.dialogData, callback);
     }
 
-    function closeDialog(result?: any) {
+    function closeDialog(confirmed?: any, result?: any) {
       const callback = dialogCallbacks.get(self.dialogData);
       self.dialogOpen = false;
 
       if (callback) {
         dialogCallbacks.delete(self.dialogData);
-        setTimeout(() => callback(result), 200);
+        setTimeout(() => callback(confirmed, result), 200);
+      }
+    }
+
+    function openPopOver(
+      schema: any,
+      ctx: any,
+      callback?: (confirmed?: any, value?: any) => void
+    ) {
+      self.popOverData = ctx || {};
+      self.popOverOpen = true;
+      self.popOverSchema = schema;
+      callback && dialogCallbacks.set(self.popOverData, callback);
+    }
+
+    function closePopOver(confirmed?: any, result?: any) {
+      const callback = dialogCallbacks.get(self.popOverData);
+      self.popOverOpen = false;
+
+      if (callback) {
+        dialogCallbacks.delete(self.popOverData);
+        setTimeout(() => callback(confirmed, result), 200);
       }
     }
 
@@ -1327,7 +1526,13 @@ export const FormItemStore = StoreNode.named('FormItemStore')
         | 'input' // 用户交互改变
         | 'defaultValue' // 默认值
     ) {
-      self.tmpValue = value;
+      // 清除因extraName导致清空时value为空值数组，进而导致必填校验不生效的异常情况
+      if (self.extraName && Array.isArray(value)) {
+        self.tmpValue = value.filter(item => item).length ? value : '';
+      } else {
+        self.tmpValue = value;
+      }
+
       if (changeReason) {
         self.changeMotivation = changeReason;
       }
@@ -1352,6 +1557,21 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       self.isControlled = !!value;
     }
 
+    const init: () => Promise<void> = flow(function* init() {
+      const hooks = initHooks.sort(
+        (a: any, b: any) => (a.__weight || 0) - (b.__weight || 0)
+      );
+      try {
+        for (let hook of hooks) {
+          yield hook(self);
+        }
+      } finally {
+        if (isAlive(self)) {
+          self.inited = true;
+        }
+      }
+    });
+
     return {
       focus,
       blur,
@@ -1360,8 +1580,10 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       setError,
       addError,
       clearError,
+      setPagination,
       setOptions,
       loadOptions,
+      loadOptionsFromDataScope,
       deferLoadOptions,
       deferLoadLeftOptions,
       expandTreeOptions,
@@ -1373,12 +1595,31 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       resetValidationStatus,
       openDialog,
       closeDialog,
+      openPopOver,
+      closePopOver,
       changeTmpValue,
       changeEmitedValue,
       addSubFormItem,
       removeSubFormItem,
       loadAutoUpdateData,
-      setIsControlled
+      setIsControlled,
+
+      init,
+
+      addInitHook(fn: (store: any) => any, weight = 0) {
+        fn = promisify(fn);
+        initHooks.push(fn);
+        (fn as any).__weight = weight;
+        return () => {
+          const idx = initHooks.indexOf(fn);
+          ~idx && initHooks.splice(idx, 1);
+        };
+      },
+
+      beforeDestroy: () => {
+        // 销毁
+        initHooks.splice(0, initHooks.length);
+      }
     };
   });
 

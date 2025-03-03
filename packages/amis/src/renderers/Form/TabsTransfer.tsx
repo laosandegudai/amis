@@ -1,4 +1,9 @@
-import {OptionsControlProps, OptionsControl, resolveEventData} from 'amis-core';
+import {
+  OptionsControlProps,
+  OptionsControl,
+  resolveEventData,
+  getVariable
+} from 'amis-core';
 import React from 'react';
 import find from 'lodash/find';
 import {Spinner, SpinnerExtraProps} from 'amis-ui';
@@ -121,7 +126,7 @@ export class BaseTabsTransferRenderer<
       }
     } else if (term) {
       return filterTree(
-        options,
+        option.children || options,
         (option: Option, key: number, level: number, paths: Array<Option>) => {
           return !!(
             (Array.isArray(option.children) && option.children.length) ||
@@ -261,15 +266,24 @@ export class TabsTransferRenderer extends BaseTabsTransferRenderer<TabsTransferP
   }
 
   // 动作
-  doAction(action: ActionObject, args: any) {
-    const {resetValue, onChange} = this.props;
+  doAction(
+    action: ActionObject,
+    data: any,
+    throwErrors: boolean = false,
+    args?: any
+  ) {
+    const {resetValue, onChange, formStore, store, name} = this.props;
     const activeKey = args?.activeKey as number;
     switch (action.actionType) {
       case 'clear':
         onChange?.('');
         break;
       case 'reset':
-        onChange?.(resetValue ?? '');
+        onChange?.(
+          getVariable(formStore?.pristine ?? store?.pristine, name) ??
+            resetValue ??
+            ''
+        );
         break;
       case 'changeTabKey':
         this.setState({
@@ -307,7 +321,9 @@ export class TabsTransferRenderer extends BaseTabsTransferRenderer<TabsTransferP
       valueTpl,
       menuTpl,
       data,
-      mobileUI
+      mobileUI,
+      initiallyOpen = true,
+      testIdBuilder
     } = this.props;
 
     return (
@@ -341,6 +357,8 @@ export class TabsTransferRenderer extends BaseTabsTransferRenderer<TabsTransferP
           valueField={valueField}
           ctx={data}
           mobileUI={mobileUI}
+          initiallyOpen={initiallyOpen}
+          testIdBuilder={testIdBuilder}
         />
 
         <Spinner

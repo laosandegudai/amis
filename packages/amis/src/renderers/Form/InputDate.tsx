@@ -4,7 +4,9 @@ import {
   FormControlProps,
   FormBaseControl,
   resolveEventData,
-  str2function
+  str2function,
+  normalizeDate,
+  getVariable
 } from 'amis-core';
 import cx from 'classnames';
 import {filterDate, isPureVariable, resolveVariableAndFilter} from 'amis-core';
@@ -79,6 +81,10 @@ export interface InputDateBaseControlSchema extends FormBaseControlSchema {
    * (currentDate: moment.Moment, props: any) => boolean;
    */
   disabledDate?: string;
+
+  /* * 是否禁止输入
+   */
+  inputForbid?: boolean;
 }
 
 /**
@@ -127,6 +133,11 @@ export interface DateControlSchema extends InputDateBaseControlSchema {
    * 限制最大日期
    */
   maxDate?: string;
+
+  /**
+   * 弹窗容器选择器
+   */
+  popOverContainerSelector?: string;
 }
 
 /**
@@ -404,7 +415,8 @@ export default class DateControl extends React.PureComponent<
       data,
       format,
       valueFormat,
-      utc
+      utc,
+      changeMotivation
     } = props;
 
     if (defaultValue && value === defaultValue) {
@@ -412,6 +424,11 @@ export default class DateControl extends React.PureComponent<
       setPrinstineValue(
         (utc ? moment.utc(date) : date).format(valueFormat || format)
       );
+    } else if (changeMotivation === 'formulaChanged' && defaultValue && value) {
+      const date = normalizeDate(value, valueFormat || format);
+      if (date && date.format(valueFormat || format) !== value) {
+        setPrinstineValue(date.format(valueFormat || format));
+      }
     }
 
     let schedulesData = props.schedules;
@@ -546,16 +563,33 @@ export default class DateControl extends React.PureComponent<
 
   // 动作
   doAction(action: ActionObject, data: object, throwErrors: boolean) {
-    const {resetValue} = this.props;
+    const {resetValue, formStore, store, name} = this.props;
 
     if (action.actionType === 'clear') {
       this.dateRef?.clear();
       return;
     }
 
-    if (action.actionType === 'reset' && resetValue) {
-      this.dateRef?.reset(resetValue);
+    if (action.actionType === 'reset') {
+      const pristineVal =
+        getVariable(formStore?.pristine ?? store?.pristine, name) ?? resetValue;
+      this.dateRef?.reset(pristineVal);
     }
+  }
+
+  setData(value: any) {
+    const {data, valueFormat, format, utc, onChange} = this.props;
+
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      value instanceof Date
+    ) {
+      const date = filterDate(value as any, data, valueFormat || format);
+      value = (utc ? moment.utc(date) : date).format(valueFormat || format);
+    }
+
+    onChange(value);
   }
 
   // 值的变化
@@ -566,10 +600,48 @@ export default class DateControl extends React.PureComponent<
       'change',
       resolveEventData(this.props, {value: nextValue})
     );
-    if (dispatcher?.prevented) {
-      return;
-    }
+    // 因为前面没有 await，所以这里的 dispatcher.prevented 是不准确的。
+    // 为什么没写 onChange，我估计是不能让 onChange 太慢执行
+    // if (dispatcher?.prevented) {
+    //   return;
+    // }
     this.props.onChange(nextValue);
+  }
+
+  // 点击日期事件
+  @autobind
+  async handleClick(date: moment.Moment) {
+    const {dispatchEvent, utc, valueFormat, format} = this.props;
+    dispatchEvent(
+      'click',
+      resolveEventData(this.props, {
+        value: (utc ? moment.utc(date) : date).format(valueFormat || format)
+      })
+    );
+  }
+
+  // 鼠标移入日期事件
+  @autobind
+  async handleMouseEnter(date: moment.Moment) {
+    const {dispatchEvent, utc, valueFormat, format} = this.props;
+    dispatchEvent(
+      'mouseenter',
+      resolveEventData(this.props, {
+        value: (utc ? moment.utc(date) : date).format(valueFormat || format)
+      })
+    );
+  }
+
+  // 鼠标移出日期事件
+  @autobind
+  async handleMouseLeave(date: moment.Moment) {
+    const {dispatchEvent, utc, valueFormat, format} = this.props;
+    dispatchEvent(
+      'mouseleave',
+      resolveEventData(this.props, {
+        value: (utc ? moment.utc(date) : date).format(valueFormat || format)
+      })
+    );
   }
 
   @autobind
@@ -634,6 +706,7 @@ export default class DateControl extends React.PureComponent<
               ? env?.getModalContainer
               : rest.popOverContainer || env.getModalContainer
           }
+          popOverContainerSelector={rest.popOverContainerSelector}
           {...this.state}
           valueFormat={valueFormat || format}
           minDateRaw={this.props.minDate}
@@ -647,6 +720,9 @@ export default class DateControl extends React.PureComponent<
           onFocus={this.dispatchEvent}
           onBlur={this.dispatchEvent}
           disabledDate={this.isDisabledDate}
+          onClick={this.handleClick}
+          onMouseEnter={this.handleMouseEnter}
+          onMouseLeave={this.handleMouseLeave}
         />
       </div>
     );

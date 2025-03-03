@@ -1,9 +1,13 @@
-import {registerEditorPlugin} from 'amis-editor-core';
-import {BaseEventContext, BasePlugin} from 'amis-editor-core';
-import {defaultValue, getSchemaTpl} from 'amis-editor-core';
-import {tipedLabel} from 'amis-editor-core';
-import {ValidatorTag} from '../validator';
-import {getEventControlConfig} from '../renderer/event-control/helper';
+import {
+  registerEditorPlugin,
+  RendererPluginAction,
+  BaseEventContext,
+  BasePlugin,
+  defaultValue,
+  getSchemaTpl,
+  tipedLabel
+} from 'amis-editor-core';
+import {getActionCommonProps} from '../renderer/event-control/helper';
 
 export class ProgressPlugin extends BasePlugin {
   static id = 'ProgressPlugin';
@@ -31,6 +35,22 @@ export class ProgressPlugin extends BasePlugin {
   previewSchema = {
     ...this.scaffold
   };
+
+  // 动作定义
+  actions: RendererPluginAction[] = [
+    {
+      actionType: 'reset',
+      actionLabel: '重置',
+      description: '重置为默认值',
+      ...getActionCommonProps('reset')
+    },
+    {
+      actionType: 'setValue',
+      actionLabel: '赋值',
+      description: '触发组件数据更新',
+      ...getActionCommonProps('setValue')
+    }
+  ];
 
   panelTitle = '进度';
 
@@ -91,26 +111,6 @@ export class ProgressPlugin extends BasePlugin {
                 },
                 needDeleteProps: ['placeholder'],
                 valueType: 'number' // 期望数值类型，不过 amis中会尝试字符串 trans 数值类型
-              }),
-              getSchemaTpl('menuTpl', {
-                label: tipedLabel(
-                  '数值模板',
-                  '值渲染模板，支持JSX、数据域变量使用, 默认 ${value}%'
-                ),
-                name: 'valueTpl',
-                variables: [
-                  {
-                    label: '值字段',
-                    children: [
-                      {
-                        label: '进度值',
-                        value: 'value',
-                        tag: 'number'
-                      }
-                    ]
-                  }
-                ],
-                requiredDataPropsVariables: true
               }),
 
               getSchemaTpl('switch', {
@@ -178,7 +178,7 @@ export class ProgressPlugin extends BasePlugin {
               {
                 type: 'input-number',
                 name: 'gapDegree',
-                visibleOn: 'data.mode === "dashboard"',
+                visibleOn: 'this.mode === "dashboard"',
                 label: '缺口角度',
                 value: 75,
                 min: 0,
@@ -188,7 +188,7 @@ export class ProgressPlugin extends BasePlugin {
                 label: '缺口位置',
                 name: 'gapPosition',
                 type: 'button-group-select',
-                visibleOn: 'data.mode === "dashboard"',
+                visibleOn: 'this.mode === "dashboard"',
                 value: defaultValue('bottom'),
                 tiled: true,
                 options: [
@@ -215,13 +215,13 @@ export class ProgressPlugin extends BasePlugin {
               getSchemaTpl('switch', {
                 name: 'animate',
                 label: '显示动画',
-                visibleOn: 'data.mode === "line"'
+                visibleOn: 'this.mode === "line"'
               }),
               {
                 type: 'button-group-select',
                 name: 'styleType',
                 label: '样式',
-                visibleOn: 'data.mode === "line"',
+                visibleOn: 'this.mode === "line"',
                 options: [
                   {
                     label: '纯色',
@@ -260,7 +260,7 @@ export class ProgressPlugin extends BasePlugin {
                     placeholder: 'value',
                     columnClassName: 'w-xs',
                     unique: true,
-                    requiredOn: 'data.map?.length > 1',
+                    requiredOn: 'this.map?.length > 1',
                     min: 0,
                     step: 10,
                     precision: 0

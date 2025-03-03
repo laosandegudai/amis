@@ -33,7 +33,8 @@ import type {
   OperatorType,
   ExpressionFunc,
   ExpressionField,
-  ExpressionComplex
+  ExpressionComplex,
+  TestIdBuilder
 } from 'amis-core';
 
 const option2value = (item: any) => item.value;
@@ -53,6 +54,7 @@ export interface ConditionItemProps extends ThemeProps, LocaleProps {
   popOverContainer?: any;
   renderEtrValue?: any;
   selectMode?: 'list' | 'tree' | 'chained';
+  testIdBuilder?: TestIdBuilder;
 }
 
 export class ConditionItem extends React.Component<ConditionItemProps> {
@@ -80,10 +82,19 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
 
   @autobind
   handleLeftChange(leftValue: any) {
+    const {fields, config} = this.props;
+    // 获取默认Op
+    const field: any = findTree(fields, (f: any) => f.name === leftValue.field);
     const value = {
       ...this.props.value,
       left: leftValue,
-      op: undefined,
+      op:
+        field?.defaultOp ??
+        (Array.isArray(field?.operators) && field.operators.length === 1
+          ? field.operators[0].value || field.operators[0]
+          : undefined) ??
+        config.types[field?.type]?.defaultOp ??
+        undefined,
       right: undefined
     };
     const onChange = this.props.onChange;
@@ -93,7 +104,9 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
 
   @autobind
   handleOperatorChange(op: OperatorType) {
-    const {fields, value, index, onChange} = this.props;
+    const {fields, value, index, onChange, formula} = this.props;
+    const useFormulaInput =
+      formula?.mode === 'input-group' && formula?.inputSettings;
     const leftFieldSchema: FieldSimple = findTree(
       fields,
       (i: FieldSimple) => i.name === (value?.left as ExpressionField)?.field
@@ -101,7 +114,10 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
     const result = {
       ...value,
       op: op,
-      right: value.right ?? leftFieldSchema?.defaultValue
+      /** 使用公式编辑器模式时，因为不同条件下值格式不一致（比如select类型下包含和等于对应的multiple会变化），所以变化条件时需要清空right值 */
+      right: useFormulaInput
+        ? leftFieldSchema?.defaultValue
+        : value.right ?? leftFieldSchema?.defaultValue
     };
 
     onChange(result, index);
@@ -143,7 +159,8 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
       fieldClassName,
       searchable,
       popOverContainer,
-      selectMode
+      selectMode,
+      testIdBuilder
     } = this.props;
     return (
       <Expression
@@ -157,6 +174,7 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
         searchable={searchable}
         popOverContainer={popOverContainer}
         selectMode={selectMode}
+        testIdBuilder={testIdBuilder?.getChild('left')}
         allowedTypes={
           ['field', 'func'].filter(
             type => type === 'field' || type === 'func'
@@ -175,6 +193,7 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
       classnames: cx,
       disabled,
       popOverContainer,
+      testIdBuilder,
       mobileUI
     } = this.props;
     const left = value?.left;
@@ -215,6 +234,7 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
       return (
         <PopOverContainer
           mobileUI={mobileUI}
+          disabled={!!(value?.op && operators.length < 2)}
           popOverContainer={popOverContainer || (() => findDOMNode(this))}
           popOverRender={({onClose}) => (
             <GroupedSelection
@@ -224,10 +244,11 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
               options={options}
               value={value.op}
               multiple={false}
+              testIdBuilder={testIdBuilder?.getChild('operator-group')}
             />
           )}
         >
-          {({onClick, isOpened, ref}) => (
+          {({onClick, isOpened, ref, disabled: popOverDisabled}) => (
             <div className={cx('CBGroup-operator')}>
               <ResultBox
                 className={cx(
@@ -237,14 +258,15 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
                 ref={ref}
                 allowInput={false}
                 result={
-                  __(OperationMap[value?.op as keyof typeof OperationMap]) ||
-                  options.find(option => option.value === value.op)?.label
+                  options.find(option => option.value === value.op)?.label ||
+                  __(OperationMap[value?.op as keyof typeof OperationMap])
                 }
                 onResultChange={noop}
                 onResultClick={onClick}
                 disabled={disabled}
                 placeholder={__('Condition.cond_placeholder')}
                 mobileUI={mobileUI}
+                testIdBuilder={testIdBuilder?.getChild('operator-resbox')}
               >
                 {!mobileUI ? (
                   <span className={cx('CBGroup-operatorCaret')}>
@@ -309,7 +331,8 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
       disabled,
       formula,
       popOverContainer,
-      renderEtrValue
+      renderEtrValue,
+      testIdBuilder
     } = this.props;
     let field = {
       ...config.types[type],
@@ -341,6 +364,7 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
       return (
         <>
           <Expression
+            key={`${field.name}-0`}
             config={config}
             funcs={funcs}
             valueField={field}
@@ -356,11 +380,15 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
             formula={formula}
             popOverContainer={popOverContainer}
             renderEtrValue={renderEtrValue}
+            testIdBuilder={testIdBuilder?.getChild(
+              `right-${op}-${field.name}-exp-0`
+            )}
           />
 
           <span className={cx('CBSeprator')}>~</span>
 
           <Expression
+            key={`${field.name}-1`}
             config={config}
             funcs={funcs}
             valueField={field}
@@ -376,6 +404,9 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
             formula={formula}
             popOverContainer={popOverContainer}
             renderEtrValue={renderEtrValue}
+            testIdBuilder={testIdBuilder?.getChild(
+              `right-${op}-${field.name}-exp-1`
+            )}
           />
         </>
       );
@@ -384,6 +415,7 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
         return (
           <span key={i}>
             <Expression
+              key={`${field.name}-${i}`}
               config={config}
               op={op}
               funcs={funcs}
@@ -400,6 +432,9 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
               formula={formula}
               popOverContainer={popOverContainer}
               renderEtrValue={renderEtrValue}
+              testIdBuilder={testIdBuilder?.getChild(
+                `right-${op}-${field.name}-exp-${i}`
+              )}
             />
           </span>
         );
@@ -407,6 +442,7 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
     }
     return (
       <Expression
+        key={`${field.name}-0`}
         config={config}
         op={op}
         funcs={funcs}
@@ -422,6 +458,7 @@ export class ConditionItem extends React.Component<ConditionItemProps> {
         formula={formula}
         popOverContainer={popOverContainer}
         renderEtrValue={renderEtrValue}
+        testIdBuilder={testIdBuilder?.getChild(`right-${op}-${field.name}-exp`)}
       />
     );
   }

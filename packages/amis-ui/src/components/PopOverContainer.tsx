@@ -12,11 +12,16 @@ export interface PopOverOverlay {
 }
 
 export interface PopOverContainerProps {
+  show?: boolean;
   children: (props: {
+    disabled?: boolean;
     onClick: (e: React.MouseEvent) => void;
     isOpened: boolean;
     ref: any;
   }) => JSX.Element;
+  disabled?: boolean;
+  /** 弹出层打开时触发的事件 */
+  onOpen?: () => void;
   popOverRender: (props: {onClose: () => void}) => JSX.Element;
   popOverContainer?: any;
   popOverClassName?: string;
@@ -60,10 +65,18 @@ export class PopOverContainer extends React.Component<
   }
 
   @autobind
-  handleClick() {
-    this.setState({
-      isOpened: true
-    });
+  handleClick(e?: React.MouseEvent) {
+    e?.preventDefault();
+
+    this.props.disabled ||
+      this.setState(
+        {
+          isOpened: true
+        },
+        () => {
+          this.props.onOpen?.();
+        }
+      );
   }
 
   @autobind
@@ -152,20 +165,22 @@ export class PopOverContainer extends React.Component<
       placement,
       align,
       showConfirm,
-      onConfirm
+      onConfirm,
+      disabled
     } = this.props;
 
     return (
       <>
         {children({
-          isOpened: this.state.isOpened,
+          isOpened: this.state.isOpened && this.props.show !== false,
           onClick: this.handleClick,
-          ref: this.targetRef
+          ref: this.targetRef,
+          disabled
         })}
         {mobileUI ? (
           <PopUp
-            isShow={this.state.isOpened}
-            container={document.body}
+            isShow={this.state.isOpened && this.props.show !== false}
+            container={popOverContainer}
             className={popOverClassName}
             showConfirm={showConfirm}
             onHide={this.close}
@@ -178,7 +193,7 @@ export class PopOverContainer extends React.Component<
             container={popOverContainer || this.getParent}
             target={this.getTarget}
             placement={placement || PopOverContainer.alignToPlacement({align})}
-            show={this.state.isOpened}
+            show={this.state.isOpened && this.props.show !== false}
           >
             <PopOver
               overlay
