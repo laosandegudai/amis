@@ -94,6 +94,7 @@ export const FormItemStore = StoreNode.named('FormItemStore')
     itemsRef: types.optional(types.array(types.string), []),
     inited: false,
     validated: false,
+    validatedAt: 0,
     validating: false,
     multiple: false,
     delimiter: ',',
@@ -511,15 +512,19 @@ export const FormItemStore = StoreNode.named('FormItemStore')
         yield hook();
       }
 
-      addError(
-        doValidate(
-          self.tmpValue,
-          data,
-          customRules ? str2rules(customRules) : self.rules,
-          self.messages,
-          self.__
-        )
-      );
+      try {
+        addError(
+          doValidate(
+            self.tmpValue,
+            data,
+            customRules ? str2rules(customRules) : self.rules,
+            self.messages,
+            self.__
+          )
+        );
+      } catch (e) {
+        addError(String(e.message));
+      }
 
       if (!self.errors.length && isEffectiveApi(self.validateApi, data)) {
         if (validateCancel) {
@@ -548,7 +553,10 @@ export const FormItemStore = StoreNode.named('FormItemStore')
             );
           }
         } catch (err) {
-          addError(String(err));
+          const env = getEnv(self);
+          if (!env.isCancel(err)) {
+            addError(String(err));
+          }
         }
       }
 
@@ -572,6 +580,7 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       }
 
       self.validating = false;
+      self.validatedAt = Date.now();
       return self.valid;
     });
 
@@ -877,7 +886,12 @@ export const FormItemStore = StoreNode.named('FormItemStore')
     function loadOptionsFromDataScope(
       source: string,
       ctx: Record<string, any>,
-      onChange?: (value: any) => void
+      onChange?: (
+        value: any,
+        submitOnChange?: boolean,
+        changeImmediately?: boolean
+      ) => void,
+      clearValue?: boolean
     ) {
       let options: any[] = resolveVariableAndFilter(source, ctx, '| raw');
 
@@ -902,6 +916,13 @@ export const FormItemStore = StoreNode.named('FormItemStore')
       }
 
       setOptions(options, onChange, ctx);
+
+      // source从数据域获取，同时发生变化时，需要清空当前表单项
+      if (clearValue && !self.selectFirst) {
+        self.selectedOptions.some((item: any) => item.__unmatched) &&
+          onChange &&
+          onChange('', false, true);
+      }
 
       return options;
     }

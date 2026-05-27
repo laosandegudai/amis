@@ -29,7 +29,8 @@ export class ListPlugin extends BasePlugin {
   static id = 'ListPlugin';
   // 关联渲染器名字
   rendererName = 'list';
-  $schema = '/schemas/ListSchema.json';
+  useLazyRender = true; // 使用懒渲染
+  $schema = '/schemas/AMISListSchema.json';
 
   // 组件名称
   name = '列表';

@@ -4,7 +4,8 @@ import {
   SnapshotIn,
   IAnyModelType,
   isAlive,
-  Instance
+  Instance,
+  getEnv
 } from 'mobx-state-tree';
 import {iRendererStore} from './iRenderer';
 import {
@@ -31,9 +32,10 @@ import {
   hasVisibleExpression,
   sortArray
 } from '../utils/helper';
-import {evalExpression} from '../utils/tpl';
+import {evalExpression, filter} from '../utils/tpl';
 import {IFormStore} from './form';
 import {getStoreById} from './manager';
+import {getPageId} from '../utils/getPageId';
 
 /**
  * 内部列的数量 '__checkme' | '__dragme' | '__expandme'
@@ -120,7 +122,8 @@ export const Column = types
     breakpoint: types.optional(types.frozen(), undefined),
     pristine: types.optional(types.frozen(), undefined),
     remark: types.optional(types.frozen(), undefined),
-    className: types.union(types.string, types.frozen())
+    className: types.union(types.string, types.frozen()),
+    appeared: false
   })
   .views(self => ({
     get isPrimary() {
@@ -172,6 +175,9 @@ export const Column = types
 
     setRealWidth(value: number) {
       self.realWidth = value;
+    },
+    markAppeared(value: boolean) {
+      self.appeared = self.appeared || value;
     }
   }));
 
@@ -196,13 +202,14 @@ export const Row = types
       types.array(types.late((): IAnyModelType => Row)),
       []
     ),
+    height: 0,
     defer: false, // 是否为懒数据
     loaded: false, // 懒数据是否加载完了
     loading: false, // 懒数据是否正在加载
     error: '', // 懒数据加载失败的错误信息
-    depth: types.number, // 当前children位于第几层，便于使用getParent获取最顶层TableStore
-    appeared: true,
-    lazyRender: false
+    depth: types.number // 当前children位于第几层，便于使用getParent获取最顶层TableStore
+    // appeared: true,
+    // lazyRender: false
   })
   .views(self => ({
     get parent() {
@@ -444,6 +451,10 @@ export const Row = types
       self.isHover = value;
     },
 
+    setHeight(value: number): void {
+      self.height = value;
+    },
+
     replaceWith(data: any) {
       Object.keys(data).forEach(key => {
         if (key !== 'id') {
@@ -484,9 +495,9 @@ export const Row = types
       }
     },
 
-    markAppeared(value: any) {
-      value && (self.appeared = !!value);
-    },
+    // markAppeared(value: any) {
+    //   value && (self.appeared = !!value);
+    // },
 
     markLoading(value: any) {
       self.loading = !!value;
@@ -591,7 +602,8 @@ export const TableStore = iRendererStore
     searchFormExpanded: false, // 用来控制搜索框是否展开了，那个自动根据 searchable 生成的表单 autoGenerateFilter
     lazyRenderAfter: 100,
     tableLayout: 'auto',
-    theadHeight: 0
+    theadHeight: 0,
+    persistKey: ''
   })
   .views(self => {
     function getColumnsExceptBuiltinTypes() {
@@ -842,10 +854,19 @@ export const TableStore = iRendererStore
     }
 
     return {
+      get __() {
+        return getEnv(self).translate;
+      },
+
       getSelectionUpperLimit,
 
       get columnsKey() {
-        return location.pathname + self.path;
+        if (self.persistKey) {
+          return filter(self.persistKey, self.data);
+        }
+
+        const fn = getEnv(self).getPageId || getPageId;
+        return fn() + self.path;
       },
 
       get columnsData() {
@@ -1131,6 +1152,10 @@ export const TableStore = iRendererStore
         }
 
         return context;
+      },
+
+      getItemById(id: string) {
+        return findTree(self.rows, item => item.id === id) as IRow;
       }
     };
   })
@@ -1211,6 +1236,7 @@ export const TableStore = iRendererStore
         (self.tableLayout = config.tableLayout);
 
       config.showIndex !== undefined && (self.showIndex = config.showIndex);
+      config.persistKey !== undefined && (self.persistKey = config.persistKey);
 
       if (config.columns && Array.isArray(config.columns)) {
         let columns: Array<SColumn> = config.columns
@@ -1267,31 +1293,35 @@ export const TableStore = iRendererStore
           });
         }
 
-        if (self.showIndex) {
+        if (self.showIndex && !columns.some(item => item.type === '__index')) {
           columns.unshift({
             type: '__index',
+            label: self.__('Table.index'),
             width: 50
           });
         }
 
-        columns.unshift({
-          type: '__expandme',
-          toggable: false,
-          className: 'Table-expandCell'
-        });
+        columns.some(item => item.type === '__expandme') ||
+          columns.unshift({
+            type: '__expandme',
+            toggable: false,
+            className: 'Table-expandCell'
+          });
 
-        columns.unshift({
-          type: '__checkme',
-          fixed: 'left',
-          toggable: false,
-          className: 'Table-checkCell'
-        });
+        columns.some(item => item.type === '__checkme') ||
+          columns.unshift({
+            type: '__checkme',
+            fixed: 'left',
+            toggable: false,
+            className: 'Table-checkCell'
+          });
 
-        columns.unshift({
-          type: '__dragme',
-          toggable: false,
-          className: 'Table-dragCell'
-        });
+        columns.some(item => item.type === '__dragme') ||
+          columns.unshift({
+            type: '__dragme',
+            toggable: false,
+            className: 'Table-dragCell'
+          });
 
         const originColumns = self.columns.concat();
         const ids: Array<any> = [];
@@ -1436,7 +1466,7 @@ export const TableStore = iRendererStore
       document.body.removeChild(div);
     }
 
-    function syncTableWidth() {
+    function syncTableWidth(setWidth = false) {
       const table = tableRef;
       if (!table) {
         return;
@@ -1447,7 +1477,9 @@ export const TableStore = iRendererStore
       cols.forEach((col: HTMLElement) => {
         const index = parseInt(col.getAttribute('data-index')!, 10);
         const column = self.columns[index];
-        column.setRealWidth(col.offsetWidth);
+        const realWidth = col.getBoundingClientRect().width;
+        column.setRealWidth(realWidth);
+        setWidth && column.setWidth(realWidth);
       });
     }
 
@@ -1596,19 +1628,19 @@ export const TableStore = iRendererStore
 
       if (!allMatched) {
         // 前 20 个直接渲染，后面的按需渲染
-        if (
-          self.lazyRenderAfter &&
-          self.falttenedRows.length > self.lazyRenderAfter
-        ) {
-          for (
-            let i = self.lazyRenderAfter, len = self.falttenedRows.length;
-            i < len;
-            i++
-          ) {
-            self.falttenedRows[i].appeared = false;
-            self.falttenedRows[i].lazyRender = true;
-          }
-        }
+        // if (
+        //   self.lazyRenderAfter &&
+        //   self.falttenedRows.length > self.lazyRenderAfter
+        // ) {
+        //   for (
+        //     let i = self.lazyRenderAfter, len = self.falttenedRows.length;
+        //     i < len;
+        //     i++
+        //   ) {
+        //     self.falttenedRows[i].appeared = false;
+        //     self.falttenedRows[i].lazyRender = true;
+        //   }
+        // }
 
         const expand = self.footable && self.footable.expand;
         if (
@@ -1697,7 +1729,10 @@ export const TableStore = iRendererStore
       self.selectedRows.clear();
 
       selected.forEach(item => {
-        let resolved = findTree(self.rows, a => a.pristine === item);
+        let resolved = findTree(
+          self.rows,
+          a => a.pristine === item || a.data === item
+        );
 
         // 先严格比较，
         if (!resolved) {
@@ -2104,6 +2139,11 @@ export const TableStore = iRendererStore
       persistSaveToggledColumns,
       setSearchFormExpanded,
       toggleSearchFormExpanded,
+
+      switchToFixedLayout() {
+        this.syncTableWidth(true);
+        self.tableLayout = 'fixed';
+      },
 
       // events
       afterCreate() {

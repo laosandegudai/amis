@@ -24,7 +24,7 @@ export class NumberControlPlugin extends BasePlugin {
   static id = 'NumberControlPlugin';
   // 关联渲染器名字
   rendererName = 'input-number';
-  $schema = '/schemas/NumberControlSchema.json';
+  $schema = '/schemas/AMISInputNumberSchema.json';
 
   // 组件名称
   name = '数字框';
@@ -40,7 +40,8 @@ export class NumberControlPlugin extends BasePlugin {
     label: '数字',
     name: 'number',
     showSteps: true,
-    keyboard: true
+    keyboard: true,
+    kilobitSeparator: true
   };
   previewSchema: any = {
     type: 'form',

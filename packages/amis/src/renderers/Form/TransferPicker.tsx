@@ -7,7 +7,7 @@ import {
 } from 'amis-core';
 import React from 'react';
 import {Spinner, SpinnerExtraProps} from 'amis-ui';
-import {BaseTransferRenderer, TransferControlSchema} from './Transfer';
+import {BaseTransferRenderer, AMISTransferSchemaBase} from './Transfer';
 import {TransferPicker} from 'amis-ui';
 import {autobind, createObject} from 'amis-core';
 import {ActionObject, toNumber} from 'amis-core';
@@ -19,12 +19,12 @@ import pick from 'lodash/pick';
  * TransferPicker 穿梭器的弹框形态
  * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/form/transfer-picker
  */
-export interface TransferPickerControlSchema
-  extends Omit<TransferControlSchema, 'type'>,
+export interface AMISTransferPickerSchema
+  extends AMISTransferSchemaBase,
     SpinnerExtraProps {
   type: 'transfer-picker';
   /**
-   * 边框模式，全边框，还是半边框，或者没边框。
+   * 边框模式
    */
   borderMode?: 'full' | 'half' | 'none';
 
@@ -39,7 +39,7 @@ export interface TransferPickerControlSchema
 export interface TabsTransferProps
   extends OptionsControlProps,
     Omit<
-      TransferPickerControlSchema,
+      AMISTransferPickerSchema,
       | 'type'
       | 'options'
       | 'inputClassName'
@@ -128,7 +128,8 @@ export class TransferPickerRenderer extends BaseTransferRenderer<TabsTransferPro
       placeholder,
       onlyChildren,
       autoCheckChildren = true,
-      initiallyOpen = true
+      initiallyOpen = true,
+      searchPlaceholder
     } = this.props;
 
     // 目前 LeftOptions 没有接口可以动态加载
@@ -150,7 +151,7 @@ export class TransferPickerRenderer extends BaseTransferRenderer<TabsTransferPro
     return (
       <div className={cx('TransferControl', className)}>
         <TransferPicker
-          placeholder={placeholder}
+          placeholder={placeholder as string}
           borderMode={borderMode}
           selectMode={selectMode}
           onlyChildren={onlyChildren}
@@ -163,6 +164,7 @@ export class TransferPickerRenderer extends BaseTransferRenderer<TabsTransferPro
           sortable={sortable}
           searchResultMode={searchResultMode}
           onSearch={searchable ? this.handleSearch : undefined}
+          searchPlaceholder={searchPlaceholder}
           showArrow={showArrow}
           onDeferLoad={deferLoad}
           selectTitle={selectTitle}

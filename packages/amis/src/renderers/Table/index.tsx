@@ -44,7 +44,8 @@ import {
   getTree,
   resolveVariableAndFilterForAsync,
   getMatchedEventTargets,
-  loopTooMuch
+  loopTooMuch,
+  filterClassNameObject
 } from 'amis-core';
 import {
   Button,
@@ -55,80 +56,94 @@ import {
   SpinnerExtraProps
 } from 'amis-ui';
 import {TableCell} from './TableCell';
-import type {AutoGenerateFilterObject} from '../CRUD';
+import type {AMISAutoGenerateFilterObject} from '../CRUD';
 import {HeadCellFilterDropDown} from './HeadCellFilterDropdown';
 import {HeadCellSearchDropDown} from './HeadCellSearchDropdown';
 import TableContent, {renderItemActions} from './TableContent';
 import {
   BaseSchema,
   SchemaApi,
-  SchemaClassName,
   SchemaObject,
   SchemaTokenizeableString,
   SchemaTpl
 } from '../../Schema';
 import {SchemaPopOver} from '../PopOver';
-import {SchemaQuickEdit} from '../QuickEdit';
-import {SchemaCopyable} from '../Copyable';
+import {AMISQuickEdit, getQuickEditApi, SchemaQuickEdit} from '../QuickEdit';
+import {AMISCopyable, SchemaCopyable} from '../Copyable';
 import {SchemaRemark} from '../Remark';
 import ColumnToggler from './ColumnToggler';
 import {exportExcel} from './exportExcel';
 import AutoFilterForm from './AutoFilterForm';
 import Cell from './Cell';
+import VCell from './VCell';
 
-import type {IColumn, IRow} from 'amis-core';
+import type {
+  IColumn,
+  IRow,
+  AMISVariableName,
+  AMISPopOverBase,
+  AMISSchema,
+  AMISApi,
+  AMISOptions,
+  AMISClassName,
+  AMISLocalSource,
+  AMISExpression,
+  AMISBadgeBase,
+  AMISSchemaBase,
+  AMISRemarkBase
+} from 'amis-core';
 
 /**
- * 表格列，不指定类型时默认为文本类型。
+ * 表格列配置，不指定类型时默认为文本类型
  */
-export type TableColumnObject = {
+export interface AMISTableColumnBase {
   /**
-   * 列标题
+   * 列标题文本
    */
   label: string;
 
   /**
-   * 配置是否固定当前列
+   * 是否固定当前列
    */
   fixed?: 'left' | 'right' | 'none';
 
   /**
    * 绑定字段名
    */
-  name?: string;
+  name?: AMISVariableName;
 
   /**
-   * 配置查看详情功能
+   * 查看详情配置
    */
-  popOver?: SchemaPopOver;
+  popOver?: AMISPopOverBase;
 
   /**
-   * 配置快速编辑功能
+   * 快速编辑配置
    */
-  quickEdit?: SchemaQuickEdit;
+  quickEdit?: AMISQuickEdit;
 
   /**
-   * 作为表单项时，可以单独配置编辑时的快速编辑面板。
+   * 更新时快速编辑配置
    */
-  quickEditOnUpdate?: SchemaQuickEdit;
+  quickEditOnUpdate?: AMISQuickEdit;
 
   /**
-   * 配置点击复制功能
+   * 点击复制配置
    */
-  copyable?: SchemaCopyable;
+  copyable?: AMISCopyable;
 
   /**
-   * 配置是否可以排序
+   * 是否可排序
    */
   sortable?: boolean;
 
   /**
    * 是否可快速搜索
    */
-  searchable?: boolean | SchemaObject;
+  searchable?: boolean | AMISSchema;
 
   /**
-   * 配置是否默认展示
+   * 是否默认展示
    */
   toggled?: boolean;
 
@@ -148,7 +163,7 @@ export type TableColumnObject = {
   vAlign?: 'top' | 'middle' | 'bottom';
 
   /**
-   * 标题左右对齐方式
+   * 标题对齐方式
    */
   headerAlign?: 'left' | 'right' | 'center' | 'justify';
 
@@ -168,70 +183,72 @@ export type TableColumnObject = {
   labelClassName?: string;
 
   /**
-   * todo
+   * 是否可过滤
    */
   filterable?:
     | boolean
     | {
-        source?: string;
-        options?: Array<any>;
+        source?: AMISApi;
+        options?: AMISOptions;
       };
 
   /**
-   * 结合表格的 footable 一起使用。
-   * 填写 *、xs、sm、md、lg指定 footable 的触发条件，可以填写多个用空格隔开
+   * 响应式断点
    */
   breakpoint?: '*' | 'xs' | 'sm' | 'md' | 'lg';
 
   /**
-   * 提示信息
+   * 提示信息配置
    */
-  remark?: SchemaRemark;
+  remark?: AMISRemarkBase;
 
   /**
-   * 默认值, 只有在 inputTable 里面才有用
+   * 默认值
    */
   value?: any;
 
   /**
-   * 是否唯一, 只有在 inputTable 里面才有用
+   * 是否唯一
    */
   unique?: boolean;
 
   /**
-   * 表格列单元格是否可以获取父级数据域值，默认为true，该配置对当前列内单元格生效
+   * 是否可获取父级数据
    */
   canAccessSuperData?: boolean;
 
   /**
-   * 当一次性渲染太多列上有用，默认为 100，可以用来提升表格渲染性能
+   * 延迟渲染阈值
    * @default 100
    */
   lazyRenderAfter?: number;
 
   /**
-   * 单元格内部组件自定义样式 style作为单元格自定义样式的配置
+   * 单元格内部组件自定义样式
    */
   innerStyle?: {
     [propName: string]: any;
   };
-};
 
-export type TableColumnWithType = SchemaObject & TableColumnObject;
-export type TableColumn = TableColumnWithType | TableColumnObject;
+  [propName: string]: any;
+}
 
-type AutoFillHeightObject = Record<'height' | 'maxHeight', number>;
+export type AMISTableColumn =
+  | AMISTableColumnBase
+  | (AMISSchema & AMISTableColumnBase);
+
+// 保留原来的叫法
+export type TableColumnObject = AMISTableColumnBase;
+export type TableColumnWithType = AMISSchema & AMISTableColumnBase;
+export type TableColumn = AMISTableColumn;
+
+export type AMISAutoFillHeightObject = Record<'height' | 'maxHeight', number>;
+type AutoFillHeightObject = AMISAutoFillHeightObject;
 
 /**
- * Table 表格渲染器。
- * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/table
+ * 数据表格，支持排序、筛选、搜索、固定列、拖拽、快速编辑等。通过列配置控制单元格渲染与交互。
  */
-export interface TableSchema extends BaseSchema {
-  /**
-   * 指定为表格渲染器。
-   */
-  type: 'table' | 'static-table';
-
+export interface AMISTableBase extends AMISSchemaBase {
   /**
    * 是否固定表头
    */
@@ -269,17 +286,21 @@ export interface TableSchema extends BaseSchema {
   /**
    * 底部外层 CSS 类名
    */
-  footerClassName?: SchemaClassName;
+  footerClassName?: AMISClassName;
 
   /**
    * 顶部外层 CSS 类名
    */
-  headerClassName?: SchemaClassName;
+  headerClassName?: AMISClassName;
 
   /**
    * 占位符
    */
-  placeholder?: string | SchemaTpl;
+  placeholder?:
+    | string
+    | {
+        [propName: string]: string;
+      };
 
   /**
    * 是否显示序号
@@ -299,12 +320,12 @@ export interface TableSchema extends BaseSchema {
   /**
    * 数据源：绑定当前环境变量
    */
-  source?: SchemaTokenizeableString;
+  source?: AMISLocalSource;
 
   /**
    * 表格 CSS 类名
    */
-  tableClassName?: SchemaClassName;
+  tableClassName?: AMISClassName;
 
   /**
    * 标题
@@ -314,12 +335,12 @@ export interface TableSchema extends BaseSchema {
   /**
    * 工具栏 CSS 类名
    */
-  toolbarClassName?: SchemaClassName;
+  toolbarClassName?: AMISClassName;
 
   /**
    * 合并单元格配置，配置数字表示从左到右的多少列自动合并单元格。
    */
-  combineNum?: number | SchemaExpression;
+  combineNum?: number | AMISExpression;
 
   /**
    * 合并单元格配置，配置从第几列开始合并。
@@ -329,12 +350,12 @@ export interface TableSchema extends BaseSchema {
   /**
    * 顶部总结行
    */
-  prefixRow?: Array<SchemaObject>;
+  prefixRow?: Array<AMISSchema>;
 
   /**
    * 底部总结行
    */
-  affixRow?: Array<SchemaObject>;
+  affixRow?: Array<AMISSchema>;
 
   /**
    * 是否可调整列宽
@@ -342,29 +363,29 @@ export interface TableSchema extends BaseSchema {
   resizable?: boolean;
 
   /**
-   * 行样式表表达式
+   * 行样式表达式
    */
   rowClassNameExpr?: string;
 
   /**
    * 行角标
    */
-  itemBadge?: BadgeObject;
+  itemBadge?: AMISBadgeBase;
 
   /**
    * 开启查询区域，会根据列元素的searchable属性值，自动生成查询条件表单
    */
-  autoGenerateFilter?: AutoGenerateFilterObject | boolean;
+  autoGenerateFilter?: AMISAutoGenerateFilterObject | boolean;
 
   /**
-   * 表格是否可以获取父级数据域值，默认为false
+   * 表格是否可获取父级数据域值，默认为false
    */
   canAccessSuperData?: boolean;
 
   /**
    * 表格自动计算高度
    */
-  autoFillHeight?: boolean | AutoFillHeightObject;
+  autoFillHeight?: boolean | AMISAutoFillHeightObject;
 
   /**
    * table layout
@@ -374,9 +395,24 @@ export interface TableSchema extends BaseSchema {
   /**
    * 懒加载 API，当行数据中用 defer: true 标记了，则其孩子节点将会用这个 API 来拉取数据。
    */
-  deferApi?: SchemaApi;
-}
+  deferApi?: AMISApi;
 
+  /**
+   * 持久化 key
+   */
+  persistKey?: string;
+}
+export type BaseTableSchema = AMISTableBase;
+/**
+ * 表格基础配置，用于展示和操作结构化数据，支持分页、排序、筛选、可编辑、列设置等功能
+ */
+export interface AMISTableSchema extends AMISTableBase {
+  /**
+   * 指定为表格渲染器。
+   */
+  type: 'table' | 'static-table';
+}
+export type TableSchema = AMISTableSchema;
 export interface TableProps extends RendererProps, SpinnerExtraProps {
   title?: string; // 标题
   header?: SchemaNode;
@@ -654,7 +690,9 @@ export default class Table<
       lazyRenderAfter,
       tableLayout,
       resolveDefinitions,
-      showIndex
+      showIndex,
+      persistKey,
+      useVirtualList
     } = props;
 
     let combineNum = props.combineNum;
@@ -689,7 +727,8 @@ export default class Table<
         canAccessSuperData,
         lazyRenderAfter,
         tableLayout,
-        showIndex
+        showIndex,
+        persistKey
       },
       {
         resolveDefinitions
@@ -722,7 +761,8 @@ export default class Table<
   static syncRows(
     store: ITableStore,
     props: TableProps,
-    prevProps?: TableProps
+    prevProps?: TableProps,
+    forceUpdateRows = false
   ) {
     const source = props.source;
     const value = getPropValue(props, (props: TableProps) => props.items);
@@ -732,6 +772,7 @@ export default class Table<
     // 要严格比较前后的value值，否则某些情况下会导致循环update无限渲染
     if (Array.isArray(value)) {
       if (
+        forceUpdateRows ||
         !prevProps ||
         !isEqual(
           getPropValue(prevProps, (props: TableProps) => props.items),
@@ -843,6 +884,7 @@ export default class Table<
   }
 
   autoFillHeightDispose?: () => void;
+  autoFillHeightDispose2?: () => void;
   initAutoFillHeight() {
     const props = this.props;
     const currentNode = this.dom.current!;
@@ -855,6 +897,13 @@ export default class Table<
         'height'
       );
       this.toDispose.push(this.autoFillHeightDispose);
+      this.autoFillHeightDispose2 = resizeSensor(
+        document.body,
+        this.updateAutoFillHeight,
+        false,
+        'height'
+      );
+      this.toDispose.push(this.autoFillHeightDispose2);
       this.updateAutoFillHeight();
     }
   }
@@ -914,7 +963,8 @@ export default class Table<
           const rect1 = selfNode.getBoundingClientRect();
           const rect2 = nextSibling.getBoundingClientRect();
 
-          if (rect1.bottom <= rect2.top) {
+          // 浏览器缩放/扩大的时候会出现精度问题
+          if (rect1.bottom - rect2.top <= 0.5) {
             nextSiblingHeight +=
               nextSibling.offsetHeight +
               getStyleNumber(nextSibling, 'margin-bottom');
@@ -948,7 +998,7 @@ export default class Table<
     const tableContentHeight = heightValue
       ? `${heightValue}px`
       : `${Math.round(
-          viewportHeight - tableContentTop - tableContentBottom
+          viewportHeight - tableContentTop - tableContentBottom - 1
         )}px`;
 
     tableContent.style[heightField] = tableContentHeight;
@@ -961,6 +1011,7 @@ export default class Table<
   componentDidUpdate(prevProps: TableProps) {
     const props = this.props;
     const store = props.store;
+    let forceReSync = false;
 
     changedEffect(
       [
@@ -983,7 +1034,8 @@ export default class Table<
         'canAccessSuperData',
         'lazyRenderAfter',
         'tableLayout',
-        'showIndex'
+        'showIndex',
+        'persistKey'
       ],
       prevProps,
       props,
@@ -1001,6 +1053,13 @@ export default class Table<
             10
           );
         }
+        if (
+          !forceReSync &&
+          changes.hasOwnProperty('combineNum') &&
+          store.combineNum !== changes.combineNum
+        ) {
+          forceReSync = true;
+        }
         if (changes.orderBy && !props.onQuery) {
           delete changes.orderBy;
         }
@@ -1011,13 +1070,15 @@ export default class Table<
     );
 
     if (
+      forceReSync ||
       anyChanged(['source', 'value', 'items'], prevProps, props) ||
       (!props.value &&
         !props.items &&
         (props.data !== prevProps.data ||
           (typeof props.source === 'string' && isPureVariable(props.source))))
     ) {
-      Table.syncRows(store, props, prevProps) && this.syncSelected();
+      Table.syncRows(store, props, prevProps, forceReSync) &&
+        this.syncSelected();
     } else if (isArrayChildrenModified(prevProps.selected!, props.selected!)) {
       const prevSelectedRows = store.selectedRows
         .map(item => item.id)
@@ -1041,12 +1102,15 @@ export default class Table<
     // 检测属性变化，来切换功能
     if (props.autoFillHeight !== prevProps.autoFillHeight) {
       if (this.autoFillHeightDispose) {
-        const idx = this.toDispose.indexOf(this.autoFillHeightDispose);
-        if (idx !== -1) {
-          this.toDispose.splice(idx, 1);
-        }
+        this.toDispose = this.toDispose.filter(
+          fn =>
+            ![this.autoFillHeightDispose, this.autoFillHeightDispose2].includes(
+              fn
+            )
+        );
         this.autoFillHeightDispose();
         delete this.autoFillHeightDispose;
+        delete this.autoFillHeightDispose2;
         const tableContent = this.table?.parentElement as HTMLElement;
         if (tableContent) {
           tableContent.style.height = '';
@@ -1063,6 +1127,7 @@ export default class Table<
     this.toDispose.forEach(fn => fn());
     this.toDispose = [];
     delete this.autoFillHeightDispose;
+    delete this.autoFillHeightDispose2;
 
     this.updateTableInfoLazy.cancel();
     this.updateAutoFillHeightLazy.cancel();
@@ -1117,20 +1182,15 @@ export default class Table<
       // 那么用户只能通过事件动作来更新上层变量来实现选中
       item.toggle(value);
     }
+    this.syncSelected();
 
-    const rendererEvent = await dispatchEvent(
+    await dispatchEvent(
       'selectedChange',
       createObject(data, {
         ...store.eventContext,
         item: item.data
       })
     );
-
-    if (rendererEvent?.prevented) {
-      return;
-    }
-
-    this.syncSelected();
   }
 
   handleRowClick(item: IRow, index: number) {
@@ -1199,19 +1259,14 @@ export default class Table<
     const {store, data, dispatchEvent} = this.props;
 
     store.toggleAll();
+    this.syncSelected();
 
-    const rendererEvent = await dispatchEvent(
+    await dispatchEvent(
       'selectedChange',
       createObject(data, {
         ...store.eventContext
       })
     );
-
-    if (rendererEvent?.prevented) {
-      return;
-    }
-
-    this.syncSelected();
   }
 
   handleQuickChange(
@@ -1228,13 +1283,7 @@ export default class Table<
       return;
     }
 
-    const {
-      onSave,
-      onPristineChange,
-      saveImmediately: propsSaveImmediately,
-      primaryField,
-      onItemChange
-    } = this.props;
+    const {onSave, onPristineChange, primaryField, onItemChange} = this.props;
 
     item.change(values, savePristine);
 
@@ -1265,25 +1314,26 @@ export default class Table<
       item.path
     );
 
-    if (!saveImmediately && !propsSaveImmediately) {
-      return;
-    } else if (saveImmediately && saveImmediately.api) {
-      this.props.onAction(
-        null,
-        {
-          actionType: 'ajax',
-          api: saveImmediately.api,
-          reload: options?.reload
-        },
-        item.locals
-      );
-      return;
-    }
-
     if (!onSave) {
+      const api = getQuickEditApi(saveImmediately);
+
+      if (isEffectiveApi(api)) {
+        // 调用自身的onAction方法
+        this.props.onAction(
+          null,
+          {
+            actionType: 'ajax',
+            api,
+            reload: options?.reload
+          },
+          item.locals
+        );
+      }
+
       return;
     }
 
+    // 调用crud的onSave方法
     onSave(
       item.data,
       difference(item.data, item.pristine, ['id', primaryField]),
@@ -1532,7 +1582,8 @@ export default class Table<
   }
 
   getPopOverContainer() {
-    return this.dom.current;
+    const {popOverContainer} = this.props;
+    return popOverContainer ? popOverContainer() : this.dom.current;
   }
 
   handleMouseMove(e: React.MouseEvent<any>) {
@@ -1990,15 +2041,15 @@ export default class Table<
     }
 
     const {key, ...restProps} = props;
+    const columnClassName = filterClassNameObject(
+      column.pristine.className,
+      data
+    );
+    const thClassName = cx(columnClassName, stickyClassName);
 
     if (column.type === '__checkme') {
       return (
-        <th
-          {...restProps}
-          key={key}
-          style={style}
-          className={cx(column.pristine.className, stickyClassName)}
-        >
+        <th {...restProps} key={key} style={style} className={thClassName}>
           {store.rows.length && store.multiple ? (
             <Checkbox
               classPrefix={ns}
@@ -2016,21 +2067,11 @@ export default class Table<
       );
     } else if (column.type === '__dragme') {
       return (
-        <th
-          {...restProps}
-          key={key}
-          style={style}
-          className={cx(column.pristine.className, stickyClassName)}
-        />
+        <th {...restProps} key={key} style={style} className={thClassName} />
       );
     } else if (column.type === '__expandme') {
       return (
-        <th
-          {...restProps}
-          key={key}
-          style={style}
-          className={cx(column.pristine.className, stickyClassName)}
-        >
+        <th {...restProps} key={key} style={style} className={thClassName}>
           {(store.footable &&
             (store.footable.expandAll === false || store.footable.accordion)) ||
           (store.expandConfig &&
@@ -2054,12 +2095,7 @@ export default class Table<
       );
     } else if (column.type === '__index') {
       return (
-        <th
-          {...restProps}
-          key={key}
-          style={style}
-          className={cx(column.pristine.className, stickyClassName)}
-        >
+        <th {...restProps} key={key} style={style} className={thClassName}>
           {__('Table.index')}
 
           {resizable === false ? null : resizeLine}
@@ -2217,7 +2253,7 @@ export default class Table<
           key="content"
           className={cx(
             `TableCell--title`,
-            column.pristine.className,
+            columnClassName,
             column.pristine.labelClassName
           )}
           style={props.style}
@@ -2257,11 +2293,16 @@ export default class Table<
       itemBadge,
       translate,
       testIdBuilder,
-      filterItemIndex
+      filterItemIndex,
+      offset
     } = this.props;
 
+    // 如果列数大于20，并且列不是固定列，则使用按需渲染模式
+    const Comp =
+      store.filteredColumns.length > 20 && !column.fixed ? VCell : Cell;
+
     return (
-      <Cell
+      <Comp
         key={props.key}
         region={region}
         column={column}
@@ -2285,6 +2326,7 @@ export default class Table<
         testIdBuilder={testIdBuilder?.getChild(
           `cell-${props.rowPath}-${column.index}`
         )}
+        offset={offset}
       />
     );
   }

@@ -156,7 +156,7 @@ export class TreeControlPlugin extends BasePlugin {
   static id = 'TreeControlPlugin';
   // 关联渲染器名字
   rendererName = 'input-tree';
-  $schema = '/schemas/TreeControlSchema.json';
+  $schema = '/schemas/AMISInputTreeSchema.json';
 
   // 组件名称
   name = '树组件';
@@ -579,6 +579,11 @@ export class TreeControlPlugin extends BasePlugin {
                     label: '新增文案提示',
                     value: '添加子节点',
                     name: 'createTip'
+                  },
+                  {
+                    type: 'input-number',
+                    label: '最大长度',
+                    name: 'createMaxLength'
                   }
                 ]
               }),
@@ -591,6 +596,11 @@ export class TreeControlPlugin extends BasePlugin {
                     label: '编辑文案提示',
                     value: '编辑该节点',
                     name: 'editTip'
+                  },
+                  {
+                    type: 'input-number',
+                    label: '最大长度',
+                    name: 'editMaxLength'
                   }
                 ]
               }),
@@ -778,13 +788,48 @@ export class TreeControlPlugin extends BasePlugin {
         title: '外观',
         body: getSchemaTpl('collapseGroup', [
           getSchemaTpl('theme:formItem', {
-            schema: {
-              type: 'input-number',
-              label: '高度',
-              name: 'wrapperCustomStyle.root.height',
-              clearable: true,
-              unitOptions: ['px', '%', 'em', 'vh', 'vw']
-            }
+            schema: [
+              {
+                type: 'button-group-select',
+                label: '高度设置',
+                size: 'xs',
+                name: 'heightAuto',
+                options: [
+                  {
+                    label: '固定',
+                    value: false
+                  },
+                  {
+                    label: '适配内容',
+                    value: true
+                  }
+                ],
+                pipeIn: (value: any) => {
+                  return !!value;
+                },
+                onChange: (
+                  value: any,
+                  oldValue: boolean,
+                  model: any,
+                  form: any
+                ) => {
+                  if (value) {
+                    form.deleteValueByName('wrapperCustomStyle.root.height');
+                  } else {
+                    form.setValueByName(
+                      'wrapperCustomStyle.root.height',
+                      '260px'
+                    );
+                  }
+                }
+              },
+              getSchemaTpl('theme:height2', {
+                label: '固定高度',
+                name: 'wrapperCustomStyle.root.height',
+                clearable: true,
+                visibleOn: '!this.heightAuto'
+              })
+            ]
           }),
           getSchemaTpl('theme:form-label'),
           getSchemaTpl('theme:form-description'),

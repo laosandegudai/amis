@@ -902,7 +902,7 @@ Form 支持轮询初始化接口，步骤如下：
 }
 ```
 
-发送请求默认为 `POST` 方式，会将所有表单项整理成一个对象发送过过去。除此之外你可以主动获取以下信息。
+发送请求默认为 `POST` 方式，会将所有表单项整理成一个对象发送过去。除此之外你可以主动获取以下信息。
 
 - `diff` 只会包含 `diff` 结果
 - `prinstine` 原始数据
@@ -963,7 +963,7 @@ Form 支持轮询初始化接口，步骤如下：
 
 ### 轮询提交请求
 
-通过设置`asyncApi`，当表单提交发送保存接口后，还会继续轮询请求该接口，默认间隔为`3秒`，直到返回 `finished` 属性为 `true` 才 结束。
+通过设置`asyncApi`，当表单提交发送保存接口后，还会继续轮询请求该接口，默认间隔为`3秒`，直到返回 `finished` 属性为 `true` 才结束。
 
 ```schema: scope="body"
 {
@@ -1389,6 +1389,7 @@ Form 支持轮询初始化接口，步骤如下：
 | messages.fetchFailed        | `string`                                                                  |                                            | 获取失败时提示                                                                                                                                                                                                                                                                                                                                               |
 | messages.saveSuccess        | `string`                                                                  |                                            | 保存成功时提示                                                                                                                                                                                                                                                                                                                                               |
 | messages.saveFailed         | `string`                                                                  |                                            | 保存失败时提示                                                                                                                                                                                                                                                                                                                                               |
+| messages.validateFailed     | `string`                                                                  | `"依赖的部分字段没有通过验证"`             | 表单验证失败时的提示                                                                                                                                                                                                                                                                                                                                         |
 | wrapWithPanel               | `boolean`                                                                 | `true`                                     | 是否让 Form 用 panel 包起来，设置为 false 后，actions 将无效。                                                                                                                                                                                                                                                                                               |
 | panelClassName              | `string`                                                                  |                                            | 外层 panel 的类名                                                                                                                                                                                                                                                                                                                                            |
 | api                         | [API](../../../docs/types/api)                                            |                                            | Form 用来保存数据的 api。                                                                                                                                                                                                                                                                                                                                    |
@@ -1397,12 +1398,12 @@ Form 支持轮询初始化接口，步骤如下：
 | interval                    | `number`                                                                  | `3000`                                     | 刷新时间(最低 3000)                                                                                                                                                                                                                                                                                                                                          |
 | silentPolling               | `boolean`                                                                 | `false`                                    | 配置刷新时是否显示加载动画                                                                                                                                                                                                                                                                                                                                   |
 | stopAutoRefreshWhen         | `string`                                                                  | `""`                                       | 通过[表达式](./Types.md#表达式) 来配置停止刷新的条件                                                                                                                                                                                                                                                                                                         |
-| initAsyncApi                | [API](../../../docs/types/api)                                            |                                            | Form 用来获取初始数据的 api,与 initApi 不同的是，会一直轮询请求该接口，直到返回 finished 属性为 true 才 结束。                                                                                                                                                                                                                                               |
-| initFetch                   | `boolean`                                                                 | `true`                                     | 设置了 initApi 或者 initAsyncApi 后，默认会开始就发请求，设置为 false 后就不会起始就请求接口                                                                                                                                                                                                                                                                 |
+| initAsyncApi                | [API](../../../docs/types/api)                                            |                                            | Form 用来获取初始数据的 api,与 initApi 不同的是，会一直轮询请求该接口，直到返回 finished 属性为 true 才结束。                                                                                                                                                                                                                                                |
+| initFetch                   | `boolean`                                                                 | `true`                                     | 设置了 initApi 或者 initAsyncApi 后，默认会开始就发请求，设置为 false 后就不会一开始就请求接口                                                                                                                                                                                                                                                               |
 | initFetchOn                 | `string`                                                                  |                                            | 用表达式来配置                                                                                                                                                                                                                                                                                                                                               |
 | initFinishedField           | `string`                                                                  | `finished`                                 | 设置了 initAsyncApi 后，默认会从返回数据的 data.finished 来判断是否完成，也可以设置成其他的 xxx，就会从 data.xxx 中获取                                                                                                                                                                                                                                      |
 | initCheckInterval           | `number`                                                                  | `3000`                                     | 设置了 initAsyncApi 以后，默认拉取的时间间隔                                                                                                                                                                                                                                                                                                                 |
-| asyncApi                    | [API](../../../docs/types/api)                                            |                                            | 设置此属性后，表单提交发送保存接口后，还会继续轮询请求该接口，直到返回 `finished` 属性为 `true` 才 结束。                                                                                                                                                                                                                                                    |
+| asyncApi                    | [API](../../../docs/types/api)                                            |                                            | 设置此属性后，表单提交发送保存接口后，还会继续轮询请求该接口，直到返回 `finished` 属性为 `true` 才结束。                                                                                                                                                                                                                                                     |
 | checkInterval               | `number`                                                                  | 3000                                       | 轮询请求的时间间隔，默认为 3 秒。设置 `asyncApi` 才有效                                                                                                                                                                                                                                                                                                      |
 | finishedField               | `string`                                                                  | `"finished"`                               | 如果决定结束的字段名不是 `finished` 请设置此属性，比如 `is_success`                                                                                                                                                                                                                                                                                          |
 | submitOnChange              | `boolean`                                                                 | `false`                                    | 表单修改即提交                                                                                                                                                                                                                                                                                                                                               |
@@ -1430,19 +1431,20 @@ Form 支持轮询初始化接口，步骤如下：
 
 当前组件会对外派发以下事件，可以通过`onEvent`来监听这些事件，并通过`actions`来配置执行的动作，在`actions`中可以通过`${事件参数名}`或`${event.data.[事件参数名]}`来获取事件产生的数据，详细请查看[事件动作](../../docs/concepts/event-action)。
 
-| 事件名称              | 事件参数                                                                                                                                                                                   | 说明                                                                                                                                        |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 事件名称              | 事件参数                                                                                                                                                                                   | 说明                                                                                                                                        |
-| inited                | `responseData: any` 请求的响应数据</br>`responseStatus: number` 响应状态，0 表示成功</br>`responseMsg: string`响应消息, `error`表示接口是否成功<br/>`[name]: any` 当前数据域中指定字段的值 | initApi 接口请求完成时触发                                                                                                                  |
-| change                | `event.data: object` 当前表单数据                                                                                                                                                          | 表单值变化时触发                                                                                                                            |
-| formItemValidateSucc  | `event.data: object` 当前表单数据                                                                                                                                                          | 表单项校验成功时触发（只有`validateOnChange`为`true`或者点击提交过表单又去修改表单项信息的时候才会触发）                                    |
-| formItemValidateError | `event.data: object` 当前表单数据                                                                                                                                                          | 表单项校验失败时触发（只有`validateOnChange`为`true`或者点击提交过表单又去修改表单项信息的时候才会触发）                                    |
-| validateSucc          | `event.data: object` 当前表单数据                                                                                                                                                          | 表单校验成功时触发                                                                                                                          |
-| validateError         | `event.data: object` 当前表单数据                                                                                                                                                          | 表单校验失败时触发                                                                                                                          |
-| submit                | `event.data: object` 当前表单数据                                                                                                                                                          | 点击提交按钮或者触发表单提交动作的时候触发（配置了该事件后将不会触发表单提交时的校验、提交到 api 或者 target 等行为，所有行为需要自己配置） |
-| submitSucc            | `event.data.result: object` api 远程请求成功后返回的结果数据                                                                                                                               | 提交成功时触发                                                                                                                              |
-| submitFail            | `event.data.error: object` api 远程请求失败后返回的错误信息                                                                                                                                | 提交失败时触发                                                                                                                              |
-| asyncApiFinished      | `[name]: any` 当前数据域中指定字段的值                                                                                                                                                     | asyncApi 远程请求轮训结束                                                                                                                   |
+| 事件名称              | 事件参数                                                                                                                                                                                     | 说明                                                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 事件名称              | 事件参数                                                                                                                                                                                     | 说明                                                                                                                                        |
+| inited                | `responseData: any` 请求的响应数据<br />`responseStatus: number` 响应状态，0 表示成功<br />`responseMsg: string`响应消息, `error`表示接口是否成功<br/>`[name]: any` 当前数据域中指定字段的值 | 表单初始化完成事件，不管配置不配置 initApi 都会触发，实际上还会等部分子表单项初始化完成                                                     |
+| change                | `event.data: object` 当前表单数据                                                                                                                                                            | 表单值变化时触发                                                                                                                            |
+| formItemValidateSucc  | `event.data: object` 当前表单数据<br />`event.data.__formName` 表单项名字<br />`event.data.__formValue` 表单项值                                                                             | 表单项校验成功时触发                                                                                                                        |
+| formItemValidateError | `event.data: object` 当前表单数据 <br />`event.data.__formName` 表单项名字<br />`event.data.__formValue` 表单项值<br />`event.data.__errors`表单项错误                                       | 表单项校验失败时触发                                                                                                                        |
+| validateSucc          | `event.data: object` 当前表单数据                                                                                                                                                            | 表单校验成功时触发                                                                                                                          |
+| validateError         | `event.data: object` 当前表单数据                                                                                                                                                            | 表单校验失败时触发                                                                                                                          |
+| submit                | `event.data: object` 当前表单数据                                                                                                                                                            | 点击提交按钮或者触发表单提交动作的时候触发（配置了该事件后将不会触发表单提交时的校验、提交到 api 或者 target 等行为，所有行为需要自己配置） |
+| submitSucc            | `event.data.result: object` api 远程请求成功后返回的结果数据                                                                                                                                 | 提交成功时触发                                                                                                                              |
+| submitFail            | `event.data.error: object` api 远程请求失败后返回的错误信息                                                                                                                                  | 提交失败时触发                                                                                                                              |
+| initApiFinished       | `[name]: any` 当前数据域中指定字段的值 <br />`event.data.__trigger` 触发原因：`init` \| `reload`                                                                                             | asyncApi 远程请求轮训结束                                                                                                                   |
+| asyncApiFinished      | `[name]: any` 当前数据域中指定字段的值                                                                                                                                                       | asyncApi 远程请求轮训结束                                                                                                                   |
 
 ### inited
 
@@ -1535,7 +1537,11 @@ Form 支持轮询初始化接口，步骤如下：
 
 ### formItemValidateSucc
 
-只有`validateOnChange`为`true`或者点击提交过表单又去修改表单项信息的时候才会触发。
+事件上下文
+
+- `event.data` 表单的全部数据
+- `event.data.__formName` 表单项名字
+- `event.data.__formValue` 表单项值
 
 ```schema: scope="body"
 [
@@ -1574,6 +1580,17 @@ Form 支持轮询初始化接口，步骤如下：
             }
           }
         ]
+      },
+      "formItemValidateError": {
+        "actions": [
+          {
+            "actionType": "setValue",
+            "componentId": "formitem_validate_succ_text",
+            "args": {
+              "value": "failed"
+            }
+          }
+        ]
       }
     }
   },
@@ -1589,57 +1606,14 @@ Form 支持轮询初始化接口，步骤如下：
 
 ### formItemValidateError
 
-只有`validateOnChange`为`true`或者点击提交过表单又去修改表单项信息的时候才会触发。
+事件上下文
 
-```schema: scope="body"
-[
-  {
-    "type": "form",
-    "title": "尝试修改表单项email",
-    "api": "/api/mock2/form/x",
-    "body": [
-      {
-        "type": "input-text",
-        "name": "name",
-        "label": "姓名",
-        "value": "amis",
-        "validateOnChange": true
-      },
-      {
-        "type": "input-text",
-        "name": "email",
-        "label": "邮箱",
-        "value": "amis",
-        "validateOnChange": true,
-        "required": true,
-        "validations": {
-          "isEmail": true
-        }
-      }
-    ],
-    "onEvent": {
-      "formItemValidateError": {
-        "actions": [
-          {
-            "actionType": "setValue",
-            "componentId": "formitem_validate_fail_text",
-            "args": {
-              "value": "${event.data|json}"
-            }
-          }
-        ]
-      }
-    }
-  },
-  {
-    "type": "input-text",
-    "id": "formitem_validate_fail_text",
-    "static": true,
-    "name": "tip",
-    "label": "上下文"
-  }
-]
-```
+- `event.data` 表单的全部数据
+- `event.data.__formName` 表单项名字
+- `event.data.__formValue` 表单项值
+- `event.data.__errors` 表单项的错误，字符数组
+
+示例请参考 `formItemValidateSucc` 的例子
 
 ### validateSucc
 
@@ -1874,6 +1848,66 @@ Form 支持轮询初始化接口，步骤如下：
     "static": true,
     "name": "tip",
     "label": "上下文"
+  }
+]
+```
+
+### initApiFinished
+
+> 6.13.0 起开始支持此事件
+
+initApi 请求完成后触发，包括初始化过程和后续的重新刷新都会触发
+
+可以通过 `event.data.__trigger` 来判断，它的分别是 `init` 和 `reload`。
+
+```schema: scope="body"
+[
+  {
+    "type": "form",
+    "title": "尝试提交表单",
+    "initApi": "/api/mock2/page/initData",
+    "id": "theform",
+    "actions": [
+      {
+        "label": "Reload",
+        type: "button",
+        onEvent: {
+          click: {
+            actions: [
+              {
+                actionType: "reload",
+                componentId: "theform"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "body": [
+      {
+        "type": "input-text",
+        "name": "name",
+        "label": "姓名"
+      },
+      {
+        "type": "input-email",
+        "name": "email",
+        "label": "邮箱"
+      }
+    ],
+    "onEvent": {
+      "initApiFinished": {
+        "actions": [
+          {
+            "actionType": "toast",
+            "args": {
+              "msgType": "info",
+              "msg": "context: ${event.data|json} trigger: ${event.data.__trigger}"
+            }
+          }
+        ]
+      }
+    }
   }
 ]
 ```

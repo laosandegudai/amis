@@ -604,6 +604,54 @@ test('10. Renderer:crud quickSaveItemApi saveImmediately', async () => {
   expect(mockFetcher).toBeCalledTimes(3);
 });
 
+test('10.1 quickEdit.saveImmediately对象形式,能够触发接口调用', async () => {
+  const mockFetcher = jest.fn(fetcher);
+  const {container} = render(
+    amisRender(
+      {
+        type: 'page',
+        data: {
+          items: [
+            {
+              checked: true
+            }
+          ]
+        },
+        body: {
+          type: 'crud',
+          columns: [
+            {
+              name: 'checked',
+              label: 'checked',
+              quickEdit: {
+                mode: 'inline',
+                type: 'switch',
+                saveImmediately: {
+                  api: {
+                    url: '/example'
+                  }
+                },
+                resetOnFailed: true
+              }
+            }
+          ]
+        }
+      },
+      {},
+      makeEnv({fetcher: mockFetcher})
+    )
+  );
+
+  const switchBtn = container.querySelector('.cxd-Switch.is-checked')!;
+  expect(switchBtn).toBeInTheDocument();
+  fireEvent.click(switchBtn);
+
+  await waitFor(() => {
+    expect(mockFetcher).toBeCalledTimes(1);
+    expect(mockFetcher.mock.calls[0][0].url).toBe('/example');
+  });
+});
+
 test('11. Renderer:crud bulkActions', async () => {
   const {container} = render(
     amisRender(
@@ -757,6 +805,7 @@ test('13. enderer: crud keepItemSelectionOnPageChange & maxKeepItemSelectionLeng
     ).toBe(4);
   });
   replaceReactAriaIds(container);
+  await wait(20);
   expect(container).toMatchSnapshot();
 });
 
@@ -1076,7 +1125,9 @@ describe('18. inner events', () => {
               actions: [
                 {
                   actionType: 'custom',
-                  script: mockFn
+                  args: {
+                    script: mockFn
+                  }
                 }
               ]
             }

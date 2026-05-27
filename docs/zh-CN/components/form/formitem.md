@@ -365,7 +365,7 @@ order: 1
 
 ##### 通过条件配置静态/输入态
 
-也可以通过[表达式](../../../docs/concepts/expression)配置`staticOn`，来实现在某个条件下将当前表单项状态的的自动切换.
+也可以通过[表达式](../../../docs/concepts/expression)配置`staticOn`，来实现在某个条件下将当前表单项状态的自动切换.
 
 ```schema: scope="body"
 {
@@ -1593,7 +1593,7 @@ Table 类型的表单项，要实现服务端校验，可以使用 `路径key` �
 
 ### 配置自动填充
 
-通过配置 "autoFill.api" 为自动填充数据源接口地址；amis 可以将返回数据自动填充到表单中，例如如下配置；
+通过配置 "autoFill.api" 为自动填充数据源接口地址；amis 可以将返回数据自动填充到表单中，如下配置；
 
 ```schema:scope="body"
 {
@@ -1611,7 +1611,7 @@ Table 类型的表单项，要实现服务端校验，可以使用 `路径key` �
           platform: '${platform1}'
         },
         api: {
-          url: "/api/mock2/form/autoUpdate?browser=${browser}&version=${version}",
+          url: "/api/mock2/form/autoUpdate?browser=${browser}",
           responseData: {
             browser: "${browser}",
             version: "${version}",
@@ -1636,7 +1636,7 @@ Table 类型的表单项，要实现服务端校验，可以使用 `路径key` �
 ```
 
 自动填充接口返回格式如下：
-注意：amis 仅处理接口返回结果仅有一项的数据，默认自动填充相关字段
+注意：amis 仅处理接口返回结果只有一项的数据，默认自动填充相关字段
 
 ```json
 {
@@ -1666,7 +1666,7 @@ Table 类型的表单项，要实现服务端校验，可以使用 `路径key` �
 
 ### 配置参照录入
 
-设置 autoFill.showSuggestion 为 true；同时在 autoFill 中配置如下示例参数，可以进行数据的参照录入「当前表单项聚焦或者值变化时弹出 dialog/drawer/popOver 供用户操作」例如如下配置
+设置 autoFill.showSuggestion 为 true；同时在 autoFill 中配置如下示例参数，可以进行数据的参照录入「当前表单项聚焦或者值变化时弹出 dialog/drawer/popOver 供用户操作」如下配置
 
 fillMapping 配置 支持变量取值和表达式；
 如下配置中，如果想一次选中多条数据并映射可如下配置表达式，其中 items 默认为选中的 1 至 N 条数据：

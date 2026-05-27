@@ -29,7 +29,7 @@ export class ComboControlPlugin extends BasePlugin {
   static id = 'ComboControlPlugin';
   // 关联渲染器名字
   rendererName = 'combo';
-  $schema = '/schemas/ComboControlSchema.json';
+  $schema = '/schemas/AMISComboSchema.json';
 
   // 组件名称
   name = '组合输入';
@@ -375,6 +375,8 @@ export class ComboControlPlugin extends BasePlugin {
                     form.setValueByName('removable', value);
                     !value && form.setValueByName('draggable', false);
                     form.setValueByName('flat', false);
+                    form.setValueByName('maxLength', undefined);
+                    form.setValueByName('minLength', undefined);
                   }
                 }),
                 {

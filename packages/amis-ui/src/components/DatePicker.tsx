@@ -246,13 +246,13 @@ const timeFormats = {
 export type ShortCutDate = {
   label: string;
   /** 支持表达式 */
-  date: moment.Moment | string;
+  date: string;
 };
 
 export type ShortCutDateRange = {
   label: string;
-  startDate?: moment.Moment | string;
-  endDate?: moment.Moment | string;
+  startDate?: string;
+  endDate?: string;
 };
 
 export type ShortCuts =
@@ -528,6 +528,10 @@ export class DatePicker extends React.Component<DateProps, DatePickerState> {
   }
 
   handleBlur(e: React.SyntheticEvent<HTMLDivElement>) {
+    const targetElement = (e.nativeEvent as FocusEvent).relatedTarget;
+    if (targetElement === this.dom || targetElement === this.inputRef.current) {
+      return;
+    }
     this.setState({
       isFocused: false
     });

@@ -43,6 +43,7 @@ import {keyToPath} from './keyToPath';
 import {isExpression, replaceExpression} from './formula';
 import type {IStatusStore} from '../store/status';
 import {isAlive} from 'mobx-state-tree';
+import {AMISExpression} from '../schema';
 
 export {
   createObject,
@@ -62,8 +63,19 @@ export function preventDefault(event: TouchEvent | Event): void {
   }
 }
 
+// isMobile根据media宽度判断是否是移动端
 export function isMobile() {
   return (window as any).matchMedia?.('(max-width: 768px)').matches;
+}
+
+// isMobileDevice根据userAgent判断是否为移动端设备
+export function isMobileDevice() {
+  const userAgent = navigator.userAgent;
+  const isMobileUA =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|Windows Phone|Opera Mini|IEMobile|Mobile/i.test(
+      userAgent
+    );
+  return isMobileUA;
 }
 
 export function range(num: number, min: number, max: number): number {
@@ -157,9 +169,9 @@ export function syncDataFromSuper(
 }
 
 /**
- * 生成 8 位随机数字。
+ * 生成 12 位随机数字。
  *
- * @return {string} 8位随机数字
+ * @return {string} 12位随机数字
  */
 export function guid() {
   function s4() {
@@ -440,8 +452,8 @@ export function isVisible(
   schema: {
     id?: string;
     name?: string;
-    visibleOn?: string;
-    hiddenOn?: string;
+    visibleOn?: AMISExpression;
+    hiddenOn?: AMISExpression;
     visible?: boolean;
     hidden?: boolean;
   },
@@ -911,14 +923,21 @@ export function mapTree<T extends TreeItem>(
  */
 export function eachTree<T extends TreeItem>(
   tree: Array<T>,
-  iterator: (item: T, key: number, level: number, paths?: Array<T>) => any,
+  iterator: (
+    item: T,
+    key: number,
+    level: number,
+    paths: Array<T>,
+    indexes: Array<number>
+  ) => any,
   level: number = 1,
-  paths: Array<T> = []
+  paths: Array<T> = [],
+  indexes: Array<number> = []
 ) {
   const length = tree.length;
   for (let i = 0; i < length; i++) {
     const item = tree[i];
-    const res = iterator(item, i, level, paths);
+    const res = iterator(item, i, level, paths, indexes);
     if (res === 'break') {
       break;
     }
@@ -927,7 +946,13 @@ export function eachTree<T extends TreeItem>(
     }
 
     if (item.children?.splice) {
-      eachTree(item.children, iterator, level + 1, paths.concat(item));
+      eachTree(
+        item.children,
+        iterator,
+        level + 1,
+        paths.concat(item),
+        indexes.concat(i)
+      );
     }
   }
 }
@@ -2228,7 +2253,7 @@ export function parseQuery(
       : query
     : {};
   /* 处理hash中的query */
-  const hash = window.location?.hash;
+  const hash = location?.hash ?? window.location?.hash;
   let hashQuery = {};
   let idx = -1;
 

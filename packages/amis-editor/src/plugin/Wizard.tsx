@@ -28,7 +28,8 @@ export class WizardPlugin extends BasePlugin {
   static id = 'WizardPlugin';
   // 关联渲染器名字
   rendererName = 'wizard';
-  $schema = '/schemas/WizardSchema.json';
+  useLazyRender = true; // 使用懒渲染
+  $schema = '/schemas/AMISWizardSchema.json';
 
   name = '向导';
   isBaseComponent = true;
@@ -365,7 +366,7 @@ export class WizardPlugin extends BasePlugin {
               addButtonText: '新增一步',
               scaffold: {
                 title: '标题',
-                items: [
+                body: [
                   {
                     type: 'input-text',
                     name: 'var1',
@@ -910,7 +911,7 @@ export class WizardPlugin extends BasePlugin {
               type={info.type}
               plugin={info.plugin}
               renderer={info.renderer}
-              $schema="/schemas/WizardStepSchema.json"
+              $schema="/schemas/AMISWizardStepSchema.json"
               hostId={info.id}
               memberIndex={index}
               name={step.title || `步骤${index + 1}`}

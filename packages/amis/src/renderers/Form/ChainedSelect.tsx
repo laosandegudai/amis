@@ -8,7 +8,8 @@ import {
   resolveEventData,
   getVariable,
   setThemeClassName,
-  CustomStyle
+  CustomStyle,
+  AMISFormItemWithOptions
 } from 'amis-core';
 import {Select, Spinner} from 'amis-ui';
 import {Api, ApiObject} from 'amis-core';
@@ -22,16 +23,22 @@ import isEmpty from 'lodash/isEmpty';
 
 /**
  * 链式下拉框
- * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/form/chained-select
+ * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/form/chain-select
  */
-export interface ChainedSelectControlSchema extends FormOptionsSchema {
+/**
+ * 链式下拉框组件，用于根据前一次选择动态加载和展示下一级选项，支持多级联动选择，常用于省市区等多层级数据选择场景。
+ */
+export interface AMISChainedSelectSchema extends AMISFormItemWithOptions {
+  /**
+   * 指定为 chained-select 组件
+   */
   type: 'chained-select';
 }
 
 export interface ChainedSelectProps
   extends OptionsControlProps,
     Omit<
-      ChainedSelectControlSchema,
+      AMISChainedSelectSchema,
       | 'options'
       | 'type'
       | 'source'
@@ -272,9 +279,9 @@ export default class ChainedSelectControl extends React.Component<
     onChange(valueRes);
   }
 
-  reload() {
+  reload(subpath?: string, query?: any) {
     const reload = this.props.reloadOptions;
-    reload && reload();
+    reload && reload(subpath, query);
   }
 
   renderStatic(displayValue = '-') {
@@ -339,6 +346,7 @@ export default class ChainedSelectControl extends React.Component<
       env,
       testIdBuilder,
       popoverClassName,
+      placeholder,
       ...rest
     } = this.props;
     const arr = Array.isArray(value)
@@ -355,6 +363,7 @@ export default class ChainedSelectControl extends React.Component<
       <div className={cx(`${ns}ChainedSelectControl`, className)}>
         <Select
           {...rest}
+          placeholder={placeholder as string}
           mobileUI={mobileUI}
           popOverContainer={
             mobileUI

@@ -20,7 +20,7 @@ export class SubFormControlPlugin extends BasePlugin {
   static id = 'SubFormControlPlugin';
   // 关联渲染器名字
   rendererName = 'input-sub-form';
-  $schema = '/schemas/SubFormControlSchema.json';
+  $schema = '/schemas/AMISInputSubFormSchema.json';
 
   // 组件名称
   name = '子表单项';
@@ -88,6 +88,12 @@ export class SubFormControlPlugin extends BasePlugin {
         label: '按钮标签名',
         value: '设置'
       }),
+      {
+        type: 'switch',
+        label: '多选模式',
+        name: 'multiple',
+        value: false
+      },
       {
         name: 'minLength',
         visibleOn: 'this.multiple',

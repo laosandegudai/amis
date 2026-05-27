@@ -12,8 +12,14 @@ import {
   setThemeClassName,
   formateCheckThemeCss
 } from 'amis-core';
-import type {ActionObject, Api, OptionsControlProps, Option} from 'amis-core';
-import {Checkbox, Icon, Spinner} from 'amis-ui';
+import type {
+  ActionObject,
+  Api,
+  OptionsControlProps,
+  Option,
+  AMISFormItemWithOptions
+} from 'amis-core';
+import {Checkbox, Icon, Spinner, TooltipWrapper} from 'amis-ui';
 import {FormOptionsSchema} from '../../Schema';
 import {supportStatic} from './StaticHoc';
 import type {TestIdBuilder} from 'amis-core';
@@ -23,7 +29,13 @@ import debounce from 'lodash/debounce';
  * 复选框
  * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/form/checkboxes
  */
-export interface CheckboxesControlSchema extends FormOptionsSchema {
+/**
+ * 复选框组组件，用于在表单中通过多个复选框选择多个选项，支持全选、默认全选、自定义选项展示和多列排列等功能。
+ */
+export interface AMISCheckboxesSchema extends AMISFormItemWithOptions {
+  /**
+   * 指定为 checkboxes 组件
+   */
   type: 'checkboxes';
 
   /**
@@ -55,7 +67,7 @@ export interface CheckboxesControlSchema extends FormOptionsSchema {
 export interface CheckboxesProps
   extends OptionsControlProps,
     Omit<
-      CheckboxesControlSchema,
+      AMISCheckboxesSchema,
       | 'options'
       | 'type'
       | 'className'
@@ -107,9 +119,9 @@ export default class CheckboxesControl extends React.Component<
     }
   }
 
-  reload() {
+  reload(subpath?: string, query?: any) {
     const reload = this.props.reloadOptions;
-    reload && reload();
+    reload && reload(subpath, query);
   }
 
   @autobind
@@ -236,6 +248,7 @@ export default class CheckboxesControl extends React.Component<
       optionType,
       menuTpl,
       data,
+      classnames: cx,
       testIdBuilder
     } = this.props;
     const labelText = String(option[labelField || 'label']);
@@ -243,6 +256,7 @@ export default class CheckboxesControl extends React.Component<
     const itemTestIdBuilder = testIdBuilder?.getChild(
       'item-' + labelText || index
     );
+    const finalDisabled = disabled || option.disabled;
 
     return (
       <Checkbox
@@ -250,7 +264,7 @@ export default class CheckboxesControl extends React.Component<
         key={index}
         onChange={() => onToggle(option)}
         checked={!!~selectedOptions.indexOf(option)}
-        disabled={disabled || option.disabled}
+        disabled={finalDisabled}
         inline={inline}
         labelClassName={optionLabelClassName || labelClassName}
         description={option.description}
@@ -263,6 +277,17 @@ export default class CheckboxesControl extends React.Component<
               data: createObject(data, option)
             })
           : labelText}
+        {option.disabledTip && finalDisabled ? (
+          <TooltipWrapper
+            placement="right"
+            tooltip={option.disabledTip}
+            trigger="hover"
+          >
+            <a className={cx('Select-option-disabledTip')}>
+              <Icon className="icon" icon="question2" />
+            </a>
+          </TooltipWrapper>
+        ) : null}
         {removable && hasAbility(option, 'removable') ? (
           <a data-tooltip={__('Select.clear')} data-position="left">
             <Icon

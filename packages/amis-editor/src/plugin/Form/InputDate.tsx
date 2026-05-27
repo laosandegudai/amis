@@ -148,7 +148,7 @@ export class DateControlPlugin extends BasePlugin {
   static id = 'DateControlPlugin';
   // 关联渲染器名字
   rendererName = 'input-date';
-  $schema = '/schemas/DateControlSchema.json';
+  $schema = '/schemas/AMISInputDateSchema.json';
 
   // 组件名称
   icon = 'fa fa-calendar';
@@ -424,7 +424,7 @@ export class DateControlPlugin extends BasePlugin {
         body: getSchemaTpl(
           'collapseGroup',
           [
-            getSchemaTpl('style:formItem', renderer),
+            getSchemaTpl('theme:formItem'),
             getSchemaTpl('style:classNames', [
               getSchemaTpl('className', {
                 label: '描述',

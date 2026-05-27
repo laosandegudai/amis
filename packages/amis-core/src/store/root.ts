@@ -1,10 +1,12 @@
-import {flow, Instance, types} from 'mobx-state-tree';
+import {addDisposer, flow, Instance, types, isAlive} from 'mobx-state-tree';
 import {parseQuery} from '../utils/helper';
 import {ServiceStore} from './service';
 import {
   createObjectFromChain,
   extractObjectChain,
-  isObjectShallowModified
+  isObjectShallowModified,
+  createObject,
+  cloneObject
 } from '../utils';
 import {
   GlobalVariableItem,
@@ -20,13 +22,25 @@ import {
 } from '../globalVar';
 import isPlainObject from 'lodash/isPlainObject';
 import debounce from 'lodash/debounce';
+import {reaction} from 'mobx';
 
 export const RootStore = ServiceStore.named('RootStore')
   .props({
     runtimeError: types.frozen(),
     runtimeErrorStack: types.frozen(),
     query: types.frozen(),
+    params: types.frozen(),
     ready: false,
+
+    // 临时变更，等 react 完成一轮渲染后，将临时变更切成正式变更
+    // 主要是为了让可能需要重新渲染的部分组件可以实现 this.props.data 和 prevProps.data 不一致
+    // 因为很多组件内部会 diff this.props.data 和 prevProps.data 来决定是否更新的逻辑
+    globalVarTempStates: types.optional(
+      types.map(types.frozen<GlobalVariableState>()),
+      {}
+    ),
+
+    // 正式变更
     globalVarStates: types.optional(
       types.map(types.frozen<GlobalVariableState>()),
       {}
@@ -34,7 +48,8 @@ export const RootStore = ServiceStore.named('RootStore')
   })
   .volatile(self => {
     return {
-      context: {},
+      context: {} as any,
+      legacyGlobalTempContext: {} as any,
       globalVars: [] as Array<GlobalVariableItemFull>,
       globalData: {
         global: {},
@@ -43,61 +58,97 @@ export const RootStore = ServiceStore.named('RootStore')
     };
   })
   .views(self => ({
-    get downStream() {
-      let result = self.data;
+    get nextGlobalData(): any {
+      let globalData = {} as any;
+      let globalState = {} as any;
+      const chain = extractObjectChain(self.data);
 
-      if (self.context || self.query || self.globalVarStates.size) {
-        const chain = extractObjectChain(result);
-
-        // 数据链中添加 global 和 globalState
-        // 对应的是全局变量的值和全局变量的状态
-        if (self.globalVarStates.size) {
-          const globalData = {} as any;
-          let touched = false;
-          let saved = true;
-          let errors: any = {};
-          let initialized = true;
-          self.globalVarStates.forEach((state, key) => {
-            globalData[key] = state.value;
-            touched = touched || state.touched;
-            if (!state.saved) {
-              saved = false;
-            }
-
-            if (state.errorMessages.length) {
-              errors[key] = state.errorMessages;
-            }
-            if (!state.initialized) {
-              initialized = false;
-            }
-          });
-
-          // 保存全局变量的值和状态
-          Object.assign(self.globalData.global, globalData);
-          Object.assign(self.globalData.globalState, {
-            fields: self.globalVarStates.toJSON(),
-            initialized: initialized,
-            touched: touched,
-            saved: saved,
-            errors: errors,
-            valid: !Object.keys(errors).length
-          });
-
-          // self.globalData 一直都是那个对象，这样组件里面始终拿到的都是最新的
-          chain.unshift(self.globalData);
+      let touched = false;
+      let saved = true;
+      let errors: any = {};
+      let initialized = true;
+      self.globalVarTempStates.forEach((state, key) => {
+        globalData[key] = state.value;
+        touched = touched || state.touched;
+        if (!state.saved) {
+          saved = false;
         }
 
-        self.context && chain.unshift(self.context);
-        self.query &&
-          chain.splice(chain.length - 1, 0, {
-            ...self.query,
-            __query: self.query
-          });
+        if (state.errorMessages.length) {
+          errors[key] = state.errorMessages;
+        }
+        if (!state.initialized) {
+          initialized = false;
+        }
+      });
 
-        result = createObjectFromChain(chain);
-      }
+      globalState = {
+        fields: self.globalVarTempStates.toJSON(),
+        initialized: initialized,
+        touched: touched,
+        saved: saved,
+        errors: errors,
+        valid: !Object.keys(errors).length
+      };
+      chain.unshift({
+        global: globalData,
+        globalState: globalState
+      });
+      chain.unshift(self.legacyGlobalTempContext);
+      chain.unshift(self.context);
 
-      return result;
+      return createObjectFromChain(chain);
+    },
+
+    get downStream() {
+      const chain = extractObjectChain(self.data);
+
+      // 数据链中添加 global 和 globalState
+      // 对应的是全局变量的值和全局变量的状态
+      const globalData = {} as any;
+      let touched = false;
+      let saved = true;
+      let errors: any = {};
+      let initialized = true;
+      self.globalVarStates.forEach((state, key) => {
+        globalData[key] = state.value;
+        touched = touched || state.touched;
+        if (!state.saved) {
+          saved = false;
+        }
+
+        if (state.errorMessages.length) {
+          errors[key] = state.errorMessages;
+        }
+        if (!state.initialized) {
+          initialized = false;
+        }
+      });
+
+      // 保存全局变量的值和状态
+      Object.assign(self.globalData.global, globalData);
+      Object.assign(self.globalData.globalState, {
+        fields: self.globalVarStates.toJSON(),
+        initialized: initialized,
+        touched: touched,
+        saved: saved,
+        errors: errors,
+        valid: !Object.keys(errors).length
+      });
+
+      // self.globalData 一直都是那个对象，这样组件里面始终拿到的都是最新的
+      chain.unshift(self.globalData);
+
+      self.context && chain.unshift(self.context);
+      (self.query || self.params) &&
+        chain.splice(chain.length - 1, 0, {
+          ...self.params,
+          ...self.query, // query 里面的优先，页面中建议还是用 __query 和 __params 来访问，避免冲突
+          __query: self.query,
+          __params: self.params
+        });
+
+      return createObjectFromChain(chain);
     }
   }))
   .actions(self => {
@@ -168,7 +219,7 @@ export const RootStore = ServiceStore.named('RootStore')
 
       if (getter) {
         await getGlobalVarData(item, context, getter);
-        const state = self.globalVarStates.get(item.key)!;
+        const state = self.globalVarTempStates.get(item.key)!;
         updateState(item.key, {
           initialized: true,
           pristine: state.value
@@ -234,7 +285,7 @@ export const RootStore = ServiceStore.named('RootStore')
             continue;
           }
 
-          const state = self.globalVarStates.get(key);
+          const state = self.globalVarTempStates.get(key);
           if (state) {
             updateState(key, {
               value: data[key],
@@ -275,7 +326,7 @@ export const RootStore = ServiceStore.named('RootStore')
       const itemsNotInitialized: Array<GlobalVariableItemFull> = [];
 
       for (let item of globalVars) {
-        let state = self.globalVarStates.get(item.key);
+        let state = self.globalVarTempStates.get(item.key);
         if (state?.initialized) {
           continue;
         }
@@ -320,11 +371,18 @@ export const RootStore = ServiceStore.named('RootStore')
         );
 
         // 初始化全局变量
-        self.globalVars = yield initializeGlobalVars(newVars, updateVars);
+        const globalVars = yield initializeGlobalVars(newVars, updateVars);
 
+        if (!isAlive(self)) {
+          return;
+        }
+
+        self.globalVars = globalVars;
         removeVars.forEach(item => {
-          self.globalVarStates.delete(item.key);
+          self.globalVarTempStates.delete(item.key);
         });
+
+        syncGlobalVarStates();
       });
 
     // 更新全局变量的值
@@ -350,7 +408,7 @@ export const RootStore = ServiceStore.named('RootStore')
         value: any;
       }
     ) => {
-      const state = self.globalVarStates.get(key);
+      const state = self.globalVarTempStates.get(key);
       if (!state) {
         return;
       }
@@ -483,7 +541,7 @@ export const RootStore = ServiceStore.named('RootStore')
       }> = [];
       const values: any = {};
       for (let varItem of self.globalVars) {
-        const state = self.globalVarStates.get(varItem.key);
+        const state = self.globalVarTempStates.get(varItem.key);
         if (!state?.touched) {
           continue;
         } else if (key && key !== varItem.key) {
@@ -536,19 +594,124 @@ export const RootStore = ServiceStore.named('RootStore')
       leading: false
     });
 
+    function syncGlobalVarStates() {
+      self.globalVarStates.clear();
+      self.globalVarTempStates.forEach((state, key) => {
+        self.globalVarStates.set(key, {...state});
+      });
+    }
+
+    function syncLegacyGlobalVarStates() {
+      if (
+        self.legacyGlobalTempContext.__page !== self.context.__page ||
+        self.legacyGlobalTempContext.appVariables !== self.context.appVariables
+      ) {
+        Object.assign(self.context, self.legacyGlobalTempContext);
+        self.data = cloneObject(self.data);
+      }
+    }
+
+    let pendingCount = 0;
+    let callbacks: Array<() => void> = [];
+    function addSyncGlobalVarStatePendingTask(
+      fn: (callback: () => void) => void,
+      callback?: () => void
+    ) {
+      pendingCount++;
+      callback && callbacks.push(callback);
+      fn(() => {
+        pendingCount--;
+
+        if (pendingCount === 0) {
+          callbacks.forEach(callback => callback());
+          callbacks = [];
+          if (isAlive(self)) {
+            (self as any).syncGlobalVarStates();
+            (self as any).syncLegacyGlobalVarStates();
+          }
+        }
+      });
+    }
+
+    function observeSet(
+      obj: Record<string, any>,
+      callback: (value: any) => void
+    ) {
+      if (!obj || obj.__observed) {
+        // 如果已经被观察过了，就不需要再观察了
+        return obj;
+      }
+      let timer: ReturnType<typeof requestAnimationFrame> = 0;
+      return new Proxy(
+        {...obj},
+        {
+          get(target, prop: string) {
+            if (prop === '__observed') {
+              return true;
+            }
+            return Reflect.get(target, prop);
+          },
+          set(target, prop: string, value) {
+            Reflect.set(target, prop, value);
+
+            cancelAnimationFrame(timer);
+            timer = requestAnimationFrame(() => callback(target));
+            console.warn("Don't modify the context directly.");
+
+            return true;
+          }
+        }
+      );
+    }
+
     return {
-      updateContext(context: any) {
+      updateContextBySetter(context: any) {
+        this.updateContext(context);
+        self.data = cloneObject(self.data);
+      },
+      updateContext(context: any, isInit = false) {
         // 因为 context 不是受控属性，直接共用引用好了
         // 否则还会触发孩子节点的重新渲染
-        Object.assign(self.context, context);
+
+        let {__page, appVariables, ...rest} = context || {};
+
+        // 对历史用法做兼容
+        if (__page || appVariables) {
+          // 有部分用户直接在自定义动作脚本里面修改 __page 或者 appVariables 变量
+          // 奇怪的是之前的实现方式这种修改是会更新变更的
+          // 所以这里用 Proxy 来解决不更新的问题
+          __page = __page
+            ? observeSet(__page, __page =>
+                (self as any).updateContextBySetter({...self.context, __page})
+              )
+            : __page;
+          appVariables = appVariables
+            ? observeSet(appVariables, appVariables =>
+                (self as any).updateContextBySetter({
+                  ...self.context,
+                  appVariables
+                })
+              )
+            : appVariables;
+
+          if (isInit) {
+            self.context.__page = __page;
+            self.context.appVariables = appVariables;
+          }
+
+          self.legacyGlobalTempContext.__page = __page;
+          self.legacyGlobalTempContext.appVariables = appVariables;
+        }
+
+        Object.assign(self.context, rest);
       },
       updateGlobalVarState(key: string, state: Partial<GlobalVariableState>) {
-        const origin = self.globalVarStates.get(key);
+        const origin = self.globalVarTempStates.get(key);
         const newState = {
           ...(origin || createGlobalVarState()),
           ...state
         };
-        self.globalVarStates.set(key, newState as any);
+        self.globalVarTempStates.set(key, newState as any);
       },
       setGlobalVars,
       updateGlobalVarValue,
@@ -564,7 +727,27 @@ export const RootStore = ServiceStore.named('RootStore')
           self.query = query;
         }
       },
+      updateParams(params?: any) {
+        if (params && isObjectShallowModified(params, self.params, false)) {
+          self.params = params;
+        }
+      },
       init: init,
+      syncGlobalVarStates,
+      syncLegacyGlobalVarStates,
+      addSyncGlobalVarStatePendingTask,
+      afterCreate() {
+        addDisposer(
+          self,
+          reaction(
+            () => self.nextGlobalData,
+            () =>
+              (self as any).addSyncGlobalVarStatePendingTask((callback: any) =>
+                requestAnimationFrame(callback)
+              )
+          )
+        );
+      },
       afterDestroy() {
         lazySaveGlobalVarValues.flush();
       }

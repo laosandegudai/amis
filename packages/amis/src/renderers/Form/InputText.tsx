@@ -24,19 +24,31 @@ import {
 } from 'amis-core';
 import {Icon, SpinnerExtraProps, Input, Spinner, OverflowTpl} from 'amis-ui';
 import {ActionSchema} from '../Action';
-import {FormOptionsSchema, SchemaApi} from '../../Schema';
+import {FormOptionsSchema, SchemaApi, SchemaObject} from '../../Schema';
 import {supportStatic} from './StaticHoc';
 
-import type {Option} from 'amis-core';
+import type {AMISFormItemWithOptions, Option} from 'amis-core';
 import type {ListenerAction} from 'amis-core';
 
 // declare function matchSorter(items:Array<any>, input:any, options:any): Array<any>;
 
+export type InputTextAddOnObject = {
+  /**
+   * 按钮位置
+   */
+  position?: 'left' | 'right';
+  [propName: string]: any;
+};
+
+export type InputTextAddOn = ActionSchema & InputTextAddOnObject;
+
 /**
- * Text 文本输入框。
- * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/form/text
+ * 文本输入框，支持建议、校验与多种展示模式。支持异步联想、前后缀、密码显隐、计数、大小写转换。
  */
-export interface TextControlSchema extends FormOptionsSchema {
+export interface AMISInputTextSchema extends AMISFormItemWithOptions {
+  /**
+   * 指定为 text 组件
+   */
   type:
     | 'input-text'
     | 'input-email'
@@ -46,57 +58,54 @@ export interface TextControlSchema extends FormOptionsSchema {
     | 'native-time'
     | 'native-number';
 
-  addOn?: {
-    position?: 'left' | 'right';
-    label?: string;
-    icon?: string;
-    className?: string;
-  } & ActionSchema;
+  /**
+   * 附加按钮
+   */
+  addOn?: InputTextAddOn;
 
   /**
-   * 是否去除首尾空白文本。
+   * 是否去除首尾空格
    */
   trimContents?: boolean;
 
   /**
-   * 自动完成 API，当输入部分文字的时候，会将这些文字通过 ${term} 可以取到，发送给接口。
-   * 接口可以返回匹配到的选项，帮助用户输入。
+   * 自动完成 API
    */
   autoComplete?: SchemaApi;
 
   /**
-   * 配置原生 input 的 autoComplete 属性
+   * 原生自动完成
    * @default off
    */
   nativeAutoComplete?: string;
 
   /**
-   * 边框模式，全边框，还是半边框，或者没边框。
+   * 边框模式
    */
   borderMode?: 'full' | 'half' | 'none';
 
   /**
-   * 限制文字最小输入个数
+   * 最小长度
    */
   minLength?: number;
 
   /**
-   * 限制文字最大输入个数
+   * 最大长度
    */
   maxLength?: number;
 
   /**
-   * 是否显示计数
+   * 是否显示字符计数
    */
   showCounter?: boolean;
 
   /**
-   * 前缀
+   * 前缀文本
    */
   prefix?: string;
 
   /**
-   * 后缀
+   * 后缀文本
    */
   suffix?: string;
 
@@ -104,9 +113,9 @@ export interface TextControlSchema extends FormOptionsSchema {
    * 自动转换值
    */
   transform?: {
-    /** 用户输入的字符自动转小写 */
+    /** 转小写 */
     lowerCase?: boolean;
-    /** 用户输入的字符自动转大写 */
+    /** 转大写 */
     upperCase?: boolean;
   };
 
@@ -116,7 +125,7 @@ export interface TextControlSchema extends FormOptionsSchema {
   /** 原生input标签的CSS类名 */
   nativeInputClassName?: string;
 
-  /** 在内容为空的时候清除值 */
+  /** 内容为空时清除值 */
   clearValueOnEmpty?: boolean;
 }
 
@@ -130,7 +139,7 @@ export type InputTextRendererEvent =
   | 'enter';
 
 export interface TextProps extends OptionsControlProps, SpinnerExtraProps {
-  placeholder?: string;
+  placeholder?: string | { [propName: string]: string; };
   addOn?: ActionObject & {
     position?: 'left' | 'right';
     label?: string;
@@ -138,11 +147,11 @@ export interface TextProps extends OptionsControlProps, SpinnerExtraProps {
     className?: string;
   };
   creatable?: boolean;
-  clearable: boolean;
+  clearable?: boolean;
   resetValue?: any;
   autoComplete?: any;
   allowInputText?: boolean;
-  spinnerClassName: string;
+  spinnerClassName?: string;
   revealPassword?: boolean;
   transform?: {
     lowerCase?: boolean; // 用户输入的字符自动转小写
@@ -382,8 +391,8 @@ export default class TextControl extends React.PureComponent<
     onChange(this.normalizeValue(newValue));
   }
 
-  async handleClick() {
-    const {dispatchEvent, value} = this.props;
+  async handleClick(event: React.MouseEvent) {
+    const {dispatchEvent, value, multiple} = this.props;
     const rendererEvent = await dispatchEvent(
       'click',
       resolveEventData(this.props, {
@@ -394,11 +403,19 @@ export default class TextControl extends React.PureComponent<
     if (rendererEvent?.prevented) {
       return;
     }
-    // 已经 focus 的就不重复执行，否则总重新定位光标
-    this.state.isFocused || this.focus();
-    this.setState({
-      isOpen: true
-    });
+    // 修复 placeholder 点击无法聚焦的问题
+    const isClickedOnInput =
+      event.target === this.input ||
+      (this.input?.parentElement?.contains(event.target as HTMLElement) ??
+        false);
+
+    if (multiple || isClickedOnInput) {
+      // 已经 focus 的就不重复执行，否则总重新定位光标
+      this.state.isFocused || this.focus();
+      this.setState({
+        isOpen: true
+      });
+    }
   }
 
   async handleFocus(e: any) {
@@ -575,8 +592,14 @@ export default class TextControl extends React.PureComponent<
 
     if (multiple) {
       const newValue = selectedOptions.concat();
-      toggledOption && newValue.push(toggledOption);
-
+      if (toggledOption) {
+        newValue.push(toggledOption);
+      } else if (value && creatable !== false) {
+        newValue.push({
+          label: value,
+          value
+        });
+      }
       onChange(this.normalizeValue(newValue));
     } else {
       onChange(toggledOption ? this.normalizeValue(toggledOption) : value);
@@ -715,9 +738,9 @@ export default class TextControl extends React.PureComponent<
     }
   }
 
-  reload() {
+  reload(subpath?: string, query?: any) {
     const reload = this.props.reloadOptions;
-    reload && reload();
+    reload && reload(subpath, query);
   }
 
   valueToString(value: any) {

@@ -312,18 +312,14 @@ export default class Editor extends Component<EditorProps> {
   // 快捷功能键
   @autobind
   handleKeyDown(e: KeyboardEvent) {
+    const manager = this.manager;
+    const store = manager.store;
+
     // 弹窗模式不处理
-    if (this.props.isSubEditor) {
+    if (this.props.isSubEditor || this.props.readonly || store.activeElement) {
       // e.defaultPrevented // 或者已经阻止不处理
       return;
     }
-
-    if (this.props.readonly) {
-      return;
-    }
-
-    const manager = this.manager;
-    const store = manager.store;
 
     if (
       (e.target as HTMLElement).tagName === 'BODY' &&
@@ -501,9 +497,13 @@ export default class Editor extends Component<EditorProps> {
 
     // 没找到就近找
     if (!targetId) {
-      targetId = (e.target as HTMLElement)
-        .closest('[data-editor-id]')
-        ?.getAttribute('data-editor-id')!;
+      const dom = (e.target as HTMLElement).closest(
+        '[data-editor-id], [data-hlbox-id]'
+      );
+      targetId =
+        dom?.getAttribute('data-editor-id') ||
+        dom?.getAttribute('data-hlbox-id') ||
+        '';
     }
 
     // 没找到看看是不是在大纲中的右键
@@ -535,7 +535,10 @@ export default class Editor extends Component<EditorProps> {
 
     manager.openContextMenu(targetId, region, {
       x: window.scrollX + e.clientX + offsetX,
-      y: window.scrollY + e.clientY + offsetY
+      y: window.scrollY + e.clientY + offsetY,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      target: e.target as HTMLElement
     });
   }
 

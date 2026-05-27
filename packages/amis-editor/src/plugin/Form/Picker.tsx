@@ -32,7 +32,7 @@ export class PickerControlPlugin extends BasePlugin {
   static id = 'PickerControlPlugin';
   // 关联渲染器名字
   rendererName = 'picker';
-  $schema = '/schemas/PickerControlSchema.json';
+  $schema = '/schemas/AMISPickerSchema.json';
 
   // 组件名称
   name = '列表选取';
@@ -121,6 +121,37 @@ export class PickerControlPlugin extends BasePlugin {
                     type: 'object',
                     title: '所点击的选项',
                     properties: itemSchema
+                  }
+                }
+              }
+            }
+          }
+        ];
+      }
+    },
+    {
+      eventName: 'staticItemClick',
+      eventLabel: '静态展示节点点击',
+      description: '静态展示时节点点击时触发',
+      dataSchema: (manager: EditorManager) => {
+        const {itemSchema} = resolveOptionEventDataSchame(manager);
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  item: {
+                    type: 'object',
+                    title: '所点击的选项',
+                    properties: itemSchema
+                  },
+                  index: {
+                    type: 'number',
+                    title: '所点击的选项索引'
                   }
                 }
               }
@@ -480,10 +511,7 @@ export class PickerControlPlugin extends BasePlugin {
           getSchemaTpl(
             'collapseGroup',
             [
-              getSchemaTpl('style:formItem', {
-                renderer: context.info.renderer,
-                hiddenList: ['labelHide']
-              }),
+              getSchemaTpl('theme:formItem'),
               {
                 title: '基本',
                 body: [

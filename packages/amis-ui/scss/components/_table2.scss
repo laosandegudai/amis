@@ -127,6 +127,12 @@
   .#{$ns}Table-header {
     padding: var(--Table-toolbar-marginY) var(--Table-toolbar-marginX);
 
+    &--affixed {
+      overflow: hidden;
+      background-color: var(--Table-thead-bg);
+      padding-right: var(--Table-scrollbar-width) !important;
+    }
+
     &.#{$ns}Table-sticky-holder {
       position: sticky;
       z-index: 3;
@@ -176,8 +182,19 @@
     line-height: var(--table-body-lineHeight);
     background: var(--Table-bg);
     border-spacing: 0;
-    border-collapse: collapse;
+    // border-collapse: collapse;
     border: none;
+
+    &--fixed {
+      table-layout: fixed;
+
+      > thead > tr > th,
+      > thead > tr > td,
+      > tbody > tr > td,
+      > tfoot > tr > td {
+        white-space: normal !important;
+      }
+    }
 
     & th,
     & td {
@@ -266,6 +283,12 @@
 
       > td {
         border-top: var(--Table-borderWidth) solid var(--Table-borderColor);
+        border-bottom: unset;
+      }
+      &:last-child {
+        > td {
+          border-bottom: var(--Table-borderWidth) solid var(--Table-borderColor);
+        }
       }
 
       > td,
@@ -627,6 +650,14 @@
         overflow-x: unset !important;
       }
 
+      .#{$ns}Table-table {
+        border-collapse: separate;
+
+        > tbody > tr > td {
+          border-top: none;
+        }
+      }
+
       .#{$ns}Table-row {
         z-index: 1;
       }
@@ -637,6 +668,24 @@
 
       .#{$ns}Table-cell-fix-left {
         z-index: 3 !important;
+      }
+    }
+
+    &.is-autoFillHeight {
+      overflow: auto;
+      & > .#{$ns}Table-content {
+        overflow: visible !important;
+        transform: unset !important;
+      }
+      & > .#{$ns}Table-content > table > thead > tr > th {
+        position: sticky;
+        top: 0;
+        z-index: 2 !important; // 添加z-index确保显示在最上层
+
+        &.#{$ns}Table-cell-fix-left,
+        &.#{$ns}Table-cell-fix-right {
+          z-index: 3 !important;
+        }
       }
     }
   }
@@ -651,23 +700,23 @@
         }
       }
 
-      > tbody > tr:not(.#{$ns}Table-row-disabled) {
-        > td.#{$ns}Table-cell-fix-left {
-          border-right: none;
-        }
-      }
+      // > tbody > tr:not(.#{$ns}Table-row-disabled) {
+      //   > td.#{$ns}Table-cell-fix-left {
+      //     border-right-color: var(--table-body-bg-color);
+      //   }
+      // }
 
-      > tfoot > tr > td:not(:last-child) {
-        &.#{$ns}Table-cell-fix-left-last {
-          border-right: none;
-        }
-      }
+      // > tfoot > tr > td:not(:last-child) {
+      //   &.#{$ns}Table-cell-fix-left-last {
+      //     border-right-color: var(--table-body-bg-color);
+      //   }
+      // }
 
-      > thead > tr > th:not(:last-child) {
-        &.#{$ns}Table-cell-fix-left-last {
-          border-right: none;
-        }
-      }
+      // > thead > tr > th:not(:last-child) {
+      //   &.#{$ns}Table-cell-fix-left-last {
+      //     border-right-color: var(--table-body-bg-color);
+      //   }
+      // }
     }
   }
 

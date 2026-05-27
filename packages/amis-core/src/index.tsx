@@ -37,6 +37,7 @@ import './renderers/builtin';
 import './renderers/register';
 export * from './utils/index';
 export * from './utils/animations';
+export * from './schema';
 export * from './types';
 export * from './store';
 export * from './globalVar';
@@ -69,7 +70,8 @@ import {
   theme,
   getTheme,
   themeable,
-  makeClassnames
+  makeClassnames,
+  defaultTheme
 } from './theme';
 import type {ClassNamesFn, ThemeProps} from './theme';
 const classPrefix = getClassPrefix();
@@ -81,7 +83,8 @@ import FormItem, {
   getFormItemByName
 } from './renderers/Item';
 import type {
-  FormBaseControl,
+  AMISFormItem,
+  AMISFormItemBase,
   FormControlProps,
   FormItemProps
 } from './renderers/Item';
@@ -91,9 +94,16 @@ import {
   OptionsControlBase
 } from './renderers/Options';
 import type {OptionsControlProps} from './renderers/Options';
-import type {FormOptionsControl} from './renderers/Options';
+import type {
+  FormOptionsControl,
+  AMISFormItemWithOptions
+} from './renderers/Options';
 import {Schema} from './types';
-import ScopedRootRenderer, {addRootWrapper, RootRenderProps} from './Root';
+import ScopedRootRenderer, {
+  addRootWrapper,
+  RootRenderProps,
+  AMISPartialPropsContext
+} from './Root';
 import {envOverwrite} from './envOverwrite';
 import {EnvContext} from './env';
 import type {RendererEnv} from './env';
@@ -117,13 +127,20 @@ import Overlay from './components/Overlay';
 import PopOver from './components/PopOver';
 import ErrorBoundary from './components/ErrorBoundary';
 import {FormRenderer} from './renderers/Form';
-import type {FormHorizontal, FormSchemaBase} from './renderers/Form';
+import type {
+  FormHorizontal,
+  FormSchemaBase,
+  AMISFormSchema,
+  AMISFormBase
+} from './renderers/Form';
 import {
   enableDebug,
   disableDebug,
   promisify,
   replaceText,
-  wrapFetcher
+  wrapFetcher,
+  resolveVariableAndFilter,
+  resolveVariableAndFilterForAsync
 } from './utils/index';
 import type {OnEventProps} from './utils/index';
 import {valueMap as styleMap} from './utils/style-helper';
@@ -140,6 +157,10 @@ import styleManager from './StyleManager';
 import {bindGlobalEvent, dispatchGlobalEvent} from './utils/renderer-event';
 
 import {getCustomVendor, registerCustomVendor} from './utils/icon';
+import useEnvContext, {EnvContextProvider} from './hooks/useEnvContext';
+import useRenderOptionsContext, {
+  RenderOptionsContextProvider
+} from './hooks/useRenderOptionsContext';
 
 // @ts-ignore
 export const version = '__buildVersion';
@@ -157,6 +178,11 @@ export {
   RenderOptions,
   RendererEnv,
   EnvContext,
+  EnvContextProvider,
+  useEnvContext,
+  RenderOptionsContextProvider,
+  AMISPartialPropsContext,
+  useRenderOptionsContext,
   RegisterStore,
   registerStore,
   FormItem,
@@ -230,8 +256,15 @@ export {
   OptionsControlProps,
   OptionsControlBase,
   FormOptionsControl,
+  AMISFormItemWithOptions as FormOptionsControlSelf,
+  AMISFormItemWithOptions,
   FormControlProps,
-  FormBaseControl,
+  AMISFormItem,
+  AMISFormItemBase,
+  AMISFormItem as FormBaseControl,
+  AMISFormItemBase as FormBaseControlWithoutSize,
+  AMISFormSchema,
+  AMISFormBase,
   extendDefaultEnv,
   addRootWrapper,
   RendererConfig,
@@ -256,7 +289,9 @@ export {
   wrapFetcher,
   SchemaRenderer,
   getCustomVendor,
-  registerCustomVendor
+  registerCustomVendor,
+  resolveVariableAndFilter,
+  resolveVariableAndFilterForAsync
 };
 
 export function render(
@@ -266,7 +301,7 @@ export function render(
   pathPrefix: string = ''
 ): JSX.Element {
   return (
-    <AMISRenderer
+    <AMISSchema
       {...props}
       key={key}
       schema={schema}
@@ -276,7 +311,7 @@ export function render(
   );
 }
 
-function AMISRenderer({
+function AMISSchema({
   schema,
   options,
   pathPrefix,
@@ -340,9 +375,9 @@ function AMISRenderer({
   }, Object.keys(options).concat(Object.values(options)).concat(locale));
 
   const env = getEnv(store);
-  let theme = props.theme || options.theme || 'cxd';
+  let theme = props.theme || options.theme || defaultTheme;
   if (theme === 'default') {
-    theme = 'cxd';
+    theme = defaultTheme;
   }
   env.theme = getTheme(theme);
 
@@ -363,7 +398,7 @@ function AMISRenderer({
 
   // 根据环境覆盖 schema，这个要在最前面做，不然就无法覆盖 validations
   schema = React.useMemo(() => {
-    schema = envOverwrite(schema, locale);
+    schema = envOverwrite(schema, locale, env.isMobile() ? 'mobile' : 'pc');
     // todo 和 envOverwrite 一起处理，减少循环次数
     schema = replaceText(
       schema,
@@ -373,9 +408,16 @@ function AMISRenderer({
     return schema;
   }, [schema, locale, options.replaceText]);
 
+  React.useEffect(() => {
+    env.pageMetaEffect?.(schema.meta || {});
+  }, [schema.meta]);
+
+  const partialProps = React.useContext(AMISPartialPropsContext);
+
   return (
     <EnvContext.Provider value={env}>
       <ScopedRootRenderer
+        {...partialProps}
         {...props}
         schema={schema}
         pathPrefix={pathPrefix}

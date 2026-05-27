@@ -9,6 +9,7 @@ import {resolveVariableAndFilterForAsync} from './resolveVariableAndFilterForAsy
 import {evalExpression, evalExpressionWithConditionBuilderAsync} from './tpl';
 import type {PlainObject} from '../types';
 import {debug} from './debug';
+import {AMISAction} from '../schema';
 
 export interface debounceConfig {
   maxWait?: number;
@@ -27,7 +28,7 @@ export interface EventListeners {
     debounce?: debounceConfig;
     track?: trackConfig;
     weight?: number; // 权重
-    actions: ListenerAction[]; // 执行的动作集
+    actions: AMISAction[]; // 执行的动作集
   };
 }
 
@@ -36,7 +37,7 @@ export interface OnEventProps {
   onEvent?: {
     [propName: string]: {
       weight?: number; // 权重
-      actions: ListenerAction[]; // 执行的动作集,
+      actions: AMISAction[]; // 执行的动作集,
       debounce?: debounceConfig;
       track?: trackConfig;
     };
@@ -50,7 +51,7 @@ export interface RendererEventListener {
   weight: number;
   debounce: debounceConfig | null;
   track: trackConfig | null;
-  actions: ListenerAction[];
+  actions: AMISAction[];
   executing?: boolean;
   debounceInstance?: any;
 }
@@ -151,7 +152,9 @@ export const bindEvent = (renderer: any) => {
     for (let key of Object.keys(listeners)) {
       const listener = rendererEventListeners.find(
         (item: RendererEventListener) =>
-          item.renderer === renderer && item.type === key
+          item.renderer === renderer &&
+          item.type === key &&
+          item.actions === listeners[key].actions
       );
       if (listener?.executing) {
         listener?.debounceInstance?.cancel?.();
@@ -322,7 +325,10 @@ export async function dispatchEvent(
     .filter(
       (item: RendererEventListener) =>
         item.type === eventName &&
-        (broadcast ? true : item.renderer === renderer)
+        (broadcast
+          ? true
+          : item.renderer === renderer &&
+            item.actions === renderer.props?.onEvent?.[eventName].actions)
     )
     .sort(
       (prev: RendererEventListener, next: RendererEventListener) =>

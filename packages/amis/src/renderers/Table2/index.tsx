@@ -1,5 +1,5 @@
 import React from 'react';
-import {findDOMNode} from 'react-dom';
+import {findDomCompat as findDOMNode} from 'amis-core';
 import {reaction} from 'mobx';
 import {isAlive} from 'mobx-state-tree';
 import cloneDeep from 'lodash/cloneDeep';
@@ -59,7 +59,7 @@ import './TableCell';
 import './ColumnToggler';
 import {SchemaQuickEdit} from '../QuickEdit';
 
-import type {TestIdBuilder} from 'amis-core';
+import type {AMISButtonSchema, AMISSchemaBase, TestIdBuilder} from 'amis-core';
 
 /**
  * Table 表格2渲染器。
@@ -190,7 +190,7 @@ export interface ColumnSchema {
   width?: string | number;
 
   /**
-   * 表格列单元格是否可以获取父级数据域值，默认为true，该配置对当前列内单元格生效
+   * 表格列单元格是否可获取父级数据域值，默认为true，该配置对当前列内单元格生效
    */
   canAccessSuperData?: boolean;
 }
@@ -281,12 +281,7 @@ export interface ExpandableSchema {
   expandedRowKeysExpr: string;
 }
 
-export interface TableSchema2 extends BaseSchema {
-  /**
-   * 指定为表格类型
-   */
-  type: 'table2';
-
+export interface BaseTableSchema2 extends AMISSchemaBase {
   /**
    * 表格标题
    */
@@ -400,7 +395,7 @@ export interface TableSchema2 extends BaseSchema {
   /**
    * 操作列配置
    */
-  actions?: Array<ActionSchema>;
+  actions?: Array<AMISButtonSchema>;
 
   /**
    * 批量操作最大限制数
@@ -435,7 +430,7 @@ export interface TableSchema2 extends BaseSchema {
   autoFillHeight?: boolean | AutoFillHeightObject;
 
   /**
-   * 表格是否可以获取父级数据域值，默认为false
+   * 表格是否可获取父级数据域值，默认为false
    */
   canAccessSuperData?: boolean;
 
@@ -444,6 +439,13 @@ export interface TableSchema2 extends BaseSchema {
    * @default 100
    */
   lazyRenderAfter?: number;
+}
+
+export interface AMISTableSchema2 extends BaseTableSchema2 {
+  /**
+   * 指定为表格类型
+   */
+  type: 'table2';
 }
 
 // 事件调整 对应CRUD2里的事件配置也需要同步修改
@@ -554,14 +556,16 @@ export default class Table2 extends React.Component<Table2Props, object> {
       rowSelection,
       keyField,
       primaryField,
-      canAccessSuperData
+      canAccessSuperData,
+      persistKey
     } = props;
 
     store.update({
       columnsTogglable,
       columns,
       canAccessSuperData,
-      rowSelectionKeyField: primaryField || rowSelection?.keyField || keyField
+      rowSelectionKeyField: primaryField || rowSelection?.keyField || keyField,
+      persistKey
     });
     Table2.syncRows(store, props, undefined) && this.syncSelected();
 
@@ -623,13 +627,14 @@ export default class Table2 extends React.Component<Table2Props, object> {
     let rows: Array<object> = [];
     let updateRows = false;
 
-    if (
-      Array.isArray(value) &&
-      (!prevProps ||
-        getPropValue(prevProps, (props: Table2Props) => props.items) !== value)
-    ) {
-      updateRows = true;
-      rows = value;
+    if (Array.isArray(value)) {
+      if (
+        !prevProps ||
+        getPropValue(prevProps, (props: Table2Props) => props.items) !== value
+      ) {
+        updateRows = true;
+        rows = value;
+      }
     } else if (typeof source === 'string') {
       const resolved = resolveVariableAndFilter(source, props.data, '| raw');
       const prev = prevProps
@@ -710,7 +715,7 @@ export default class Table2 extends React.Component<Table2Props, object> {
     const store = props.store;
 
     changedEffect(
-      ['orderBy', 'columnsTogglable', 'canAccessSuperData'],
+      ['orderBy', 'columnsTogglable', 'canAccessSuperData', 'persistKey'],
       prevProps,
       props,
       changes => {
@@ -830,12 +835,14 @@ export default class Table2 extends React.Component<Table2Props, object> {
 
       // title 不应该传递到 cell-field 的 column 中，否则部分组件会将其渲染出来
       // 但是 cell-field 需要这个字段，展示列的名称
-      const {width, children, title, ...rest} = schema;
+      const {width, children, wrapperComponent, title, ...rest} = schema;
 
       return render(
         'cell-field',
         {
           ...rest,
+          // 空字符串/null 被认为是正常的值，导致 defaultProps 不生效
+          wrapperComponent: wrapperComponent || undefined,
           title: title || rest.label,
           type: 'cell-field',
           column: rest,
@@ -1187,7 +1194,7 @@ export default class Table2 extends React.Component<Table2Props, object> {
       classnames.push(rowClassName);
     }
     if (rowClassNameExpr) {
-      classnames.push(filter(rowClassNameExpr, {record, rowIndex}));
+      classnames.push(filter(rowClassNameExpr, {...record, rowIndex}));
     }
     // row可能不存在
     // 比如初始化给了10条数据，异步接口又替换成4条
@@ -1574,7 +1581,7 @@ export default class Table2 extends React.Component<Table2Props, object> {
     const {onAction} = this.props;
 
     // todo
-    onAction && onAction(e, action, ctx);
+    return onAction?.(e, action, ctx);
   }
 
   renderActions(region: string) {
@@ -1622,9 +1629,11 @@ export default class Table2 extends React.Component<Table2Props, object> {
                 })
               );
             },
-            toggleToggle: (index: number) => {
-              const column = store.columnsData[index];
-              column.toggleToggle();
+            toggleToggle: (id: string) => {
+              const column = store.columnsData.find(
+                (col: any) => col?.id === id
+              );
+              column?.toggleToggle();
 
               dispatchEvent(
                 'columnToggled',
@@ -1667,19 +1676,16 @@ export default class Table2 extends React.Component<Table2Props, object> {
   ): Promise<any> {
     const {dispatchEvent, data, store} = this.props;
 
-    const rendererEvent = await dispatchEvent(
+    store.updateSelected(selectedRowKeys);
+    this.syncSelected();
+
+    await dispatchEvent(
       'selectedChange',
       createObject(data, {
         selectedItems: selectedRows,
         unSelectedItems: unSelectedRows
       })
     );
-
-    if (rendererEvent?.prevented) {
-      return rendererEvent?.prevented;
-    }
-    store.updateSelected(selectedRowKeys);
-    this.syncSelected();
   }
 
   @autobind

@@ -18,7 +18,8 @@ export class PanelPlugin extends BasePlugin {
   static id = 'PanelPlugin';
   // 关联渲染器名字
   rendererName = 'panel';
-  $schema = '/schemas/panelSchema.json';
+  useLazyRender = true; // 使用懒渲染
+  $schema = '/schemas/AMISPanelSchema.json';
 
   name = '面板';
   isBaseComponent = true;

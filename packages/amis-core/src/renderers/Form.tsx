@@ -1,5 +1,4 @@
 import React from 'react';
-import extend from 'lodash/extend';
 import {Renderer, RendererProps} from '../factory';
 import {FormStore, IFormStore} from '../store/form';
 import {
@@ -63,6 +62,17 @@ import {reaction} from 'mobx';
 import groupBy from 'lodash/groupBy';
 import isEqual from 'lodash/isEqual';
 import CustomStyle from '../components/CustomStyle';
+import debounce from 'lodash/debounce';
+import {
+  AMISApi,
+  AMISButtonWithAction,
+  AMISClassName,
+  AMISDefaultData,
+  AMISExpression,
+  AMISSchemaCollection,
+  AMISSchemaBase,
+  AMISButtonSchema
+} from '../schema';
 
 export interface FormHorizontal {
   left?: number;
@@ -72,9 +82,10 @@ export interface FormHorizontal {
   labelAlign?: 'left' | 'right'; // label对齐方式
   /** label自定义宽度，默认单位为px */
   labelWidth?: number | string;
+  labelOverflow?: 'default' | 'ellipsis';
 }
 
-export interface FormSchemaBase {
+export interface AMISFormBase extends AMISSchemaBase {
   /**
    * 表单标题
    */
@@ -83,12 +94,14 @@ export interface FormSchemaBase {
   /**
    * 按钮集合，会固定在底部显示。
    */
-  actions?: Array<any>;
+  actions?: Array<AMISButtonSchema>;
 
   /**
    * 表单项集合
    */
-  body?: any;
+  body?: AMISSchemaCollection;
+
+  className?: AMISClassName;
 
   /**
    * @deprecated 请用类型 tabs
@@ -100,7 +113,7 @@ export interface FormSchemaBase {
    */
   fieldSet?: any;
 
-  data?: any;
+  data?: AMISDefaultData;
 
   /**
    * 是否开启调试，开启后会在顶部实时显示表单项数据。
@@ -140,17 +153,18 @@ export interface FormSchemaBase {
      * 设置字符串的最大展示长度，超出长度阈值的字符串将被截断，点击value可切换字符串展示方式，默认为120
      */
     ellipsisThreshold?: number | false;
+    labelOverflow?: 'default' | 'ellipsis';
   };
 
   /**
    * 用来初始化表单数据
    */
-  initApi?: string | BaseApiObject;
+  initApi?: AMISApi;
 
   /**
    * Form 用来获取初始数据的 api,与initApi不同的是，会一直轮询请求该接口，直到返回 finished 属性为 true 才 结束。
    */
-  initAsyncApi?: string | BaseApiObject;
+  initAsyncApi?: AMISApi;
 
   /**
    * 设置了initAsyncApi后，默认会从返回数据的data.finished来判断是否完成，也可以设置成其他的xxx，就会从data.xxx中获取
@@ -170,7 +184,7 @@ export interface FormSchemaBase {
   /**
    * 建议改成 api 的 sendOn 属性。
    */
-  initFetchOn?: string;
+  initFetchOn?: AMISExpression;
 
   /**
    * 设置后将轮询调用 initApi
@@ -185,7 +199,7 @@ export interface FormSchemaBase {
   /**
    * 配置停止轮询的条件
    */
-  stopAutoRefreshWhen?: string;
+  stopAutoRefreshWhen?: AMISExpression;
 
   /**
    * 是否开启本地缓存
@@ -207,7 +221,7 @@ export interface FormSchemaBase {
    *
    * 详情：https://aisuda.bce.baidu.com/amis/zh-CN/components/form/index#%E8%A1%A8%E5%8D%95%E6%8F%90%E4%BA%A4
    */
-  api?: string | BaseApiObject;
+  api?: AMISApi;
 
   /**
    * Form 也可以配置 feedback。
@@ -217,7 +231,7 @@ export interface FormSchemaBase {
   /**
    * 设置此属性后，表单提交发送保存接口后，还会继续轮询请求该接口，直到返回 finished 属性为 true 才 结束。
    */
-  asyncApi?: string | BaseApiObject;
+  asyncApi?: AMISApi;
 
   /**
    * 轮询请求的时间间隔，默认为 3秒。设置 asyncApi 才有效
@@ -274,7 +288,7 @@ export interface FormSchemaBase {
   /**
    * 配置容器 panel className
    */
-  panelClassName?: ClassName;
+  panelClassName?: AMISClassName;
 
   /**
    * 设置主键 id, 当设置后，检测表单是否完成时（asyncApi），只会携带此数据。
@@ -356,8 +370,33 @@ export interface FormSchemaBase {
    * 展示态时的className
    */
   static?: boolean;
-  staticOn?: SchemaExpression;
-  staticClassName?: SchemaClassName;
+  staticOn?: AMISExpression;
+  staticClassName?: AMISClassName;
+
+  /**
+   * 是否可以访问上层数据，默认是会允许，这样顶层同名数据会自动赋值到同名表单项
+   * @default true
+   */
+  canAccessSuperData?: boolean;
+}
+
+export type FormSchemaBase = AMISFormBase;
+
+/**
+ * 表单容器组件，用于收集和提交用户输入数据。支持字段验证、数据提交、布局配置等。
+ */
+export interface AMISFormSchema extends AMISFormBase {
+  /**
+   * 指定为表单渲染器
+   */
+  type: 'form';
+}
+
+// 注册到 AMISSchemaRegistry 中
+declare module '../schema' {
+  interface AMISSchemaRegistry {
+    form: AMISFormSchema;
+  }
 }
 
 export type FormGroup = FormSchemaBase & {
@@ -484,7 +523,17 @@ export default class Form extends React.Component<FormProps, object> {
     trailing: true,
     leading: false
   });
+  // 当有多次调用时，只需要跳一个
+  lazyJumpToErrorComponent = debouce(
+    this.jumpToErrorComponent.bind(this),
+    250,
+    {
+      trailing: false,
+      leading: true
+    }
+  );
   unBlockRouting?: () => void;
+  formRef = React.createRef<HTMLElement>();
   constructor(props: FormProps) {
     super(props);
 
@@ -510,7 +559,7 @@ export default class Form extends React.Component<FormProps, object> {
     this.dispatchInited = this.dispatchInited.bind(this);
     this.blockRouting = this.blockRouting.bind(this);
     this.beforePageUnload = this.beforePageUnload.bind(this);
-    this.formItemDispatchEvent = this.formItemDispatchEvent.bind(this);
+    this.dispatchEvent = this.dispatchEvent.bind(this);
     this.flush = this.flush.bind(this);
 
     const {store, canAccessSuperData, persistData, simpleMode, formLazyChange} =
@@ -659,6 +708,14 @@ export default class Form extends React.Component<FormProps, object> {
           }
         })
         .then(this.initInterval)
+        .then(() =>
+          this.props.dispatchEvent(
+            'initApiFinished',
+            injectObjectChain(store.data, {
+              __trigger: 'init'
+            })
+          )
+        )
         .then(this.onInit);
     } else {
       setTimeout(this.onInit.bind(this), 4);
@@ -702,6 +759,7 @@ export default class Form extends React.Component<FormProps, object> {
     clearTimeout(this.timer);
     // this.lazyHandleChange.flush();
     this.lazyEmitChange.cancel();
+    this.lazyJumpToErrorComponent.cancel();
     this.asyncCancel && this.asyncCancel();
     this.toDispose.forEach(fn => fn());
     this.toDispose = [];
@@ -780,6 +838,9 @@ export default class Form extends React.Component<FormProps, object> {
     const initedAt = store.initedAt;
 
     store.setInited(true);
+    // 等待 formInited 属性下发成功
+    // 因为 hooks 里面可以能有读取 props 的操作
+    await new Promise<void>(resolve => this.forceUpdate(resolve));
     const hooks = this.hooks['init'] || [];
     const groupedHooks = groupBy(hooks, item =>
       (item as any).__enforce === 'prev'
@@ -891,6 +952,12 @@ export default class Form extends React.Component<FormProps, object> {
       if (result?.ok) {
         this.initInterval(result);
         store.reset(undefined, false);
+        await this.props.dispatchEvent(
+          'initApiFinished',
+          injectObjectChain(store.data, {
+            __trigger: 'reload'
+          })
+        );
       }
     } else {
       store.reset(undefined, false);
@@ -1094,9 +1161,44 @@ export default class Form extends React.Component<FormProps, object> {
       store.setLocalPersistData(persistDataKeys);
     }
   }
-  formItemDispatchEvent(type: string, data: any) {
-    const {dispatchEvent} = this.props;
-    return dispatchEvent(type, data);
+
+  jumpToErrorComponent(renderer: any) {
+    // 当表单校验错误是，优先调用组件的 focus
+    // 如果没有 focus 方法，则滚动到错误信息的位置
+    if (typeof renderer?.focus === 'function') {
+      renderer.focus();
+    } else {
+      this.formRef.current
+        ?.querySelector(`.${this.props.classPrefix}Form-feedback`)
+        ?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+    }
+  }
+
+  dispatchEvent(
+    e: React.MouseEvent<any> | string,
+    data: any,
+    renderer?: React.Component<RendererProps>, // for didmount
+    scoped?: IScopedContext
+  ) {
+    // 把这两个事件转到 form 组件上，让 form 组件来处理
+    if (
+      (e === 'formItemValidateSucc' || e === 'formItemValidateError') &&
+      renderer?.props.type !== 'form'
+    ) {
+      if (e === 'formItemValidateError') {
+        this.lazyJumpToErrorComponent(renderer);
+      }
+
+      // 如果事件是 formItemValidateSucc 或者 formItemValidateError 转成当前组件触发的，
+      // 所以 onEvent 是配置在 form 层的而不是表单项层
+      renderer = undefined;
+      scoped = undefined;
+    }
+
+    return this.props.dispatchEvent(e, data, renderer, scoped);
   }
 
   emittedData: any = null;
@@ -1722,17 +1824,25 @@ export default class Form extends React.Component<FormProps, object> {
       submitText,
       body,
       translate: __,
-      loadingConfig
+      loadingConfig,
+      wrapWithPanel
     } = this.props;
 
     if (
+      wrapWithPanel === false ||
       typeof actions !== 'undefined' ||
       !submitText ||
       (Array.isArray(body) &&
         body.some(
           item =>
             item &&
-            !!~['submit', 'button', 'button-group', 'reset'].indexOf(
+            !!~[
+              'submit',
+              'button',
+              'button-group',
+              'reset',
+              'button-toolbar'
+            ].indexOf(
               (item as any)?.body?.[0]?.type ||
                 (item as any)?.body?.type ||
                 (item as any).type
@@ -1947,6 +2057,7 @@ export default class Form extends React.Component<FormProps, object> {
       dispatchEvent,
       labelAlign,
       labelWidth,
+      labelOverflow,
       static: isStatic,
       canAccessSuperData
     } = props;
@@ -1966,6 +2077,7 @@ export default class Form extends React.Component<FormProps, object> {
           ? 'right'
           : labelAlign,
       formLabelWidth: labelWidth,
+      formLabelOverflow: labelOverflow,
       controlWidth,
       /**
        * form.loading有为true时才下发disabled属性，否则不显性设置disbaled为false
@@ -1983,7 +2095,7 @@ export default class Form extends React.Component<FormProps, object> {
       addHook: this.addHook,
       removeHook: this.removeHook,
       renderFormItems: this.renderFormItems,
-      formItemDispatchEvent: this.formItemDispatchEvent,
+      dispatchEvent: this.dispatchEvent,
       formPristine: form.pristine,
       onFlushForm: this.flush
       // value: (control as any)?.name
@@ -2050,6 +2162,7 @@ export default class Form extends React.Component<FormProps, object> {
 
     return (
       <WrapperComponent
+        ref={this.formRef}
         className={cx(
           `Form`,
           `Form--${mode || 'normal'}`,
@@ -2119,8 +2232,7 @@ export default class Form extends React.Component<FormProps, object> {
         {render(
           'modal',
           {
-            ...((store.action as ActionObject) &&
-              ((store.action as ActionObject).dialog as object)),
+            ...store.dialogSchema,
             type: 'dialog'
           },
           {
@@ -2135,8 +2247,7 @@ export default class Form extends React.Component<FormProps, object> {
         {render(
           'modal',
           {
-            ...((store.action as ActionObject) &&
-              ((store.action as ActionObject).drawer as object)),
+            ...store.drawerSchema,
             type: 'drawer'
           },
           {

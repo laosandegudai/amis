@@ -15,7 +15,8 @@ export class CollapseGroupPlugin extends BasePlugin {
   static id = 'CollapseGroupPlugin';
   // 关联渲染器名字
   rendererName = 'collapse-group';
-  $schema = '/schemas/CollapseGroupSchema.json';
+  useLazyRender = true; // 使用懒渲染
+  $schema = '/schemas/AMISCollapseGroupSchema.json';
 
   // 组件名称
   name = '折叠面板';
@@ -327,12 +328,12 @@ export class CollapseGroupPlugin extends BasePlugin {
   };
 
   regions: Array<RegionConfig> = [
-    {
-      key: 'body',
-      label: '内容区',
-      renderMethod: 'render',
-      insertPosition: 'inner'
-    }
+    // {
+    //   key: 'body',
+    //   label: '内容区',
+    //   renderMethod: 'render',
+    //   insertPosition: 'inner'
+    // }
   ];
 }
 

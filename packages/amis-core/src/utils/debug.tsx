@@ -4,7 +4,8 @@
 
 import React, {Component, useEffect, useRef, useState, version} from 'react';
 import cx from 'classnames';
-import {findDOMNode, render, unmountComponentAtNode} from 'react-dom';
+import {render, unmountComponentAtNode} from 'react-dom';
+import {findDomCompat as findDOMNode} from './findDomCompat';
 // import {createRoot} from 'react-dom/client';
 import {autorun, observable, action} from 'mobx';
 import {observer} from 'mobx-react';
@@ -601,6 +602,14 @@ function normalizeDataForLog(data: any) {
   }
 }
 
+export function safeStringify(data: any) {
+  try {
+    return JSON.stringify(data);
+  } catch {
+    return data;
+  }
+}
+
 /**
  * 一般调试日志
  * @param msg 简单消息
@@ -619,7 +628,7 @@ export function debug(cat: Category, msg: string, ext?: any) {
     cat,
     level: 'debug',
     msg: msg,
-    ext: ext
+    ext: safeStringify(ext) // 因为 mobx 会加工，导致性能问题，所以转成字符串最简单
   };
   store.logs.push(log);
   // 不要超过 200 条，担心性能问题

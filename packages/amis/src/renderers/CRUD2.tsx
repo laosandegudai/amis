@@ -1,5 +1,5 @@
 import React from 'react';
-import {findDOMNode} from 'react-dom';
+import {findDomCompat as findDOMNode} from 'amis-core';
 import omitBy from 'lodash/omitBy';
 import pick from 'lodash/pick';
 import findIndex from 'lodash/findIndex';
@@ -31,7 +31,13 @@ import {
   isPureVariable,
   resolveVariableAndFilter,
   parsePrimitiveQueryString,
-  JSONTraverse
+  JSONTraverse,
+  AMISSchemaBase,
+  AMISSpinnerConfig,
+  AMISApi,
+  AMISLocalSource,
+  AMISExpression,
+  AMISSchemaCollection
 } from 'amis-core';
 import pickBy from 'lodash/pickBy';
 import {Html, PullRefresh, SpinnerExtraProps} from 'amis-ui';
@@ -43,10 +49,9 @@ import {
   SchemaObject,
   SchemaTokenizeableString
 } from '../Schema';
-import {CardsSchema} from './Cards';
-import {ListSchema} from './List';
-import {TableSchema2} from './Table2';
-import {SchemaCollection} from '../Schema';
+import {BaseCardsSchema} from './Cards';
+import {AMISListBase} from './List';
+import {BaseTableSchema2} from './Table2';
 
 import type {Table2RendererEvent} from './Table2';
 import type {CardsRendererEvent} from './Cards';
@@ -55,26 +60,26 @@ import isEmpty from 'lodash/isEmpty';
 
 export type CRUDRendererEvent = Table2RendererEvent | CardsRendererEvent;
 
-export interface CRUD2CommonSchema extends BaseSchema, SpinnerExtraProps {
+export interface CRUD2CommonSchema extends AMISSchemaBase, AMISSpinnerConfig {
   /**
-   *  指定为 CRUD2 渲染器。
+   * 指定为 crud2 组件
    */
   type: 'crud2';
 
   /**
-   * 指定内容区的展示模式。
+   * 指定内容区的展示模式
    */
   mode?: 'table' | 'grid' | 'cards' | /* grid 的别名*/ 'list' | 'table2';
 
   /**
    * 初始化数据 API
    */
-  api?: SchemaApi;
+  api?: AMISApi;
 
   /**
-   * 也可以直接从环境变量中读取，但是不太推荐。
+   * 也可以直接从环境变量中读取
    */
-  source?: SchemaTokenizeableString;
+  source?: AMISLocalSource;
 
   /**
    * 静默拉取
@@ -84,15 +89,15 @@ export interface CRUD2CommonSchema extends BaseSchema, SpinnerExtraProps {
    * 设置自动刷新时间
    */
   interval?: number;
-  stopAutoRefreshWhen?: SchemaExpression;
+  stopAutoRefreshWhen?: AMISExpression;
 
   /**
-   * 数据展示模式 无限加载 or 分页
+   * 数据展示模式
    */
   loadType?: 'more' | 'pagination';
 
   /**
-   * 无限加载时，根据此项设置其每页加载数量，可以不限制
+   * 无限加载时，根据此项设置其每页加载数量
    */
   perPage?: number;
 
@@ -102,12 +107,12 @@ export interface CRUD2CommonSchema extends BaseSchema, SpinnerExtraProps {
   loadDataOnce?: boolean;
 
   /**
-   * 是否可以选择数据，外部事件动作
+   * 是否可选择数据，外部事件动作
    */
   selectable?: boolean;
 
   /**
-   * 是否可以多选数据，仅当selectable为 true 时生效
+   * 是否可多选数据，仅当selectable为 true 时生效
    */
   multiple?: boolean;
 
@@ -119,17 +124,17 @@ export interface CRUD2CommonSchema extends BaseSchema, SpinnerExtraProps {
   /**
    * 快速编辑后用来批量保存的 API
    */
-  quickSaveApi?: SchemaApi;
+  quickSaveApi?: AMISApi;
 
   /**
    * 快速编辑配置成及时保存时使用的 API
    */
-  quickSaveItemApi?: SchemaApi;
+  quickSaveItemApi?: AMISApi;
 
   /**
    * 保存排序的 api
    */
-  saveOrderApi?: SchemaApi;
+  saveOrderApi?: AMISApi;
 
   /**
    * 是否将过滤条件的参数同步到地址栏,默认为true
@@ -164,7 +169,7 @@ export interface CRUD2CommonSchema extends BaseSchema, SpinnerExtraProps {
   /**
    * 顶部区域
    */
-  headerToolbar?: SchemaCollection;
+  headerToolbar?: AMISSchemaCollection;
 
   /**
    * 顶部区域CSS类名
@@ -174,7 +179,7 @@ export interface CRUD2CommonSchema extends BaseSchema, SpinnerExtraProps {
   /**
    * 底部区域
    */
-  footerToolbar?: SchemaCollection;
+  footerToolbar?: AMISSchemaCollection;
 
   /**
    * 底部区域CSS类名
@@ -192,7 +197,7 @@ export interface CRUD2CommonSchema extends BaseSchema, SpinnerExtraProps {
   keepItemSelectionOnPageChange?: boolean;
 
   /**
-   * 内容区域占满屏幕剩余空间
+   * 内容区域是否占满屏幕剩余空间
    */
   autoFillHeight?: boolean;
 
@@ -208,21 +213,93 @@ export interface CRUD2CommonSchema extends BaseSchema, SpinnerExtraProps {
         types?: ('boolean' | 'number')[];
       }
     | boolean;
+
+  /**
+   * 下拉刷新配置
+   */
+  pullRefresh?: {
+    /**
+     * 是否禁用下拉刷新
+     */
+    disabled?: boolean;
+
+    /**
+     * 是否显示loading图标
+     * @default true
+     */
+    showIcon?: boolean;
+
+    /**
+     * 是否显示文本
+     * @default true
+     */
+    showText?: boolean;
+
+    /**
+     * 指定图标样式
+     * @default 'loading-outline'
+     */
+    iconType?: string;
+
+    /**
+     * 图标和文字颜色
+     * @default '#777777'
+     */
+    color?: string;
+
+    /**
+     * 各状态文字说明
+     */
+    contentText?: {
+      /** 下拉刷新的默认文字 */
+      normalText?: string;
+      /** 下拉过程中的文字 */
+      pullingText?: string;
+      /** 释放立即刷新的文字 */
+      loosingText?: string;
+      /** 加载中的文字 */
+      loadingText?: string;
+      /** 加载成功的文字 */
+      successText?: string;
+      /** 全部加载完成的文字 */
+      completedText?: string;
+    };
+
+    /**
+     * 新数据追加的位置
+     * @default 'bottom'
+     */
+    dataAppendTo?: 'top' | 'bottom';
+
+    /**
+     * 加载状态的最短显示时间(毫秒)
+     * @default 0
+     */
+    minLoadingTime?: number;
+    /**
+     * 手势方向
+     * @default 'up'
+     */
+    gestureDirection?: 'up' | 'down';
+  };
 }
 
 export type CRUD2CardsSchema = CRUD2CommonSchema & {
   mode: 'cards';
-} & Omit<CardsSchema, 'type'>;
+} & BaseCardsSchema;
 
 export type CRUD2ListSchema = CRUD2CommonSchema & {
   mode: 'list';
-} & Omit<ListSchema, 'type'>;
+} & AMISListBase;
 
 export type CRUD2TableSchema = CRUD2CommonSchema & {
   mode?: 'table2';
-} & Omit<TableSchema2, 'type'>;
+} & BaseTableSchema2;
 
-export type CRUD2Schema = CRUD2CardsSchema | CRUD2ListSchema | CRUD2TableSchema;
+export type AMISCRUD2Schema =
+  | CRUD2CardsSchema
+  | CRUD2ListSchema
+  | CRUD2TableSchema;
 
 export interface CRUD2Props
   extends RendererProps,
@@ -246,7 +323,10 @@ const INNER_EVENTS: Array<CRUDRendererEvent> = [
   'selected'
 ];
 
-export default class CRUD2 extends React.Component<CRUD2Props, any> {
+export default class CRUD2<T extends CRUD2Props> extends React.Component<
+  T,
+  any
+> {
   static propsList: Array<keyof CRUD2Props> = [
     'mode',
     'syncLocation',
@@ -277,7 +357,8 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
     'headerToolbarClassName',
     'footerToolbarClassName',
     'primaryField',
-    'parsePrimitiveQuery'
+    'parsePrimitiveQuery',
+    'pullRefresh'
   ];
 
   static defaultProps = {
@@ -289,7 +370,25 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
     autoFillHeight: false,
     showSelection: true,
     primaryField: 'id',
-    parsePrimitiveQuery: true
+    parsePrimitiveQuery: true,
+    pullRefresh: {
+      disabled: false,
+      showIcon: true,
+      showText: true,
+      iconType: 'auto',
+      color: '#777777',
+      dataAppendTo: 'bottom',
+      gestureDirection: 'up',
+      minLoadingTime: 0,
+      contentText: {
+        normalText: '点击加载更多',
+        pullingText: '加载中...',
+        loosingText: '释放立即刷新',
+        loadingText: '加载中...',
+        successText: '加载成功',
+        completedText: '没有更多数据了'
+      }
+    }
   };
 
   control: any;
@@ -302,7 +401,7 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
 
   stopingAutoRefresh: boolean = false;
 
-  constructor(props: CRUD2Props) {
+  constructor(props: T) {
     super(props);
 
     const {
@@ -352,7 +451,8 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
   }
 
   componentDidMount() {
-    const {store, pickerMode, loadType, loadDataOnce, maxLoadNum} = this.props;
+    const {store, pickerMode, loadType, loadDataOnce, maxLoadNum, filter} =
+      this.props;
 
     // 初始化分页
     let pagination = loadType && !loadDataOnce;
@@ -368,7 +468,10 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
     }
 
     // 初始化筛选条件
-    this.initQuery({});
+    // 有filter时,从filter初始化
+    if (!this.normalizeFilterSchema(filter)?.length) {
+      this.initQuery({});
+    }
 
     if (pickerMode) {
       // 解析picker组件默认值
@@ -642,7 +745,8 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
       loadDataOnce,
       source,
       columns,
-      perPage
+      perPage,
+      pullRefresh
     } = this.props;
 
     // reload 需要清空用户选择
@@ -680,9 +784,11 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
         pageField,
         perPageField,
         loadDataMode,
+        dataAppendTo: pullRefresh?.dataAppendTo || 'bottom',
         syncResponse2Query,
         columns: store.columns ?? columns,
-        isTable2: true
+        isTable2: true,
+        minLoadingTime: pullRefresh?.minLoadingTime
       });
 
       value?.ok && // 接口正常返回才继续轮训
@@ -1117,6 +1223,24 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
     }
   }
 
+  @autobind
+  dispatchEvent(
+    e: React.MouseEvent<any> | string,
+    data: any,
+    renderer?: React.Component<RendererProps>, // for didmount
+    scoped?: IScopedContext
+  ) {
+    // 如果事件是 selectedChange 并且是当前组件触发的，
+    // 则以当前组件的选择信息为准
+    if (e === 'selectedChange' && this.control === renderer) {
+      const store = this.props.store;
+      data.selectedItems = store.selectedItems.concat();
+      data.unSelectedItems = store.unSelectedItems.concat();
+    }
+
+    return this.props.dispatchEvent(e, data, renderer, scoped);
+  }
+
   unSelectItem(item: any, index: number) {
     const {store} = this.props;
     const selected = store.selectedItems.concat();
@@ -1148,14 +1272,15 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
   }
 
   @autobind
-  toggleToggle(index: number) {
+  toggleToggle(id: string) {
     const {store} = this.props;
-    const column = store.columns[index];
-    const toggled = column.toggled;
+    const column = store.columns.find((c: any) => c.id === id);
+    if (!column) return;
+    const toggled = column.toggled ?? true;
     store.updateColumns(
-      store.columns.map((c: any, i: number) => ({
+      store.columns.map((c: any) => ({
         ...c,
-        toggled: index === i ? !toggled : c.toggled !== false
+        toggled: c.id === id ? !toggled : c.toggled !== false
       }))
     );
   }
@@ -1229,7 +1354,7 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
     });
   }
 
-  renderToolbar(region: string, toolbar?: SchemaCollection) {
+  renderToolbar(region: string, toolbar?: AMISSchemaCollection) {
     if (!toolbar) {
       return null;
     }
@@ -1243,7 +1368,7 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
     );
   }
 
-  renderFilter(filterSchema: SchemaObject[] | SchemaObject) {
+  normalizeFilterSchema(filterSchema: SchemaObject[] | SchemaObject) {
     if (
       !filterSchema ||
       (Array.isArray(filterSchema) && filterSchema.length === 0)
@@ -1258,6 +1383,16 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
       : [];
 
     if (filterSchemas.length < 1) {
+      return null;
+    }
+
+    return filterSchemas;
+  }
+
+  renderFilter(filterSchema: SchemaObject[] | SchemaObject) {
+    const filterSchemas = this.normalizeFilterSchema(filterSchema);
+
+    if (!filterSchemas?.length) {
       return null;
     }
 
@@ -1277,6 +1412,9 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
             replaceQuery: true,
             resetPage: true
           });
+        },
+        onInit: (data: any) => {
+          this.initQuery(data);
         },
         // 移动端的查询表单支持折叠
         ...(this.props.mobileUI
@@ -1333,10 +1471,7 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
             </span>
             <span className={cx('Crud-valueLabel')}>
               {labelTpl ? (
-                <Html
-                  html={filter(labelTpl, item)}
-                  filterHtml={env.filterHtml}
-                />
+                <Html html={filter(labelTpl, item)} />
               ) : (
                 getVariable(item, labelField || 'label') ||
                 getVariable(item, primaryField || 'id')
@@ -1604,6 +1739,7 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
         onSort: this.handleQuerySearch,
         onSelect: this.handleSelect,
         onAction: this.handleAction,
+        dispatchEvent: this.dispatchEvent,
         data: store.mergedData,
         loading: store.loading,
         host: this
@@ -1652,7 +1788,7 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
             {...pullRefresh}
             translate={__}
             onRefresh={this.handlePullRefresh}
-            direction="up"
+            direction={pullRefresh.gestureDirection ?? 'up'}
             loading={store.loading}
             completed={
               !store.loading &&
@@ -1684,15 +1820,10 @@ export default class CRUD2 extends React.Component<CRUD2Props, any> {
   }
 }
 
-@Renderer({
-  type: 'crud2',
-  storeType: CRUDStore.name,
-  isolateScope: true
-})
-export class CRUD2Renderer extends CRUD2 {
+export class CRUD2RendererBase<T extends CRUD2Props> extends CRUD2<T> {
   static contextType = ScopedContext;
 
-  constructor(props: CRUD2Props, context: IScopedContext) {
+  constructor(props: T, context: IScopedContext) {
     super(props);
 
     const scoped = context;
@@ -1736,3 +1867,10 @@ export class CRUD2Renderer extends CRUD2 {
     scoped.close(target);
   }
 }
+
+@Renderer({
+  type: 'crud2',
+  storeType: CRUDStore.name,
+  isolateScope: true
+})
+export class CRUD2Renderer extends CRUD2RendererBase<CRUD2Props> {}

@@ -186,23 +186,6 @@ registerActionPanel('setValue', {
         body: [
           {
             type: 'wrapper',
-            visibleOn: 'this.componentId === "customCmptId"',
-            className: 'p-none mb-6',
-            body: [
-              ...renderCmptActionSelect(
-                '目标组件',
-                true,
-                (value: string, oldVal: any, data: any, form: any) => {
-                  form.setValueByName('args.__containerType', 'all');
-                  form.setValueByName('args.__comboType', 'all');
-                },
-                true
-              )
-            ]
-          },
-          {
-            type: 'wrapper',
-            visibleOn: 'this.componentId !== "customCmptId"',
             className: 'p-none mb-6',
             body: [
               ...renderCmptActionSelect(
@@ -278,12 +261,16 @@ registerActionPanel('setValue', {
                 visibleOn: `this.__rendererName === 'combo' || this.__rendererName === 'input-table'`,
                 options: [
                   {
-                    label: '全量',
+                    label: '直接赋值',
                     value: 'all'
                   },
                   {
                     label: '指定序号',
                     value: 'appoint'
+                  },
+                  {
+                    label: '指定行数',
+                    value: 'rows'
                   }
                 ],
                 onChange: (
@@ -326,6 +313,8 @@ registerActionPanel('setValue', {
                 mode: 'horizontal',
                 formClassName: 'event-action-combo',
                 itemClassName: 'event-action-combo-item',
+                addButtonText: '新增属性',
+                addButtonClassName: 'Button--size-sm',
                 items: [
                   {
                     name: 'key',
@@ -345,6 +334,16 @@ registerActionPanel('setValue', {
                 ],
                 visibleOn: `this.__isScopeContainer && this.__containerType === 'appoint' || this.__comboType === 'appoint'`
               },
+              getSchemaTpl('formulaControl', {
+                name: '__valueInput',
+                label: '',
+                variables: '${variables}',
+                size: 'lg',
+                mode: 'horizontal',
+                visibleOn: `(this.__rendererName === 'combo' || this.__rendererName === 'input-table')
+              && (this.__comboType === 'all' || typeof this.__comboType === 'undefined')`,
+                required: true
+              }),
               {
                 type: 'combo',
                 name: 'value',
@@ -355,9 +354,19 @@ registerActionPanel('setValue', {
                 addable: true,
                 strictMode: false,
                 canAccessSuperData: true,
+                addButtonText: '新增一行',
+                addButtonClassName: 'Button--size-sm',
                 mode: 'horizontal',
                 size: 'lg',
+                scaffold: {
+                  item: [{key: '', val: ''}]
+                },
                 items: [
+                  {
+                    type: 'tpl',
+                    tpl: '第 ${index + 1} 行',
+                    columnClassName: 'no-grow'
+                  },
                   {
                     type: 'combo',
                     name: 'item',
@@ -374,6 +383,8 @@ registerActionPanel('setValue', {
                     mode: 'horizontal',
                     formClassName: 'event-action-combo',
                     itemClassName: 'event-action-combo-item',
+                    addButtonText: '新增属性',
+                    addButtonClassName: 'Button--size-sm',
                     items: [
                       {
                         name: 'key',
@@ -393,7 +404,7 @@ registerActionPanel('setValue', {
                   }
                 ],
                 visibleOn: `(this.__rendererName === 'combo' || this.__rendererName === 'input-table')
-              && this.__comboType === 'all'`
+              && this.__comboType === 'rows'`
               },
               getSchemaTpl('formulaControl', {
                 name: '__valueInput',

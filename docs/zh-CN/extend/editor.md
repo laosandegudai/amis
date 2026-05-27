@@ -47,7 +47,7 @@ render() {
 - `schemas?: JSONSchemaObject` 用来定义有哪些全局变量，辅助编辑器格式化绑定全局数据。
 - `theme?: string` amis 主题
 - `schemaFilter?: (schema: any, isPreview?: boolean) => any` 配置过滤器。可以用来实现 api proxy，比如原始配置中请求地址是 `http://baidu.com` 如果直接给编辑器预览请求，很可能会报跨域，可以自动转成 `/api/proxy?_url=xxxx`，走 proxy 解决。
-- `amisEnv?: any` 这是是给 amis 的 Env 对象，具体请前往 [env 说明](../start/getting-started#env)
+- `amisEnv?: any` 这是给 amis 的 Env 对象，具体请前往 [env 说明](../start/getting-started#env)
 - `disableBultinPlugin?: boolean` 是否禁用内置插件
 - `disablePluginList?: Array<string> | (id: string, plugin: PluginClass) => boolean` 禁用插件列表
 - `plugins?: Array<PluginClass>` 额外的自定义插件，具体看下面的说明。
@@ -479,7 +479,7 @@ regions: Array<RegionConfig> = [
 - `placeholder?: string` 区域占位字符，用于提示
 - `matchRegion?: (elem: JSX.Element | undefined | null, component: JSX.Element ) => boolean` 对于复杂的控件需要用到这个配置。如果配置了，则遍历 react dom 直到目标节点调换成 Region 节点，如果没有配置这个，但是又配置了 renderMethod 方法，那就直接将 renderMethod 里面返回的 react dom 直接包一层 Region
 - `renderMethod?: string` 指定要覆盖哪个方法。
-- `rendererName?: string` 通常是 hack 当前渲染器，单有时候当前渲染器其实是组合的别的渲染器。如果要篡改别的渲染器，则通过渲染器名字指定。
+- `rendererName?: string` 通常是 hack 当前渲染器，但有时候当前渲染器其实是组合的别的渲染器。如果要篡改别的渲染器，则通过渲染器名字指定。
 - `insertPosition?: 'outter' | 'inner'` 当配置 renderMethod 的时候会自动把 Region 插入进去。 默认是 outter 模式，有时候可能需要配置成 inner， 比如 renderMethod 为 render 的时候。
 - `optional?: boolean` 是否为可选容器，如果是可选容器，不会强制自动创建成员
 - `renderMethodOverride?: (regions: Array<RegionConfig>, insertRegion: (component: JSX.Element, dom: JSX.Element, regions: Array<RegionConfig>, info: RendererInfo, manager: EditorManager) => JSX.Element ) => Function` 有时候有些包括是需要其他条件的，所以要自己写包裹逻辑。比如 Panel 里面的 renderBody
@@ -593,118 +593,13 @@ export class MyRenderer extends React.Component {
 }
 ```
 
-然后插件中加入以下代码即可完成拖拽调整宽高
+然后[插件](https://github.com/aisuda/amis-editor-demo?tab=readme-ov-file#%E6%89%A9%E5%85%85%E8%87%AA%E5%AE%9A%E4%B9%89%E7%BC%96%E8%BE%91%E5%99%A8%E6%96%B0%E7%89%88)中修改继承类，即可完成拖拽调整宽高：
 
 ```tsx
-onActive(event: PluginEvent<ActiveEventContext>) {
-  const context = event.context;
+import {LayoutBasePlugin} from 'amis-editor';
 
-  if (context.info?.plugin !== this || !context.node) {
-    return;
-  }
-
-  const node = context.node!;
-  node.setHeightMutable(true);
-  node.setWidthMutable(true);
-}
-
-onWidthChangeStart(
-  event: PluginEvent<
-    ResizeMoveEventContext,
-    {
-      onMove(e: MouseEvent): void;
-      onEnd(e: MouseEvent): void;
-    }
-  >
-) {
-  return this.onSizeChangeStart(event, 'horizontal');
-}
-
-onHeightChangeStart(
-  event: PluginEvent<
-    ResizeMoveEventContext,
-    {
-      onMove(e: MouseEvent): void;
-      onEnd(e: MouseEvent): void;
-    }
-  >
-) {
-  return this.onSizeChangeStart(event, 'vertical');
-}
-
-onSizeChangeStart(
-  event: PluginEvent<
-    ResizeMoveEventContext,
-    {
-      onMove(e: MouseEvent): void;
-      onEnd(e: MouseEvent): void;
-    }
-  >,
-  direction: 'both' | 'vertical' | 'horizontal' = 'both'
-) {
-  const context = event.context;
-  const node = context.node;
-  if (node.info?.plugin !== this) {
-    return;
-  }
-
-  const resizer = context.resizer;
-  const dom = context.dom;
-  const frameRect = dom.parentElement!.getBoundingClientRect();
-  const rect = dom.getBoundingClientRect();
-  const startX = context.nativeEvent.pageX;
-  const startY = context.nativeEvent.pageY;
-
-  event.setData({
-    onMove: (e: MouseEvent) => {
-      const dy = e.pageY - startY;
-      const dx = e.pageX - startX;
-      const height = Math.max(50, rect.height + dy);
-      const width = Math.max(100, Math.min(rect.width + dx, frameRect.width));
-      const state: any = {
-        width,
-        height
-      };
-
-      if (direction === 'both') {
-        resizer.setAttribute('data-value', `${width}px x ${height}px`);
-      } else if (direction === 'vertical') {
-        resizer.setAttribute('data-value', `${height}px`);
-        delete state.width;
-      } else {
-        resizer.setAttribute('data-value', `${width}px`);
-        delete state.height;
-      }
-
-      node.updateState(state);
-
-      requestAnimationFrame(() => {
-        node.calculateHighlightBox();
-      });
-    },
-    onEnd: (e: MouseEvent) => {
-      const dy = e.pageY - startY;
-      const dx = e.pageX - startX;
-      const height = Math.max(50, rect.height + dy);
-      const width = Math.max(100, Math.min(rect.width + dx, frameRect.width));
-      const state: any = {
-        width,
-        height
-      };
-
-      if (direction === 'vertical') {
-        delete state.width;
-      } else if (direction === 'horizontal') {
-        delete state.height;
-      }
-
-      resizer.removeAttribute('data-value');
-      node.updateSchema(state);
-      requestAnimationFrame(() => {
-        node.calculateHighlightBox();
-      });
-    }
-  });
+export class MyRendererPlugin extends LayoutBasePlugin {
+  // ...
 }
 ```
 

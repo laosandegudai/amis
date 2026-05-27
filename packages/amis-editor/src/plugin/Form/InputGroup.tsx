@@ -15,7 +15,7 @@ export class InputGroupControlPlugin extends BasePlugin {
   static scene = ['layout'];
   // 关联渲染器名字
   rendererName = 'input-group';
-  $schema = '/schemas/InputGroupControlSchema.json';
+  $schema = '/schemas/AMISInputGroupSchema.json';
 
   // 组件名称
   name = '输入组合';
@@ -95,16 +95,7 @@ export class InputGroupControlPlugin extends BasePlugin {
         title: '外观',
         body: [
           getSchemaTpl('collapseGroup', [
-            getSchemaTpl('style:formItem', {
-              renderer: context.info.renderer,
-              schema: [
-                getSchemaTpl('switch', {
-                  label: '内联模式',
-                  name: 'inline',
-                  pipeIn: defaultValue(false)
-                })
-              ]
-            }),
+            getSchemaTpl('theme:formItem'),
             getSchemaTpl('style:classNames')
           ])
         ]

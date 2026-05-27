@@ -1664,7 +1664,7 @@
   --Form-item-color: var(--colors-neutral-text-4);
   --Form-item-fontSize: var(--fonts-size-7);
   --Form-item-fontWeight: var(--fonts-weight-6);
-  --Form-item-lineHeight: var(--fonts-lineHeight-1);
+  --Form-item-lineHeight: var(--fonts-lineHeight-2);
   --Form-item-star-color: var(--colors-error-5);
   --Form-item-star-size: var(--sizes-size-7);
   --Form-description-color: var(--colors-neutral-text-5);
@@ -2874,7 +2874,7 @@
   --select-multiple-paddingLeft: var(--sizes-size-3);
   --select-multiple-paddingRight: var(--sizes-size-3);
   --select-multiple-marginTop: var(--sizes-size-0);
-  --select-multiple-marginBottom: var(--sizes-size-0);
+  --select-multiple-marginBottom: var(--sizes-size-3);
   --select-multiple-marginLeft: var(--sizes-size-0);
   --select-multiple-marginRight: var(--sizes-size-3);
   --select-multiple-color: var(--colors-neutral-text-2);
@@ -2970,17 +2970,14 @@
   --Form-selectValue-borderColor: var(--colors-brand-7);
   --Form-selectValue-color: var(--colors-brand-5);
   --Form-selectValue-fontSize: var(--select-multiple-fontSize);
-  --Form-selectValue-onDisable-bg: #{color.adjust(
-      color.adjust(color.adjust($info, $lightness: 40%), $saturation: 2.5%),
-      $lightness: 5%
-    )};
+  --Form-selectValue-onDisable-bg: var(--colors-neutral-fill-10);
   --Form-selectValue-onHover-bg: #{color.adjust(
       color.adjust(color.adjust($info, $lightness: 40%), $saturation: 2.5%),
       $lightness: -5%
     )};
   --Form-selectValue-onDisabled-color: var(--Form-select-caret-iconColor);
   --Form-selectValue-onInvalid-color: var(--danger);
-  --Form-valueLabel-maxWidth: #{px2rem(120px)};
+  --Form-valueLabel-maxWidth: #{px2rem(200px)};
   --Form-select-onFocus-boxShadow: none;
   --ResultBox-tag-height: #{px2rem(22px)};
   --ResultBox-tag-marginBottom: var(--select-multiple-marginBottom);
@@ -3744,7 +3741,7 @@
   --Pick-status-focus-left-border-style: var(--borders-style-2);
   --Pick-status-focus-shadow: var(--shadows-shadow-none);
   --Pick-status-focus-bgColor: var(--colors-neutral-fill-11);
-  --Pick-status-disabled-color: var(--colors-neutral-text-2);
+  --Pick-status-disabled-color: var(--colors-neutral-line-6);
   --Pick-status-disabled-fontSize: var(--fonts-size-7);
   --Pick-status-disabled-fontWeight: var(--fonts-weight-6);
   --Pick-status-disabled-top-border-color: var(--colors-neutral-line-8);
@@ -3760,9 +3757,6 @@
   --Pick-status-disabled-left-border-width: var(--borders-width-2);
   --Pick-status-disabled-left-border-style: var(--borders-style-2);
   --Pick-status-disabled-bgColor: var(--colors-neutral-fill-10);
-  --Pick-status-disabled-color: var(--colors-neutral-line-6);
-  --Pick-status-disabled-fontSize: var(--fonts-size-7);
-  --Pick-status-disabled-fontWeight: var(--fonts-weight-6);
 
   --Status-base-fontSize: var(--fonts-size-9);
   --Status-base-icon-size: var(--sizes-size-8);

@@ -6,6 +6,8 @@ import map from 'lodash/map';
 import isEmpty from 'lodash/isEmpty';
 import kebabCase from 'lodash/kebabCase';
 import {resolveVariableAndFilter} from './resolveVariableAndFilter';
+import some from 'lodash/some';
+import {isExpression} from './formula';
 
 export const valueMap: PlainObject = {
   'marginTop': 'margin-top',
@@ -193,8 +195,8 @@ export function formatStyle(
 
     let className = item.key + '-' + id?.replace('u:', '');
     const weightsList: PlainObject = item.weights || {};
-
-    if (typeof data?.index === 'number') {
+    const cssHasExpression = hasExpression(body);
+    if (typeof data?.index === 'number' && cssHasExpression !== false) {
       className += `-${data.index}`;
     }
 
@@ -316,6 +318,7 @@ export function insertCustomStyle(params: {
   defaultData?: any;
   customStyleClassPrefix?: string;
   doc?: Document;
+  cssHasExpression?: boolean;
   [propName: string]: any;
 }) {
   const {
@@ -325,7 +328,8 @@ export function insertCustomStyle(params: {
     defaultData,
     customStyleClassPrefix,
     doc,
-    data
+    data,
+    cssHasExpression
   } = params;
   if (!themeCss) {
     return;
@@ -334,7 +338,7 @@ export function insertCustomStyle(params: {
   let {value} = formatStyle(themeCss, classNames, id, defaultData, data);
   value = customStyleClassPrefix ? `${customStyleClassPrefix} ${value}` : value;
   let classId = id?.replace?.('u:', '') || id + '';
-  if (typeof data?.index === 'number') {
+  if (typeof data?.index === 'number' && cssHasExpression !== false) {
     classId += `-${data.index}`;
   }
   // 这里需要插入到wrapperCustomStyle的前面
@@ -371,7 +375,15 @@ function traverseStyle(style: any, path: string, result: any) {
   Object.keys(style).forEach(key => {
     if (key !== '$$id') {
       if (isObject(style[key])) {
-        const nowPath = path ? `${path} ${key}` : key;
+        const keys = key.split(',');
+        const nowPath = path
+          ? keys
+              .map(key => {
+                const paths = path.split(',');
+                return paths.map(path => `${path} ${key}`).join(',');
+              })
+              .join(',')
+          : key;
         traverseStyle(style[key], nowPath, result);
       } else if (path === '') {
         !result[key] && (result[key] = {});
@@ -384,24 +396,40 @@ function traverseStyle(style: any, path: string, result: any) {
   });
 }
 
-/**
- * 设置源码编辑自定义样式
- */
-export function insertEditCustomStyle(params: {
+export function hasExpression(customStyle: any) {
+  let styles: any = {};
+  traverseStyle(customStyle || {}, '', styles);
+  if (!isEmpty(styles)) {
+    return some(Object.keys(styles), (key: string) => {
+      return some(styles[key], (value: any, k) => {
+        return isExpression(value) || isExpression(k);
+      });
+    });
+  }
+  return false;
+}
+
+export function formatCustomStyle(params: {
   customStyle: any;
   id?: string;
   doc?: Document;
+  cssHasExpression?: boolean;
   customStyleClassPrefix?: string;
   [propName: string]: any;
-}) {
-  const {customStyle, doc, data, customStyleClassPrefix} = params;
+}): {
+  content: string;
+  index?: string;
+  id: string;
+} {
+  const {customStyle, doc, data, cssHasExpression, customStyleClassPrefix} =
+    params;
   const id = params.id?.replace?.('u:', '') || params.id + '';
   let styles: any = {};
   traverseStyle(customStyle, '', styles);
 
   let content = '';
   let index = '';
-  if (typeof data?.index === 'number') {
+  if (typeof data?.index === 'number' && cssHasExpression !== false) {
     index = `-${data.index}`;
   }
   if (!isEmpty(styles)) {
@@ -411,63 +439,63 @@ export function insertEditCustomStyle(params: {
     }
     Object.keys(styles).forEach((key: string) => {
       if (!isObject(styles[key])) {
-        content += `\n${className} {\n  ${key}: ${
-          resolveVariableAndFilter(
-            styles[key].replace(/['|"]/g, ''),
-            data,
-            '| raw'
-          ) || styles[key]
-        }\n}`;
-      } else if (key === 'root') {
+        // 这里如果有表达式 应该先运行表达式 在执行替换 否则表达式始终运行不过去
+        content += `\n${className} {\n  ${key}: ${(
+          resolveVariableAndFilter(styles[key], data, '| raw') || styles[key]
+        ).replace(/['|"]/g, '')}\n}`;
+      } else if (key.startsWith('root')) {
         const res = map(
           styles[key],
           (value: any, key) =>
-            `${key}: ${
-              resolveVariableAndFilter(
-                value.replace(/['|"]/g, ''),
-                data,
-                '| raw'
-              ) || value
-            };`
+            `${key}: ${(
+              resolveVariableAndFilter(value, data, '| raw') || value
+            ).replace(/['|"]/g, '')};`
         );
-        content += `\n${className} {\n  ${res.join('\n  ')}\n}`;
-      } else if (/^root:/.test(key)) {
-        const res = map(
-          styles[key],
-          (value: any, key) =>
-            `${key}: ${
-              resolveVariableAndFilter(
-                value.replace(/['|"]/g, ''),
-                data,
-                '| raw'
-              ) || value
-            };`
-        );
-        const nowKey = key.replace('root', '');
-        content += `\n${className}${nowKey} {\n  ${res.join('\n  ')}\n}`;
+        content += `\n${key.replace(/root/g, className)} {\n  ${res.join(
+          '\n  '
+        )}\n}`;
       } else {
         const res = map(
           styles[key],
           (value: any, key) =>
-            `${key}: ${
-              resolveVariableAndFilter(
-                value.replace(/['|"]/g, ''),
-                data,
-                '| raw'
-              ) || value
-            };`
+            `${key}: ${(
+              resolveVariableAndFilter(value, data, '| raw') || value
+            ).replace(/['|"]/g, '')};`
         );
-        content += `\n${className} ${key} {\n  ${res.join('\n  ')}\n}`;
+        const keys = key.split(',');
+        content += `\n${keys.map(key => `${className} ${key}`)} {\n  ${res.join(
+          '\n  '
+        )}\n}`;
       }
     });
   }
+  return {
+    content: content,
+    index: index,
+    id: id
+  };
+}
 
+/**
+ * 设置源码编辑自定义样式
+ */
+export function insertEditCustomStyle(params: {
+  customStyle: any;
+  id?: string;
+  doc?: Document;
+  cssHasExpression?: boolean;
+  customStyleClassPrefix?: string;
+  [propName: string]: any;
+}) {
+  const {doc} = params;
+  const {content, index, id} = formatCustomStyle(params);
   insertStyle({
     style: content,
     classId: 'wrapperCustomStyle-' + (id || uuid()) + index,
     doc,
     id: id.replace(/(-.*)/, '')
   });
+  return content;
 }
 
 export interface InsertCustomStyle {
@@ -486,11 +514,12 @@ export function removeCustomStyle(
   type: string,
   id: string,
   doc?: Document,
-  data?: any
+  data?: any,
+  cssHasExpression?: boolean
 ) {
   let styleId =
     'amis-' + (type ? type + '-' : '') + (id.replace?.('u:', '') || id + '');
-  if (typeof data?.index === 'number') {
+  if (typeof data?.index === 'number' && cssHasExpression !== false) {
     styleId += `-${data.index}`;
   }
   const style = (doc || document).getElementById(styleId);
@@ -525,9 +554,9 @@ export function setThemeClassName(params: {
   if (!id || !themeCss) {
     return '';
   }
-
+  const cssHasExpression = hasExpression(themeCss || {});
   let index = '';
-  if (typeof data?.index === 'number') {
+  if (typeof data?.index === 'number' && cssHasExpression !== false) {
     index = `-${data.index}`;
   }
 

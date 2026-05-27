@@ -27,7 +27,8 @@ export class TabsPlugin extends BasePlugin {
   static id = 'TabsPlugin';
   // 关联渲染器名字
   rendererName = 'tabs';
-  $schema = '/schemas/TabsSchema.json';
+  useLazyRender = true; // 使用懒渲染
+  $schema = '/schemas/AMISTabsSchema.json';
 
   // 组件名称
   name = '选项卡';
@@ -549,7 +550,7 @@ export class TabsPlugin extends BasePlugin {
                     type={info.type}
                     plugin={info.plugin}
                     renderer={info.renderer}
-                    $schema="/schemas/TabSchema.json"
+                    $schema="/schemas/AMISTabSchema.json"
                     hostId={info.id}
                     memberIndex={index}
                     name={`${item.props.title || `卡片${index + 1}`}`}

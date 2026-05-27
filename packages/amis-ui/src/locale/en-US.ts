@@ -118,6 +118,8 @@ register('en-US', {
   'deleteFailed': 'Delete failed',
   'desc': 'Desc',
   'Dialog.close': 'Close',
+  'Dialog.screen': 'Fullscreen Mode',
+  'Dialog.reset': 'Exit Fullscreen Mode',
   'Dialog.title': 'Title',
   'Embed.invalidRoot': 'Invalid root selector',
   'Embed.downloading': 'Start downloading',
@@ -185,6 +187,7 @@ register('en-US', {
   'LocationPicker.placeholder': 'Pick location',
   'LocationPicker.getLocation': 'Click to obtain location information',
   'Month.placeholder': 'Select a month',
+  'MapPicker.searchPlaceholder': 'Search location',
   'Nav.sourceError': 'Fetch link error',
   'networkError': 'Network error or missing CORS configuration',
   'noResult': 'No Result',
@@ -232,6 +235,7 @@ register('en-US', {
   'Table.subAddRow': 'Add sub row',
   'Table.copyRow': 'Copy row',
   'Table.columnsVisibility': 'Click to control columns visibility',
+  'Table.columnsSorting': 'Drag column to sort',
   'Table.deleteRow': 'Delete current row',
   'Table.discard': 'Discard',
   'Table.dragTip': 'Drag the button on the left to sort',
@@ -434,6 +438,9 @@ register('en-US', {
   'Signature.confirm': 'confirm',
   'Signature.cancel': 'cancel',
   'Signature.embedLabel': 'Click to sign',
+  'Signature.embedUpdateLabel': 'Update to sign',
   'QRCode.tooLong':
-    'The QR code value is too long, please set the text to be below {{max}} characters.'
+    'The QR code value is too long, please set the text to be below {{max}} characters.',
+  'swith.on': 'On',
+  'swith.off': 'Off'
 });

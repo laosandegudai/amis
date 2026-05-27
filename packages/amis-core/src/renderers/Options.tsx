@@ -7,7 +7,8 @@ import {
   PlainObject,
   ActionObject,
   OptionProps,
-  BaseApiObject
+  BaseApiObject,
+  BaseSchemaWithoutType
 } from '../types';
 import {isEffectiveApi, isApiOutdated} from '../utils/api';
 import {isAlive} from 'mobx-state-tree';
@@ -34,7 +35,7 @@ import {
   registerFormItem,
   FormItemBasicConfig,
   detectProps as itemDetectProps,
-  FormBaseControl
+  AMISFormItem
 } from './Item';
 import {IFormItemStore} from '../store/formItem';
 
@@ -53,21 +54,29 @@ import findIndex from 'lodash/findIndex';
 import isPlainObject from 'lodash/isPlainObject';
 import {normalizeOptions} from '../utils/normalizeOptions';
 import {optionValueCompare} from '../utils/optionValueCompare';
-import type {Option} from '../types';
+import type {BaseApi, Option} from '../types';
 import {deleteVariable, resolveEventData} from '../utils';
-
+import {extendObject} from '../utils/object';
+import {
+  AMISOptions,
+  AMISApi,
+  AMISExpression,
+  AMISDialogSchemaBase,
+  AMISTemplate,
+  AMISSchema
+} from '../schema';
 export {Option};
 
-export interface FormOptionsControl extends FormBaseControl {
+export interface AMISFormItemWithOptions extends AMISFormItem {
   /**
    * 选项集合
    */
-  options?: Array<Option> | string[] | PlainObject;
+  options?: AMISOptions | string[] | PlainObject;
 
   /**
    * 可用来通过 API 拉取 options。
    */
-  source?: BaseApiObject | string;
+  source?: AMISApi;
 
   /**
    * 默认选择选项第一个值。
@@ -79,7 +88,7 @@ export interface FormOptionsControl extends FormBaseControl {
    *
    * @deprecated 建议用 source 接口的 sendOn
    */
-  initFetchOn?: string;
+  initFetchOn?: AMISExpression;
 
   /**
    * 配置 source 接口初始拉不拉取。
@@ -92,6 +101,11 @@ export interface FormOptionsControl extends FormBaseControl {
    * 是否为多选模式
    */
   multiple?: boolean;
+
+  /**
+   * 是否默认全选
+   */
+  checkAll?: boolean;
 
   /**
    * 单选模式：当用户选中某个选项时，选项中的 value 将被作为该表单项的值提交，否则，整个选项对象都会作为该表单项的值提交。
@@ -132,24 +146,24 @@ export interface FormOptionsControl extends FormBaseControl {
   deferField?: string;
 
   /**
-   * 延时加载的 API，当选项中有 defer: true 的选项时，点开会通过此接口扩充。
+   * 延时加载的 API，当选项中有 defer: true 的选项时，点开会通过此接口扩展。
    */
-  deferApi?: BaseApiObject | string;
+  deferApi?: AMISApi;
 
   /**
    * 添加时调用的接口
    */
-  addApi?: BaseApiObject | string;
+  addApi?: AMISApi;
 
   /**
    * 新增时的表单项。
    */
-  addControls?: Array<PlainObject>;
+  addControls?: Array<AMISSchema>;
 
   /**
    * 控制新增弹框设置项
    */
-  addDialog?: PlainObject;
+  addDialog?: AMISDialogSchemaBase;
 
   /**
    * 是否可以新增
@@ -169,18 +183,18 @@ export interface FormOptionsControl extends FormBaseControl {
   /**
    * 编辑时调用的 API
    */
-  editApi?: BaseApiObject | string;
+  editApi?: AMISApi;
 
   /**
    * 选项修改的表单项
    */
-  editControls?: Array<PlainObject>;
+  editControls?: Array<AMISSchema>;
 
   /**
    * 控制编辑弹框设置项
    */
 
-  editDialog?: PlainObject;
+  editDialog?: AMISDialogSchemaBase;
 
   /**
    * 是否可删除
@@ -190,13 +204,20 @@ export interface FormOptionsControl extends FormBaseControl {
   /**
    * 选项删除 API
    */
-  deleteApi?: BaseApiObject | string;
+  deleteApi?: AMISApi;
 
   /**
    * 选项删除提示文字。
    */
-  deleteConfirmText?: string;
+  deleteConfirmText?: AMISTemplate;
+
+  /**
+   * source从数据域取值时，数据域值变化后是否自动清空
+   */
+  clearValueOnSourceChange?: boolean;
 }
+
+export interface FormOptionsControl extends AMISFormItemWithOptions {}
 
 export interface OptionsBasicConfig extends FormItemBasicConfig {
   autoLoadOptionsFromSource?: boolean;
@@ -228,11 +249,7 @@ export interface OptionsControlProps
   selectedOptions: Array<Option>;
   setOptions: (value: Array<any>, skipNormalize?: boolean) => void;
   setLoading: (value: boolean) => void;
-  reloadOptions: (
-    setError?: boolean,
-    isInit?: boolean,
-    data?: Record<string, any>
-  ) => void;
+  reloadOptions: (subpath?: string, query?: any) => void;
   deferLoad: (option: Option) => void;
   leftDeferLoad: (option: Option, leftOptions: Option) => void;
   expandTreeOptions: (nodePathArr: any[]) => void;
@@ -399,6 +416,28 @@ export class OptionsControlBase<
     return false;
   }
 
+  @autobind
+  async onLoadOptionsFinished() {
+    if (this.input?.props?.dispatchEvent) {
+      const {
+        options,
+        selectedOptions = [],
+        multiple,
+        tmpValue
+      } = this.props.formItem || {};
+      const {dispatchEvent} = this.input.props;
+      await dispatchEvent(
+        'loadOptionsFinished',
+        resolveEventData(this.props, {
+          options,
+          items: options, // 为了保持名字统一
+          value: tmpValue,
+          selectedItems: multiple ? selectedOptions : selectedOptions[0]
+        })
+      );
+    }
+  }
+
   componentDidUpdate(prevProps: OptionsProps) {
     const props = this.props;
     const formItem = props.formItem as IFormItemStore;
@@ -433,9 +472,9 @@ export class OptionsControlBase<
           formItem.loadOptionsFromDataScope(
             props.source as string,
             props.data,
-            this.changeOptionValue
+            this.changeOptionValue,
+            props.clearValueOnSourceChange
           );
-
           this.normalizeValue();
         }
       } else if (
@@ -453,9 +492,13 @@ export class OptionsControlBase<
             props.data,
             undefined,
             true,
-            this.changeOptionValue
+            this.changeOptionValue,
+            undefined
           )
-          .then(() => this.normalizeValue());
+          .then(() => this.normalizeValue())
+          .then(async () => {
+            await this.onLoadOptionsFinished();
+          });
       }
     }
 
@@ -722,8 +765,15 @@ export class OptionsControlBase<
 
   // 当有 action 触发，如果指定了 reload 目标组件，有可能会来到这里面来
   @autobind
-  reload() {
-    return this.reloadOptions();
+  reload(subpath?: string, query?: any) {
+    let data = this.props.data;
+
+    if (query) {
+      this.props.onBulkChange?.(query);
+      data = extendObject(data, query);
+    }
+
+    return this.reloadOptions(false, false, data);
   }
 
   @autobind
@@ -744,14 +794,18 @@ export class OptionsControlBase<
     }
 
     return isAlive(formItem)
-      ? formItem.loadOptions(
-          source,
-          data,
-          undefined,
-          false,
-          isInit ? setPrinstineValue : onChange,
-          setError
-        )
+      ? formItem
+          .loadOptions(
+            source,
+            data,
+            undefined,
+            false,
+            isInit ? setPrinstineValue : onChange,
+            setError
+          )
+          .then(async () => {
+            await this.onLoadOptionsFinished();
+          })
       : undefined;
   }
 

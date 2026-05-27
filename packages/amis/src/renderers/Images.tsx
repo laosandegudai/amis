@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {createRef} from 'react';
 import {
   Renderer,
   RendererProps,
@@ -13,7 +13,7 @@ import {
 } from 'amis-core';
 import Image, {ImageThumbProps, imagePlaceholder} from './Image';
 import {autobind, getPropValue} from 'amis-core';
-import {BaseSchema, SchemaClassName, SchemaUrlPath} from '../Schema';
+import {BaseSchema, AMISClassName, SchemaUrlPath} from '../Schema';
 import type {ImageToolbarAction} from './Image';
 import Transition, {
   ENTERED,
@@ -21,13 +21,17 @@ import Transition, {
   EXITING,
   EXITED
 } from 'react-transition-group/Transition';
+import {AMISSchemaBase} from 'amis-core';
 /**
  * 图片集展示控件。
  * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/images
  */
-export interface ImagesSchema extends BaseSchema {
+/**
+ * 图片集组件，用于列表方式展示多张图片。支持查看大图与工具栏。
+ */
+export interface AMISImagesSchema extends AMISSchemaBase {
   /**
-   * 指定为图片集渲染器
+   * 指定为 images 组件
    */
   type: 'images' | 'static-images';
 
@@ -43,7 +47,6 @@ export interface ImagesSchema extends BaseSchema {
 
   /**
    * 配置值的连接符
-   * @default ,
    */
   delimiter?: string;
 
@@ -69,17 +72,17 @@ export interface ImagesSchema extends BaseSchema {
   options?: Array<any>;
 
   /**
-   * 图片地址，默认读取数据中的 image 属性，如果不是请配置 ,如  ${imageUrl}
+   * 图片地址，默认读取数据中的 image 属性
    */
   src?: string;
 
   /**
-   * 大图地址，不设置用 src 属性，如果不是请配置，如：${imageOriginUrl}
+   * 大图地址，不设置用 src 属性
    */
   originalSrc?: string; // 原图
 
   /**
-   * 是否启动放大功能。
+   * 是否启用放大功能
    */
   enlargeAble?: boolean;
 
@@ -89,24 +92,24 @@ export interface ImagesSchema extends BaseSchema {
   enlargetWithImages?: boolean;
 
   /**
-   * 是否显示尺寸。
+   * 是否显示尺寸
    */
   showDimensions?: boolean;
 
   /**
    * 外层 CSS 类名
    */
-  className?: SchemaClassName;
+  className?: AMISClassName;
 
   /**
    * 列表 CSS 类名
    */
-  listClassName?: SchemaClassName;
+  listClassName?: AMISClassName;
 
   /**
    * 放大详情图 CSS 类名
    */
-  imageGallaryClassName?: SchemaClassName;
+  imageGallaryClassName?: AMISClassName;
 
   /**
    * 是否展示图片工具栏
@@ -180,11 +183,15 @@ export interface ImagesSchema extends BaseSchema {
     fontFamily?: string;
     color?: string;
   };
+  /**
+   *蒙层颜色
+   * */
+  maskColor?: string;
 }
 
 export interface ImagesProps
   extends RendererProps,
-    Omit<ImagesSchema, 'type' | 'className'> {
+    Omit<AMISImagesSchema, 'type' | 'className'> {
   delimiter: string;
   onEnlarge?: (
     info: ImageThumbProps & {
@@ -198,38 +205,52 @@ export interface ImagesProps
   ) => void;
 }
 
-export interface ImagesState {
+interface ImagesState {
+  defaultWidth: number;
+  defaultHeight: number;
   currentIndex: number;
   nextAnimation: string;
 }
 
+interface ImagesFieldProps {
+  className: string;
+  delimiter: string;
+  defaultImage: string; // 这里的 defaultImage 类型应该是 string
+  placeholder: string;
+  thumbMode: string;
+  thumbRatio: string;
+  displayMode: string;
+  fullThumbMode: string;
+}
 export class ImagesField extends React.Component<ImagesProps, ImagesState> {
-  static defaultProps = {
+  static defaultProps: ImagesFieldProps = {
     className: '',
     delimiter: ',',
     defaultImage: imagePlaceholder,
-    placehoder: '-',
+    placeholder: '-',
     thumbMode: 'cover',
     thumbRatio: '1:1',
     displayMode: 'thumb',
     fullThumbMode: 'cover'
   };
+  containerRef = createRef<HTMLDivElement>();
+  resizeObserver: ResizeObserver | null = null;
+
   constructor(props: ImagesProps) {
     super(props);
+    this.state = {
+      defaultWidth: 200,
+      defaultHeight: 112.5,
+      currentIndex: 0,
+      nextAnimation: ''
+    };
   }
-  state: ImagesState = {
-    currentIndex: 0,
-    nextAnimation: ''
-  };
-
   private isSwiping: boolean = false;
   private startX: number = 0;
 
   list: Array<any> = [];
   gap = 5;
   evenReg = /^even-[1-9]\d*-[1-9]\d*$/;
-  defaultWidth = 200;
-  defaultHeight = 112.5;
 
   wrapperRef: React.RefObject<HTMLDivElement> = React.createRef();
 
@@ -354,7 +375,7 @@ export class ImagesField extends React.Component<ImagesProps, ImagesState> {
    * 计算照片子元素高度
    * */
   generateHeight = (sortType: string | undefined, index: number) => {
-    const height = Number(this.props.height) || this.defaultHeight;
+    const height = Number(this.props.height) || this.state.defaultHeight;
     if (
       sortType === 'sm-ss-sss-m' ||
       sortType === 'sss-ss-ms-m' ||
@@ -387,7 +408,7 @@ export class ImagesField extends React.Component<ImagesProps, ImagesState> {
    * 计算照片子元素宽度
    * */
   generateWidth = (sortType: string | undefined, index: number) => {
-    const width = Number(this.props.width) || this.defaultWidth;
+    const width = Number(this.props.width) || this.state.defaultWidth;
     if (sortType === 'sm-ss-sss-m' || sortType === 'sss-ss-ms-m') {
       if (index === 0) {
         return (width - 2 * this.gap) / 3;
@@ -448,8 +469,8 @@ export class ImagesField extends React.Component<ImagesProps, ImagesState> {
    * */
   generateEvenTranslate(sortType: string | undefined, index: number) {
     let result = ``;
-    const width = Number(this.props.width) || this.defaultWidth;
-    const height = Number(this.props.height) || this.defaultHeight;
+    const width = Number(this.props.width) || this.state.defaultWidth;
+    const height = Number(this.props.height) || this.state.defaultHeight;
     const rows = Number(sortType?.split('-')[1]);
     const columns = Number(sortType?.split('-')[2]);
     if (index < rows * columns) {
@@ -473,8 +494,8 @@ export class ImagesField extends React.Component<ImagesProps, ImagesState> {
    * 计算照片子元素平移位置
    * */
   generateTranslate = (sortType: string | undefined, index: number) => {
-    const width = Number(this.props.width) || this.defaultWidth;
-    const height = Number(this.props.height) || this.defaultHeight;
+    const width = Number(this.props.width) || this.state.defaultWidth;
+    const height = Number(this.props.height) || this.state.defaultHeight;
     let styleObj: any = {
       position: 'absolute',
       boxSizing: 'content-box',
@@ -611,6 +632,46 @@ export class ImagesField extends React.Component<ImagesProps, ImagesState> {
     return styleObj;
   };
 
+  componentDidMount() {
+    if (
+      !this.props.width ||
+      !this.props.height ||
+      (String(this.props.width).includes('%') &&
+        String(this.props.height).includes('%'))
+    ) {
+      //监听父级元素大小变化
+      this.observeParentSize();
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+  }
+
+  observeParentSize() {
+    if (this.containerRef.current?.parentElement) {
+      this.resizeObserver = new ResizeObserver(entries => {
+        for (let entry of entries) {
+          this.setState({
+            defaultWidth:
+              (entry.contentRect.width *
+                parseFloat(this.props.width || '100')) /
+              100,
+            defaultHeight:
+              (entry.contentRect.height *
+                parseFloat(this.props.height || '100')) /
+              100
+          });
+          // 这里可以触发组件状态更新
+          this.forceUpdate();
+        }
+      });
+      this.resizeObserver.observe(this.containerRef.current.parentElement);
+    }
+  }
+
   render() {
     const {
       className,
@@ -641,7 +702,8 @@ export class ImagesField extends React.Component<ImagesProps, ImagesState> {
       sortType,
       imagesControlClassName,
       displayMode,
-      fullThumbMode
+      fullThumbMode,
+      maskColor
     } = this.props;
 
     const {currentIndex} = this.state;
@@ -688,14 +750,16 @@ export class ImagesField extends React.Component<ImagesProps, ImagesState> {
     if (this.props.sortType) {
       return (
         <div
+          ref={this.containerRef}
           className={sortType}
           style={{
-            width: (this.props.width || this.defaultWidth) + 'px',
-            height: (this.props.height || this.defaultHeight) + 'px'
+            width: (this.props.width || this.state.defaultWidth) + 'px',
+            height: (this.props.height || this.state.defaultHeight) + 'px'
           }}
         >
           {this.list.map((item: any, index: number) => (
             <Image
+              maskColor={maskColor}
               fontStyle={this.props.fontStyle}
               style={this.generateTranslate(sortType, index)}
               width={this.generateWidth(sortType, index)}

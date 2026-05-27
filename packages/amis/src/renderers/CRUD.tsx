@@ -9,9 +9,28 @@ import {
   createObjectFromChain,
   filterTarget,
   mapTree,
-  findTree
+  findTree,
+  AMISApi,
+  AMISButtonWithAction,
+  AMISName,
+  AMISFormBase,
+  AMISSchemaCollection,
+  AMISLegacyActionSchema,
+  AMISMessageConfig,
+  AMISFunction,
+  AMISLocalSource,
+  AMISSpinnerConfig,
+  AMISButton,
+  AMISButtonSchema,
+  AMISTemplate
 } from 'amis-core';
-import {SchemaNode, Schema, ActionObject, PlainObject} from 'amis-core';
+import {
+  SchemaNode,
+  Schema,
+  ActionObject,
+  PlainObject,
+  AMISExpression
+} from 'amis-core';
 import {CRUDStore, ICRUDStore, getMatchedEventTargets} from 'amis-core';
 import {
   createObject,
@@ -24,14 +43,15 @@ import {
   qsstringify,
   qsparse,
   isIntegerInRange,
-  spliceTree
+  spliceTree,
+  BaseSchemaWithoutType
 } from 'amis-core';
 import {ScopedContext, IScopedContext} from 'amis-core';
 import {Button, SpinnerExtraProps, TooltipWrapper} from 'amis-ui';
 import {Select} from 'amis-ui';
 import {getExprProperties, isObject} from 'amis-core';
 import pick from 'lodash/pick';
-import {findDOMNode} from 'react-dom';
+import {findDomCompat as findDOMNode} from 'amis-core';
 import {evalExpression, filter} from 'amis-core';
 import {isEffectiveApi, isApiOutdated, str2function} from 'amis-core';
 import omit from 'lodash/omit';
@@ -42,35 +62,85 @@ import {Icon, confirm} from 'amis-ui';
 import {
   BaseSchema,
   SchemaApi,
-  SchemaClassName,
+  AMISClassName,
   SchemaExpression,
   SchemaMessage,
   SchemaName,
-  SchemaObject,
+  SchemaObject as AMISSchema,
   SchemaTokenizeableString,
-  SchemaTpl,
-  SchemaCollection
+  SchemaTpl
 } from '../Schema';
 import {ActionSchema} from './Action';
-import {CardsSchema} from './Cards';
-import {ListSchema} from './List';
-import {TableSchema} from './Table';
-import type {TableRendererEvent} from './Table';
-import type {CardsRendererEvent} from './Cards';
+import {BaseCardsSchema} from './Cards';
+import {AMISListBase} from './List';
+import {TableSchema, BaseTableSchema} from './Table';
+import type {AMISTableBase, TableRendererEvent} from './Table';
+import type {AMISCardsBase, CardsRendererEvent} from './Cards';
 import {
   isPureVariable,
   resolveVariableAndFilter,
   parseQuery,
   parsePrimitiveQueryString,
-  isMobile
+  isMobile,
+  AMISSchemaBase
 } from 'amis-core';
 
-import type {PaginationProps} from './Pagination';
+import type {AMISPaginationSchema, PaginationProps} from './Pagination';
 import {isAlive} from 'mobx-state-tree';
 import isPlainObject from 'lodash/isPlainObject';
 import memoize from 'lodash/memoize';
+import {Spinner} from 'amis-ui';
+import {AutoFoldedList} from 'amis-ui';
+import {getQuickEditApi, type AMISQuickEditObject} from './QuickEdit';
 
-export type CRUDBultinToolbarType =
+interface AMISLoadMoreConfig {
+  /**
+   * 是否显示加载图标
+   */
+  showIcon?: boolean;
+
+  /**
+   * 是否显示加载文本
+   */
+  showText?: boolean;
+
+  /**
+   * 加载按钮颜色
+   */
+  color?: string;
+
+  /**
+   * 加载图标类型
+   */
+  iconType?: string;
+
+  /**
+   * 加载文本内容配置
+   */
+  contentText?: {
+    /**
+     * 下拉加载文本
+     */
+    contentdown: string;
+
+    /**
+     * 释放加载文本
+     */
+    contentrefresh: string;
+
+    /**
+     * 加载中文本
+     */
+    contentnomore: string;
+  };
+  minLoadingTime?: number;
+  dataAppendTo?: 'top' | 'bottom';
+}
+
+/**
+ * 内置工具栏类型
+ */
+export type AMISCRUDBultinToolbarType =
   | 'columns-toggler'
   | 'drag-toggler'
   | 'pagination'
@@ -83,20 +153,20 @@ export type CRUDBultinToolbarType =
   | 'export-csv'
   | 'export-excel';
 
-export interface CRUDBultinToolbar extends Omit<BaseSchema, 'type'> {
-  type: CRUDBultinToolbarType;
+export interface AMISCRUDBultinToolbar extends AMISSchemaBase {
+  type: AMISCRUDBultinToolbarType;
 }
 
-export type CRUDToolbarChild = SchemaObject | CRUDBultinToolbar;
+export type AMISCRUDToolbar = AMISSchema | AMISCRUDBultinToolbar;
 
-export type CRUDToolbarObject = {
+export type AMISCRUDToolbarExtra = {
   /**
    * 对齐方式
    */
   align?: 'left' | 'right';
 };
 
-export type AutoGenerateFilterObject = {
+export interface AMISAutoGenerateFilterObject {
   /**
    * 过滤条件单行列数
    */
@@ -109,47 +179,46 @@ export type AutoGenerateFilterObject = {
    * 是否显示展开/收起
    */
   // showExpand?: boolean;
-
   /**
    * 是否默认收起
    *
    * @default true
    */
   defaultCollapsed?: boolean;
-};
+
+  /**
+   * 是否启用多选框
+   */
+  enableBulkActions?: boolean;
+
+  /**
+   * 启用批量操作的表达式
+   */
+  enableBulkActionsOn?: AMISExpression;
+}
 
 export type CRUDRendererEvent = TableRendererEvent | CardsRendererEvent;
 
-export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
-  /**
-   *  指定为 CRUD 渲染器。
-   */
-  type: 'crud';
-
-  /**
-   * 指定内容区的展示模式。
-   */
-  mode?: 'table' | 'grid' | 'cards' | /* grid 的别名*/ 'list';
-
+export interface AMISCRUDBase extends AMISSchemaBase, AMISSpinnerConfig {
   /**
    * 初始化数据 API
    */
-  api?: SchemaApi;
+  api?: AMISApi;
 
   /**
    * 懒加载 API，当行数据中用 defer: true 标记了，则其孩子节点将会用这个 API 来拉取数据。
    */
-  deferApi?: SchemaApi;
+  deferApi?: AMISApi;
 
   /**
    * 批量操作
    */
-  bulkActions?: Array<ActionSchema>;
+  bulkActions?: Array<AMISButtonSchema>;
 
   /**
    * 单条操作
    */
-  itemActions?: Array<ActionSchema>;
+  itemActions?: Array<AMISButtonSchema>;
 
   /**
    * 每页个数，默认为 10，如果不是请设置。
@@ -181,14 +250,14 @@ export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
   /**
    * 是否可通过拖拽排序，通过表达式来配置
    */
-  draggableOn?: SchemaExpression;
+  draggableOn?: AMISExpression;
 
-  name?: SchemaName;
+  name?: AMISName;
 
   /**
    * 过滤器表单
    */
-  filter?: any; // todo
+  filter?: AMISFormBase; // todo
 
   /**
    * 初始是否拉取
@@ -200,12 +269,12 @@ export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
    * 初始是否拉取，用表达式来配置。
    * @deprecated 建议用 api 的 sendOn 代替。
    */
-  initFetchOn?: SchemaExpression;
+  initFetchOn?: AMISExpression;
 
   /**
    * 配置内部 DOM 的 className
    */
-  innerClassName?: SchemaClassName;
+  innerClassName?: AMISClassName;
 
   /**
    * 设置自动刷新时间
@@ -230,25 +299,30 @@ export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
   perPageField?: string;
 
   /**
-   * 设置分页方向的字段名。单位简单分页时清楚时向前还是向后翻页。
+   * 设置分页方向的字段名。用于简单分页时确定是向前还是向后翻页。
    * @default pageDir
    */
   pageDirectionField?: string;
 
   /**
+   * 设置总条数的字段名。
+   */
+  totalField?: string;
+
+  /**
    * 快速编辑后用来批量保存的 API
    */
-  quickSaveApi?: SchemaApi;
+  quickSaveApi?: AMISApi;
 
   /**
    * 快速编辑配置成及时保存时使用的 API
    */
-  quickSaveItemApi?: SchemaApi;
+  quickSaveItemApi?: AMISApi;
 
   /**
    * 保存排序的 api
    */
-  saveOrderApi?: SchemaApi;
+  saveOrderApi?: AMISApi;
 
   /**
    * 是否将过滤条件的参数同步到地址栏,默认为true
@@ -256,7 +330,7 @@ export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
    */
   syncLocation?: boolean;
 
-  toolbar?: SchemaCollection;
+  toolbar?: AMISSchemaCollection;
 
   /**
    * 工具栏是否为 inline 模式
@@ -267,22 +341,22 @@ export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
    * 顶部工具栏
    */
   headerToolbar?: Array<
-    (CRUDToolbarChild & CRUDToolbarObject) | CRUDBultinToolbarType
+    (AMISCRUDToolbar & AMISCRUDToolbarExtra) | AMISCRUDBultinToolbarType
   >;
 
   /**
    * 底部工具栏
    */
   footerToolbar?: Array<
-    (CRUDToolbarChild & CRUDToolbarObject) | CRUDBultinToolbarType
+    (AMISCRUDToolbar & AMISCRUDToolbarExtra) | AMISCRUDBultinToolbarType
   >;
 
   /**
-   * 每页显示多少个空间成员的配置如： [10, 20, 50, 100]。
+   * 每页显示多少条记录的配置如： [10, 20, 50, 100]。
    */
   perPageAvailable?: Array<number>;
 
-  messages?: SchemaMessage;
+  messages?: AMISMessageConfig;
 
   /**
    * 是否隐藏快速编辑的按钮。
@@ -298,7 +372,7 @@ export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
    * 静默拉取
    */
   silentPolling?: boolean;
-  stopAutoRefreshWhen?: SchemaExpression;
+  stopAutoRefreshWhen?: AMISExpression;
 
   stopAutoRefreshWhenModalIsOpen?: boolean;
   filterTogglable?:
@@ -322,9 +396,14 @@ export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
   keepItemSelectionOnPageChange?: boolean;
 
   /**
+   * 当开启 keepItemSelectionOnPageChange 时，最大保留已勾选项的数量。
+   */
+  maxKeepItemSelectionLength?: number;
+
+  /**
    * 当配置 keepItemSelectionOnPageChange 时有用，用来配置已勾选项的文案。
    */
-  labelTpl?: SchemaTpl;
+  labelTpl?: AMISTemplate;
 
   /**
    * 是否为前端单次加载模式，可以用来实现前端分页。
@@ -353,15 +432,25 @@ export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
    *  * `options.matchSorter` 系统默认的排序方法
    * @since 3.5.0
    */
-  matchFunc?: string | any;
+  matchFunc?: AMISFunction<
+    (
+      items: Array<any>,
+      itemsRaw: Array<any>,
+      options: {
+        query: Record<string, any>;
+        columns: Array<any>;
+        matchSorter: (items: Array<any>, value: string) => Array<any>;
+      }
+    ) => Array<any>
+  >;
 
   /**
    * 也可以直接从环境变量中读取，但是不太推荐。
    */
-  source?: SchemaTokenizeableString;
+  source?: AMISLocalSource;
 
   /**
-   * 如果时内嵌模式，可以通过这个来配置默认的展开选项。
+   * 如果是内嵌模式，通过这个来配置默认的展开选项。
    */
   expandConfig?: {
     /**
@@ -388,12 +477,7 @@ export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
   /**
    * 开启查询区域，会根据列元素的searchable属性值，自动生成查询条件表单
    */
-  autoGenerateFilter?: AutoGenerateFilterObject | boolean;
-
-  /**
-   * 内容区域占满屏幕剩余空间
-   */
-  autoFillHeight?: TableSchema['autoFillHeight'];
+  autoGenerateFilter?: AMISAutoGenerateFilterObject | boolean;
 
   /**
    * 是否开启Query信息转换，开启后将会对url中的Query进行转换，默认开启，默认仅转化布尔值
@@ -415,29 +499,77 @@ export interface CRUDCommonSchema extends BaseSchema, SpinnerExtraProps {
    * 控制是否多选，默认为 false
    */
   multiple?: boolean;
+
+  /**
+   * 加载更多配置
+   */
+  loadMoreProps?: AMISLoadMoreConfig;
 }
 
-export type CRUDCardsSchema = CRUDCommonSchema & {
+export interface AMISCRUDDefault extends AMISCRUDBase, AMISTableBase {
+  /**
+   *  指定为 CRUD 渲染器。
+   */
+  type: 'crud';
+}
+
+export interface AMISCRUDCards extends AMISCRUDBase, AMISCardsBase {
+  /**
+   *  指定为 cards 模式。
+   */
   mode: 'cards';
-} & Omit<CardsSchema, 'type'>;
+  /**
+   *  指定为 CRUD 渲染器。
+   */
+  type: 'crud';
+}
 
-export type CRUDListSchema = CRUDCommonSchema & {
+export interface AMISCRUDList extends AMISCRUDBase, AMISListBase {
+  /**
+   *  指定为 list 模式。
+   */
   mode: 'list';
-} & Omit<ListSchema, 'type'>;
+  /**
+   *  指定为 CRUD 渲染器。
+   */
+  type: 'crud';
+}
 
-export type CRUDTableSchema = CRUDCommonSchema & {
-  mode?: 'table';
-} & Omit<TableSchema, 'type'>;
+export interface AMISCRUDTable extends AMISCRUDBase, AMISTableBase {
+  /**
+   *  指定为 table 模式。
+   */
+  mode: 'table';
+  /**
+   *  指定为 CRUD 渲染器。
+   */
+  type: 'crud';
+}
 
 /**
  * CRUD 增删改查渲染器。
  * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/crud
  */
-export type CRUDSchema = CRUDCardsSchema | CRUDListSchema | CRUDTableSchema;
+/**
+ * 列表组件：CRUD 增删改查渲染器。支持表格（table）、卡片（cards）、列表（list）等多种展示模式，同时整合了筛选、排序、批量操作、分页等常用功能。
+ * 支持灵活的数据源配置、列配置、行操作、自定义工具栏、选择与批量操作、异步加载、懒加载、无限滚动，以及多种事件分发机制。
+ * 适合用于复杂业务场景下的数据增删改查页面的快速搭建。
+ *
+ * @schemaType crud
+ * @displayName 增删改查（CRUD）
+ */
+
+export type AMISCRUDSchema =
+  | AMISCRUDTable
+  | AMISCRUDCards
+  | AMISCRUDList
+  | AMISCRUDDefault;
+
+export type AMISCRUDCommonSchema = AMISCRUDCards | AMISCRUDList | AMISCRUDTable;
 
 export interface CRUDProps
   extends RendererProps,
-    Omit<CRUDCommonSchema, 'type' | 'className'>,
+    Omit<AMISCRUDBase, 'type' | 'className'>,
     SpinnerExtraProps {
   store: ICRUDStore;
   pickerMode?: boolean; // 选择模式，用做表单中的选择操作
@@ -476,6 +608,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     'perPageAvailable',
     'pageField',
     'perPageField',
+    'totalField',
     'pageDirectionField',
     'hideQuickSaveBtn',
     'autoJumpToTopOnPagerChange',
@@ -516,7 +649,8 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     'maxTagCount',
     'overflowTagPopover',
     'parsePrimitiveQuery',
-    'matchFunc'
+    'matchFunc',
+    'loadMoreProps'
   ];
   static defaultProps = {
     toolbarInline: true,
@@ -526,6 +660,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     syncLocation: true,
     pageField: 'page',
     perPageField: 'perPage',
+    totalField: 'total',
     pageDirectionField: 'pageDir',
     hideQuickSaveBtn: false,
     autoJumpToTopOnPagerChange: true,
@@ -534,7 +669,17 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     filterDefaultVisible: true,
     loadDataOnce: false,
     autoFillHeight: false,
-    parsePrimitiveQuery: true
+    parsePrimitiveQuery: true,
+    loadMoreProps: {
+      showIcon: true,
+      showText: true,
+      iconType: 'loading-outline',
+      contentText: {
+        contentdown: '点击加载更多',
+        contentrefresh: '加载中...',
+        contentnomore: '没有更多数据了'
+      }
+    }
   };
 
   control: any;
@@ -558,6 +703,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     this.handleFilterSubmit = this.handleFilterSubmit.bind(this);
     this.handleFilterInit = this.handleFilterInit.bind(this);
     this.handleAction = this.handleAction.bind(this);
+    this.dispatchEvent = this.dispatchEvent.bind(this);
     this.handleBulkAction = this.handleBulkAction.bind(this);
     this.handleChangePage = this.handleChangePage.bind(this);
     this.handleBulkGo = this.handleBulkGo.bind(this);
@@ -576,12 +722,14 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     this.renderFooterToolbar = this.renderFooterToolbar.bind(this);
     this.clearSelection = this.clearSelection.bind(this);
     this.filterItemIndex = this.filterItemIndex.bind(this);
+    this.handleItemAction = this.handleItemAction.bind(this);
 
     const {
       location,
       store,
       pageField,
       perPageField,
+      totalField,
       syncLocation,
       loadDataOnce
     } = props;
@@ -639,7 +787,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     // 所以这里应该忽略 autoGenerateFilter 情况
     if (
       (!this.props.filter && !autoGenerateFilter) ||
-      (store.filterTogggable && !store.filterVisible)
+      (store.filterTogglable && !store.filterVisible)
     ) {
       this.handleFilterInit({});
     }
@@ -730,7 +878,8 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
 
       if (!this.lastData || this.lastData !== next) {
         store.initFromScope(props.data, props.source, {
-          columns: store.columns ?? props.columns
+          columns: store.columns ?? props.columns,
+          totalField: props.totalField
         });
 
         if (this.props.pickerMode && (val = getPropValue(this.props))) {
@@ -1003,8 +1152,8 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     }
   }
 
-  handleItemAction(action: ActionObject, ctx: any) {
-    this.doAction(action, ctx);
+  handleItemAction(e: any, action: ActionObject, ctx: any) {
+    return this.doAction(action, ctx);
   }
 
   handleFilterInit(values: object) {
@@ -1015,6 +1164,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
       store,
       orderBy,
       orderDir,
+      totalField,
       dispatchEvent
     } = this.props;
     const params: any = {...defaultParams};
@@ -1047,7 +1197,11 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         '${items}',
         {
           columns: store.columns ?? columns,
-          matchFunc
+          matchFunc:
+            typeof matchFunc === 'string'
+              ? (str2function(matchFunc) as any)
+              : matchFunc,
+          totalField
         }
       );
       let val: any;
@@ -1326,6 +1480,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
       messages,
       pageField,
       perPageField,
+      totalField,
       interval,
       stopAutoRefreshWhen,
       stopAutoRefreshWhenModalIsOpen,
@@ -1338,7 +1493,8 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
       loadDataOnceFetchOnFilter,
       source,
       columns,
-      dispatchEvent
+      dispatchEvent,
+      options
     } = this.props;
 
     // reload 需要清空用户选择，无论是否开启keepItemSelectionOnPageChange
@@ -1384,11 +1540,14 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         silent,
         pageField,
         perPageField,
+        totalField,
         loadDataMode,
         syncResponse2Query,
         columns: store.columns ?? columns,
         matchFunc,
-        filterOnAllColumns: loadDataOnceFetchOnFilter === false
+        filterOnAllColumns: loadDataOnceFetchOnFilter === false,
+        minLoadingTime: values?.minLoadingTime,
+        dataAppendTo: values?.dataAppendTo
       });
       if (!isAlive(store)) {
         return value;
@@ -1416,7 +1575,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         const rendererEvent = await dispatchEvent?.(
           'research',
           createObject(this.props.data, {
-            responseData: value?.ok ? data ?? {} : value,
+            responseData: value?.ok ? store.data ?? {} : value,
             responseStatus:
               value?.status === undefined ? (error ? 1 : 0) : value?.status,
             responseMsg: msg
@@ -1424,7 +1583,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         );
 
         if (rendererEvent?.prevented) {
-          return;
+          return store.data;
         }
       }
 
@@ -1466,12 +1625,29 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     } else if (source) {
       store.initFromScope(data, source, {
         columns: store.columns ?? columns,
-        matchFunc
+        matchFunc,
+        totalField
       });
+    } else if (pickerMode) {
+      store.initFromScope(
+        {
+          items: options || []
+        },
+        '${items}',
+        {
+          columns: store.columns ?? columns,
+          matchFunc,
+          totalField
+        }
+      );
     }
 
     let val: any;
-    if (this.props.pickerMode && (val = getPropValue(this.props))) {
+    if (
+      this.props.pickerMode &&
+      this.props.onSelect && // embed 模式下才同步外部选择，否则是弹窗模式，props.value 不会变化，所以不会记录分页选择，会出现错误
+      (val = getPropValue(this.props))
+    ) {
       this.syncSelectedFromPicker(val);
     }
 
@@ -1578,10 +1754,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     indexes: Array<string>,
     unModifiedItems?: Array<any>,
     rowsOrigin?: Array<object> | object,
-    options?: {
-      resetOnFailed?: boolean;
-      reload?: string;
-    }
+    options?: AMISQuickEditObject
   ) {
     const {
       store,
@@ -1653,7 +1826,9 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
           );
         });
     } else {
-      if (!isEffectiveApi(quickSaveItemApi)) {
+      const api = getQuickEditApi(options?.saveImmediately, quickSaveItemApi);
+
+      if (!isEffectiveApi(api)) {
         env && env.alert('CRUD quickSaveItemApi is required!');
         return;
       }
@@ -1666,7 +1841,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
 
       const sendData = createObject(data, rows);
       return store
-        .saveRemote(quickSaveItemApi, sendData)
+        .saveRemote(api, sendData)
         .then(async (result: any) => {
           // 如果请求 cancel 了，会来到这里
           if (!result) {
@@ -1874,7 +2049,10 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         };
       }
 
-      const itemsRest = items.concat();
+      // 如果没有配置对 primaryField，不要把那些没有 id 的数据带上，避免脏数据问题
+      const itemsRest = items.filter(item =>
+        item.hasOwnProperty(primaryField || 'id')
+      );
 
       newItems = store.selectedItems
         .map(item => {
@@ -2108,6 +2286,24 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     return this.handleAction(undefined, action, data, throwErrors);
   }
 
+  dispatchEvent(
+    e: React.MouseEvent<any> | string,
+    data: any,
+    renderer?: React.Component<RendererProps>, // for didmount
+    scoped?: IScopedContext
+  ) {
+    // 如果事件是 selectedChange 并且是当前组件触发的，
+    // 则以当前组件的选择信息为准
+    if (e === 'selectedChange' && this.control === renderer) {
+      const store = this.props.store;
+      data.selectedItems = store.selectedItems.concat();
+      data.unSelectedItems = store.unSelectedItems.concat();
+      // selectedIndexes  还不支持
+    }
+
+    return this.props.dispatchEvent(e, data, renderer, scoped);
+  }
+
   unSelectItem(item: any, index: number) {
     const {store} = this.props;
     const selected = store.selectedItems.concat();
@@ -2133,7 +2329,11 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
   }
 
   hasBulkActionsToolbar() {
-    const {headerToolbar, footerToolbar} = this.props;
+    const {headerToolbar, footerToolbar, enableBulkActions} = this.props;
+
+    if (enableBulkActions === false) {
+      return false;
+    }
 
     const isBulkActions = (item: any) =>
       ~['bulkActions', 'bulk-actions'].indexOf(item.type || item);
@@ -2150,7 +2350,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
       return false;
     }
 
-    let bulkBtns: Array<ActionSchema> = [];
+    let bulkBtns: Array<AMISButtonSchema> = [];
     const ctx = store.mergedData;
 
     if (bulkActions && bulkActions.length) {
@@ -2172,18 +2372,19 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
       store,
       render,
       classnames: cx,
-      primaryField
+      primaryField,
+      enableBulkActions
     } = this.props;
 
-    if (!bulkActions || !bulkActions.length) {
+    if (!bulkActions || !bulkActions.length || enableBulkActions === false) {
       return null;
     }
 
     const selectedItems = store.selectedItems;
     const unSelectedItems = store.unSelectedItems;
 
-    let bulkBtns: Array<ActionSchema> = [];
-    let itemBtns: Array<ActionSchema> = [];
+    let bulkBtns: Array<AMISButtonSchema> = [];
+    let itemBtns: Array<AMISButtonSchema> = [];
     const ctx = createObject(store.mergedData, {
       currentPageData: (store.mergedData?.items || []).concat(),
       ...store.eventContext,
@@ -2240,9 +2441,8 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
             `bulk-action/${index}`,
             {
               ...omit(btn, ['visibleOn', 'hiddenOn', 'disabledOn']),
-              type: btn.type || 'button',
-              ignoreConfirm: true
-            },
+              type: btn.type || 'button'
+            } as AMISButtonSchema,
             {
               key: `bulk-${index}`,
               data: ctx,
@@ -2253,7 +2453,8 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
                 this,
                 selectedItems.concat(),
                 unSelectedItems.concat()
-              )
+              ),
+              ignoreConfirm: true
             }
           )
         )}
@@ -2262,13 +2463,13 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
             `bulk-action/${index}`,
             {
               ...omit(btn, ['visibleOn', 'hiddenOn', 'disabledOn']),
-              type: 'button'
-            },
+              type: btn.type || 'button'
+            } as AMISButtonSchema,
             {
               key: `item-${index}`,
               data: itemData,
               disabled: btn.disabled || selectedItems.length !== 1,
-              onAction: this.handleItemAction.bind(this, btn, itemData)
+              onAction: this.handleItemAction
             }
           )
         )}
@@ -2331,9 +2532,8 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         {render(
           'pagination',
           {
-            type: 'pagination',
-            testIdBuilder: testIdBuilder?.getChild('pagination')
-          },
+            type: 'pagination' as 'pagination'
+          } as AMISPaginationSchema,
           {
             ...extraProps,
             activePage: page,
@@ -2341,8 +2541,10 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
             hasNext: store.hasNext,
             mode: store.mode,
             perPage: store.perPage,
+            total: store.total,
             popOverContainer: this.parentContainer,
-            onPageChange: this.handleChangePage
+            onPageChange: this.handleChangePage,
+            testIdBuilder: testIdBuilder?.getChild('pagination')
           }
         )}
       </div>
@@ -2423,24 +2625,61 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
       classPrefix: ns,
       classnames: cx,
       translate: __,
-      testIdBuilder
+      testIdBuilder,
+      loadMoreProps = {}
     } = this.props;
     const {page, lastPage} = store;
 
+    const {
+      showIcon = true,
+      showText = true,
+      iconType = 'loading-outline',
+      contentText = {
+        contentdown: '点击加载更多',
+        contentrefresh: '加载中...',
+        contentnomore: '没有更多数据了'
+      },
+      minLoadingTime,
+      dataAppendTo,
+      color
+    } = loadMoreProps;
+
+    const isLoading = store.loading;
+    const isNoMore = page >= lastPage;
+
     return (
-      <div className={cx('Crud-loadMore')}>
-        <Button
-          disabled={page >= lastPage}
-          disabledTip={__('CRUD.loadMoreDisableTip')}
-          classPrefix={ns}
-          onClick={() =>
-            this.search({page: page + 1, loadDataMode: 'load-more'})
+      <div
+        className={cx('Crud-loadMore')}
+        style={
+          color
+            ? ({
+                '--Spinner-color': color,
+                'color': color
+              } as React.CSSProperties)
+            : undefined
+        }
+        onClick={() => {
+          if (isLoading || isNoMore) {
+            return;
           }
-          size="sm"
-          {...testIdBuilder?.getChild('loadMore').getTestId()}
-        >
-          {__('CRUD.loadMore')}
-        </Button>
+          this.search({
+            page: page + 1,
+            loadDataMode: 'load-more',
+            minLoadingTime,
+            dataAppendTo
+          });
+        }}
+      >
+        {showIcon && <Spinner show={isLoading} icon={iconType} size="sm" />}
+        {showText && (
+          <span>
+            {isLoading
+              ? contentText.contentrefresh
+              : isNoMore
+              ? contentText.contentnomore
+              : contentText.contentdown}
+          </span>
+        )}
       </div>
     );
   }
@@ -2448,7 +2687,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
   renderFilterToggler() {
     const {store, classnames: cx, translate: __, filterTogglable} = this.props;
 
-    if (!store.filterTogggable) {
+    if (!store.filterTogglable) {
       return null;
     }
 
@@ -2507,10 +2746,13 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
   }
 
   renderToolbar(
-    toolbar?: SchemaNode,
+    toolbar?: AMISCRUDToolbar & AMISCRUDToolbarExtra,
     index: number = 0,
     childProps: any = {},
-    toolbarRenderer?: (toolbar: SchemaNode, index: number) => React.ReactNode
+    toolbarRenderer?: (
+      toolbar: AMISCRUDToolbar & AMISCRUDToolbarExtra,
+      index: number
+    ) => React.ReactNode
   ) {
     if (!toolbar) {
       return null;
@@ -2522,7 +2764,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     if (type === 'bulkActions' || type === 'bulk-actions') {
       return this.renderBulkActions(childProps);
     } else if (type === 'pagination') {
-      return this.renderPagination(toolbar);
+      return this.renderPagination(toolbar as AMISPaginationSchema);
     } else if (type === 'statistics') {
       return this.renderStatistics();
     } else if (type === 'switch-per-page') {
@@ -2534,7 +2776,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     } else if (type === 'export-csv') {
       return this.renderExportCSV(toolbar as Schema);
     } else if (type === 'reload') {
-      let reloadButton = {
+      let reloadButton: AMISButtonSchema = {
         label: '',
         icon: 'fa fa-sync',
         tooltip: __('reload'),
@@ -2601,7 +2843,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     }
 
     const $$editable = childProps.$$editable;
-    return render(`toolbar/${index}`, toolbar, {
+    return render(`toolbar/${index}`, toolbar as AMISSchemaCollection, {
       data: store.toolbarData,
       page: store.page,
       lastPage: store.lastPage,
@@ -2617,7 +2859,10 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
 
   renderHeaderToolbar(
     childProps: any,
-    toolbarRenderer?: (toolbar: SchemaNode, index: number) => React.ReactNode
+    toolbarRenderer?: (
+      toolbar: AMISCRUDToolbar & AMISCRUDToolbarExtra,
+      index: number
+    ) => React.ReactNode
   ) {
     let {toolbar, toolbarInline, headerToolbar} = this.props;
 
@@ -2634,7 +2879,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
     }
 
     return this.renderToolbar(
-      headerToolbar || [],
+      (headerToolbar as any) || [],
       0,
       childProps,
       toolbarRenderer
@@ -2661,7 +2906,12 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
       }
     }
 
-    return this.renderToolbar(footerToolbar, 0, childProps, toolbarRenderer);
+    return this.renderToolbar(
+      footerToolbar as any,
+      0,
+      childProps,
+      toolbarRenderer as any
+    );
   }
 
   renderTag(item: any, index: number) {
@@ -2693,7 +2943,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         </span>
         <span className={cx('Crud-valueLabel')}>
           {labelTpl ? (
-            <Html html={filter(labelTpl, item)} filterHtml={env.filterHtml} />
+            <Html html={filter(labelTpl, item)} />
           ) : (
             getVariable(item, labelField || 'label') ||
             getVariable(item, valueField || primaryField || 'id')
@@ -2729,76 +2979,38 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
       return null;
     }
 
-    const totalCount = store.selectedItems.length;
     let tags: any[] = store.selectedItems;
     const enableOverflow =
-      multiple !== false &&
-      isIntegerInRange(maxTagCount, {
-        start: 0,
-        end: totalCount,
-        left: 'inclusive',
-        right: 'exclusive'
-      });
+      multiple !== false && typeof maxTagCount === 'number' && maxTagCount > 0;
 
-    if (enableOverflow) {
-      tags = [
-        ...store.selectedItems.slice(0, maxTagCount),
-        {label: `+ ${totalCount - maxTagCount} ...`, value: '__overflow_tag__'}
-      ];
-    }
+    const tooltipProps: any = {
+      offset: [0, -10],
+      tooltipClassName: cx(
+        'Crud-selection-overflow',
+        overflowTagPopover?.tooltipClassName
+      ),
+      title: __('已选项'),
+      ...omit(overflowTagPopover, ['children', 'content', 'tooltipClassName'])
+    };
 
     return (
       <div className={cx('Crud-selection')}>
-        <div className={cx('Crud-selectionLabel')}>
+        <div data-folder-ignore className={cx('Crud-selectionLabel')}>
           {__('CRUD.selected', {total: store.selectedItems.length})}
         </div>
-        {tags.map((item, index) => {
-          if (enableOverflow && index === maxTagCount) {
-            return (
-              <TooltipWrapper
-                key={index}
-                container={popOverContainer}
-                tooltip={{
-                  placement: 'top',
-                  trigger: 'hover',
-                  showArrow: false,
-                  offset: [0, -10],
-                  tooltipClassName: cx(
-                    'Crud-selection-overflow',
-                    overflowTagPopover?.tooltipClassName
-                  ),
-                  title: __('已选项'),
-                  ...omit(overflowTagPopover, [
-                    'children',
-                    'content',
-                    'tooltipClassName'
-                  ]),
-                  children: () => {
-                    return (
-                      <div
-                        className={cx(`${ns}Crud-selection-overflow-wrapper`)}
-                      >
-                        {store.selectedItems
-                          .slice(maxTagCount, totalCount)
-                          .map((overflowItem, rawIndex) => {
-                            const key = rawIndex + maxTagCount;
 
-                            return this.renderTag(overflowItem, key);
-                          })}
-                      </div>
-                    );
-                  }
-                }}
-              >
-                <div key={index} className={cx(`Crud-value`)}>
-                  <span className={cx('Crud-valueLabel')}>{item.label}</span>
-                </div>
-              </TooltipWrapper>
-            );
-          }
+        <AutoFoldedList
+          enabled={!!enableOverflow}
+          tooltipClassName={cx('Crud-selection-overflow-wrapper')}
+          items={tags}
+          popOverContainer={popOverContainer}
+          tooltipOptions={tooltipProps}
+          maxVisibleCount={maxTagCount}
+          renderItem={(item, index, folded) => {
+            return this.renderTag(item, index);
+          }}
+        ></AutoFoldedList>
 
-          return this.renderTag(item, index);
-        })}
         <a onClick={this.clearSelection} className={cx('Crud-selectionClear')}>
           {__('clear')}
         </a>
@@ -2817,7 +3029,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
       filterCanAccessSuperData = true
     } = this.props;
 
-    if (!filter && (!store.filterTogggable || store.filterVisible)) {
+    if (!filter || (store.filterTogglable && !store.filterVisible)) {
       return null;
     }
 
@@ -2829,14 +3041,18 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         submitText: __('search'),
         ...filter,
         type: 'form',
-        api: null,
-        testIdBuilder: testIdBuilder?.getChild('filter')
+        api: undefined
       },
       {
         key: 'filter',
+        testIdBuilder: testIdBuilder?.getChild('filter'),
         panelClassName: cx(
           'Crud-filter',
-          filter!.panelClassName || 'Panel--default'
+          filter.panelClassName || 'Panel--default'
+        ),
+        className: cx(
+          filter.className,
+          filter.wrapWithPanel ? '' : 'Crud-filter'
         ),
         data: store.filterData,
         onReset: this.handleFilterReset,
@@ -2844,7 +3060,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         onInit: this.handleFilterInit,
         formStore: undefined,
         canAccessSuperData:
-          filter?.canAccessSuperData ?? filterCanAccessSuperData
+          filter.canAccessSuperData ?? filterCanAccessSuperData
       }
     );
   }
@@ -2964,6 +3180,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         orderDir: store.query.orderDir,
         popOverContainer,
         onAction: this.handleAction,
+        dispatchEvent: this.dispatchEvent,
         onItemChange: this.handleItemChange,
         onSave: this.handleSave,
         onSaveOrder: this.handleSaveOrder,
@@ -2978,6 +3195,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         footerToolbarRender: this.renderFooterToolbar,
         data: store.mergedData,
         loading: store.loading,
+        offset: store.offset,
         host: this,
         filterItemIndex: this.filterItemIndex,
         onDbClick: this.props.rowDbClick,
@@ -2995,14 +3213,15 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
       classnames: cx,
       translate: __,
       testIdBuilder,
-      id
+      id,
+      mobileUI
     } = this.props;
 
     return (
       <div
         className={cx('Crud', className, {
           'is-loading': store.loading,
-          'is-mobile': isMobile()
+          'is-mobile': mobileUI
         })}
         style={style}
         data-id={id}
@@ -3016,8 +3235,7 @@ export default class CRUD<T extends CRUDProps> extends React.Component<T, any> {
         {render(
           'dialog',
           {
-            ...((store.action as ActionObject) &&
-              ((store.action as ActionObject).dialog as object)),
+            ...store.dialogSchema,
             type: 'dialog'
           },
           {

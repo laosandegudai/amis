@@ -19,7 +19,7 @@ export class TagControlPlugin extends BasePlugin {
   static scene = ['layout'];
   // 关联渲染器名字
   rendererName = 'input-tag';
-  $schema = '/schemas/TagControlSchema.json';
+  $schema = '/schemas/AMISInputTagSchema.json';
 
   // 组件名称
   name = '标签选择';
@@ -183,9 +183,13 @@ export class TagControlPlugin extends BasePlugin {
               rendererSchema: (schema: Schema) => schema,
               mode: 'vertical' // 改成上下展示模式
             }),
-            getSchemaTpl('joinValues'),
+            getSchemaTpl('joinValues', {
+              visibleOn: true
+            }),
             getSchemaTpl('delimiter'),
-            getSchemaTpl('extractValue'),
+            getSchemaTpl('extractValue', {
+              visibleOn: 'this.joinValues === false'
+            }),
             {
               type: 'input-number',
               name: 'max',

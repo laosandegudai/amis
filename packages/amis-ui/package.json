@@ -3,7 +3,7 @@
   "main": "lib/index.js",
   "module": "esm/index.js",
   "types": "lib/index.d.ts",
-  "version": "6.12.0-alpha.0",
+  "version": "6.13.0",
   "description": "",
   "scripts": {
     "build": "npm run clean-dist && cross-env NODE_ENV=production rollup -c ",
@@ -28,7 +28,11 @@
       "import": "./esm/index.js"
     },
     "./scss/": "./scss/",
-    "./lib/themes/": "./lib/themes/",
+    "./lib/themes/": {
+      "style": "./lib/themes/",
+      "require": "./lib/themes/",
+      "import": "./esm/themes/"
+    },
     "./lib/*": {
       "require": "./lib/*.js",
       "import": "./esm/*.js"
@@ -36,8 +40,8 @@
   },
   "dependencies": {
     "@rc-component/mini-decimal": "^1.0.1",
-    "amis-core": "^6.12.0-alpha.0",
-    "amis-formula": "^6.12.0-alpha.0",
+    "amis-core": "^6.13.0",
+    "amis-formula": "^6.13.0",
     "animate.css": "4.1.1",
     "classnames": "2.3.2",
     "codemirror": "^5.63.0",
@@ -70,6 +74,7 @@
     "react-textarea-autosize": "8.3.3",
     "react-transition-group": "4.4.2",
     "react-visibility-sensor": "5.1.1",
+    "smooth-signature": "^1.0.15",
     "sortablejs": "1.15.0",
     "tinymce": "^6.1.2",
     "tslib": "^2.3.1",
@@ -105,7 +110,7 @@
     "sass": "^1.54.9",
     "ts-jest": "^29.0.2",
     "ts-node": "^10.4.0",
-    "typescript": "^4.6.4"
+    "typescript": "^5.8.3"
   },
   "peerDependencies": {
     "amis-core": "*",

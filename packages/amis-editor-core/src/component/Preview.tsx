@@ -24,6 +24,7 @@ import BackTop from './base/BackTop';
 import {reaction} from 'mobx';
 import type {RendererConfig} from 'amis-core';
 import IFramePreview from './IFramePreview';
+import {SchemaRenderer} from './SchemaRenderer';
 
 export interface PreviewProps {
   // isEditorEnabled?: (
@@ -87,7 +88,7 @@ export default class Preview extends Component<PreviewProps> {
     currentDom.addEventListener('mouseover', this.handeMouseOver);
     currentDom.addEventListener('mousedown', this.handeMouseDown);
     currentDom.addEventListener('submit', this.handleSubmit);
-    this.props.manager.on('after-update', this.handlePanelChange);
+    this.props.manager.on('after-update', this.handlePreviewViewChange);
   }
 
   componentWillUnmount() {
@@ -100,11 +101,9 @@ export default class Preview extends Component<PreviewProps> {
       currentDom.removeEventListener('mouseover', this.handeMouseOver);
       currentDom.removeEventListener('mousedown', this.handeMouseDown);
       currentDom.removeEventListener('submit', this.handleSubmit);
-      this.props.manager.off('after-update', this.handlePanelChange);
+      this.props.manager.off('after-update', this.handlePreviewViewChange);
       this.dialogReaction?.();
     }
-
-    this.scrollLayer?.removeEventListener('scroll', this.handlePanelChange);
 
     setTimeout(() => clearStoresCache([this.env.session!]), 500);
   }
@@ -114,22 +113,54 @@ export default class Preview extends Component<PreviewProps> {
   scrollLayer?: HTMLDivElement;
 
   @autobind
+  handleLayerScroll(e: WheelEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const store = this.props.store;
+    const iframe = store.getIframe();
+
+    if (iframe) {
+      iframe.contentWindow?.scrollTo({
+        top: iframe.contentWindow?.scrollY + e.deltaY,
+        behavior: 'smooth'
+      });
+      this.handlePreviewViewChange();
+    } else {
+      this.scrollLayer?.scrollTo({
+        top: this.scrollLayer.scrollTop + e.deltaY,
+        behavior: 'smooth'
+      });
+    }
+  }
+
+  @autobind
   contentsRef(ref: HTMLDivElement | null) {
     if (ref) {
-      this.layer = ref.parentElement!.querySelector(
-        '.ae-Preview-widgets'
-      ) as HTMLDivElement;
+      this.layer = ref
+        .closest('.ae-Preview')!
+        .querySelector('.ae-Preview-widgets') as HTMLDivElement;
 
-      this.unSensor = resizeSensor(ref, this.handlePanelChange);
+      this.unSensor = resizeSensor(ref, this.handlePreviewViewChange);
       if (this.props.isMobile) {
         ref = ref.firstChild as HTMLDivElement;
       }
 
       this.scrollLayer = ref as HTMLDivElement;
-      this.scrollLayer.removeEventListener('scroll', this.handlePanelChange);
-      this.scrollLayer.addEventListener('scroll', this.handlePanelChange);
+      this.scrollLayer.removeEventListener(
+        'scroll',
+        this.handlePreviewViewChange
+      );
+      this.scrollLayer.addEventListener('scroll', this.handlePreviewViewChange);
       this.props.store.setLayer(this.layer);
+
+      this.layer.addEventListener('wheel', this.handleLayerScroll, true);
     } else {
+      this.layer?.removeEventListener('wheel', this.handleLayerScroll, true);
+      this.scrollLayer?.removeEventListener(
+        'scroll',
+        this.handlePreviewViewChange
+      );
       delete this.scrollLayer;
       delete this.layer;
       this.unSensor?.();
@@ -157,7 +188,7 @@ export default class Preview extends Component<PreviewProps> {
   );
 
   @autobind
-  handlePanelChange() {
+  handlePreviewViewChange() {
     if (this.layer && this.scrollLayer) {
       requestAnimationFrame(() => {
         if (!this.layer) {
@@ -191,6 +222,7 @@ export default class Preview extends Component<PreviewProps> {
       (e.button === 1 && window.event !== null) || e.button === 0;
     if (!this.props.editable || !isLeftButton || e.defaultPrevented) return;
 
+    // todo highlight 改成可拖拽后，框选逻辑异常了，需要修复
     const store = this.props.store;
     if (
       e.defaultPrevented ||
@@ -241,7 +273,7 @@ export default class Preview extends Component<PreviewProps> {
         h: Math.abs(h)
       };
 
-      if (rect.w < 10 && rect.h < 10) {
+      if (Math.hypot(w, h) < 10) {
         return;
       }
 
@@ -316,10 +348,13 @@ export default class Preview extends Component<PreviewProps> {
       return;
     }
 
-    const target = (e.target as HTMLElement).closest(`[data-editor-id]`);
-
-    if ((e.target as HTMLElement).closest('.ae-editor-action-btn')) {
+    if (
+      (e.target as HTMLElement).closest(
+        '.ae-editor-action-btn,.ae-Editor-toolbarPopover '
+      )
+    ) {
       // 设计器内容区中允许点击的元素，比如：回到顶部功能按钮。
+      // 或者高亮区的操作按钮
       return;
     }
 
@@ -328,30 +363,35 @@ export default class Preview extends Component<PreviewProps> {
       return;
     }
 
-    if (target) {
-      const curActiveId = target.getAttribute('data-editor-id');
-      let curRegion: string = '';
+    const target = (e.target as HTMLElement).closest(
+      `[data-editor-id],[data-hlbox-id]`
+    );
 
-      // 判断当前是否在子区域
-      const targetRegion = (e.target as HTMLElement).closest(
-        `[data-region-host]`
-      );
-      if (targetRegion) {
-        // 特殊区域允许点击事件
-        const curRegionId = targetRegion.getAttribute('data-region-host');
-        if (
-          curRegionId &&
-          curRegionId === curActiveId &&
-          targetRegion.getAttribute('data-region')
-        ) {
-          // 确保点击的是当前预选中元素的子区域
-          curRegion = targetRegion.getAttribute('data-region')!;
-        }
-      }
+    if (target?.matches('[data-editor-id]')) {
+      const curActiveId = target.getAttribute('data-editor-id');
 
       e.metaKey
         ? this.props.manager.toggleSelection(curActiveId!)
-        : store.setActiveId(curActiveId!, curRegion);
+        : store.setActiveId(curActiveId!);
+    } else if (target?.matches('[data-hlbox-id]')) {
+      const id = target.getAttribute('data-hlbox-id')!;
+      const {x, y} = this.getElementPoint(e);
+      let elements = store.getDoc().elementsFromPoint(x, y);
+
+      let node = elements.find(
+        (ele: Element) =>
+          ele.hasAttribute('data-editor-id') &&
+          ele.getAttribute('data-editor-id') !== id &&
+          !ele.querySelector(`[data-editor-id="${id}"]`)
+      );
+      if (node) {
+        const nodeId = node.getAttribute('data-editor-id')!;
+        // 如果已经进入了内联模式
+        // 不要再切选中了
+        setTimeout(() => {
+          store.activeElement || store.setActiveId(nodeId);
+        }, 350);
+      }
     }
 
     if (!this.layer?.contains(e.target as HTMLElement) && this.props.editable) {
@@ -378,21 +418,7 @@ export default class Preview extends Component<PreviewProps> {
       // 自由容器里面的高亮区域是可以点击的
       // 当点击来自高亮区域时，需要根据位置计算出组件上点击的元素
       if (hlbox) {
-        let x = e.clientX;
-        let y = e.clientY;
-
-        const layer: HTMLElement = store.getLayer()!;
-        const layerRect = layer.getBoundingClientRect();
-        const iframe = store.getIframe();
-
-        // 计算鼠标位置在页面中的实际位置，如果iframe存在，需要考虑iframe偏移量以及iframe的缩放比例
-        let scrollTop = 0;
-        if (iframe) {
-          scrollTop = iframe.contentWindow?.scrollY || 0;
-          x -= layerRect.left;
-          y -= layerRect.top;
-          y += scrollTop;
-        }
+        const {x, y} = this.getElementPoint(e);
         const elements = store.getDoc().elementsFromPoint(x, y);
         target = elements.find((ele: Element) => {
           hostElem = ele.closest(
@@ -447,47 +473,64 @@ export default class Preview extends Component<PreviewProps> {
     const store = this.props.store;
     const dom = e.target as HTMLElement;
 
-    if (this.layer?.contains(dom)) {
-      return;
-    }
-
     if ((e.target as HTMLElement).closest('.ignore-hover-elem')) {
       // 设计器内容区中忽略hover的元素，比如：region头部标签。
       return;
     }
 
-    const target = dom.closest(`[data-editor-id]`);
+    const target = dom.closest(`[data-editor-id],[data-hlbox-id]`);
 
-    if (target) {
+    if (target?.matches('[data-editor-id]')) {
       const curHoverId = target.getAttribute('data-editor-id');
-      let curHoverRegion: string = '';
-
-      // 判断当前是否在子区域
-      const targetRegion = (e.target as HTMLElement).closest(
-        `[data-region-host]`
-      );
-      if (targetRegion) {
-        // 特殊区域允许点击事件
-        const curRegionId = targetRegion.getAttribute('data-region-host');
-        if (
-          curRegionId &&
-          curRegionId === curHoverId &&
-          targetRegion.getAttribute('data-region')
-        ) {
-          // 确保点击的是当前预选中元素的子区域
-          curHoverRegion = targetRegion.getAttribute('data-region')!;
+      store.setHoverId(curHoverId!);
+    } else if (target?.matches('[data-hlbox-id]')) {
+      const {x, y} = this.getElementPoint(e);
+      const elements = store.getDoc().elementsFromPoint(x, y);
+      let hostElem: HTMLElement | null = null;
+      for (const ele of elements) {
+        hostElem = ele.closest(`[data-editor-id]`) as HTMLElement;
+        if (hostElem) {
+          break;
         }
       }
 
-      store.setMouseMoveRegion(curHoverRegion);
-      store.setHoverId(curHoverId!);
+      if (hostElem) {
+        // 判断当前是否在子区域
+        const curHoverId = hostElem.getAttribute('data-editor-id');
+        store.setHoverId(curHoverId!);
+      }
     }
+  }
+
+  getElementPoint(e: MouseEvent) {
+    const store = this.props.store;
+    let x = e.clientX;
+    let y = e.clientY;
+
+    const iframe = store.getIframe();
+
+    // 计算鼠标位置在页面中的实际位置，如果iframe存在，需要考虑iframe偏移量以及iframe的缩放比例
+    if (iframe) {
+      const preview: HTMLElement = (store.getLayer() as HTMLElement)
+        .previousSibling?.firstChild as HTMLElement;
+      const previewRect = preview.getBoundingClientRect();
+
+      x -= previewRect.left;
+      y -= previewRect.top;
+      // 如果有缩放比例，重新计算位置
+      const scale = store.getScale();
+      if (scale >= 0) {
+        x = x / scale;
+        y = y / scale;
+      }
+    }
+
+    return {x, y};
   }
 
   @autobind
   handleMouseLeave() {
     const store = this.props.store;
-    store.setMouseMoveRegion('');
     store.setHoverId('');
   }
 
@@ -633,61 +676,63 @@ export default class Preview extends Component<PreviewProps> {
         )}
         ref={this.currentDom}
       >
-        <div
-          key={
-            /* contentsLayer 逻辑不一样需要更新一下 */ isMobile
-              ? 'mobile-body'
-              : 'pc-body'
-          }
-          className={cx(
-            'ae-Preview-body',
-            className,
-            editable ? 'is-edting' : '',
-            isMobile ? 'is-mobile' : 'is-pc hoverShowScrollBar'
-          )}
-          ref={this.contentsRef}
-        >
-          <div className="ae-Preview-inner">
-            {!store.ready ? (
-              <div className="ae-Preview-loading">
-                <Spinner overlay size="lg" />
-              </div>
-            ) : isMobile ? (
-              <IFramePreview
-                {...rest}
-                key="mobile"
-                editable={editable}
-                store={store}
-                env={env}
-                manager={manager}
-                autoFocus={autoFocus}
-                appLocale={appLocale}
-              ></IFramePreview>
-            ) : (
-              <SmartPreview
-                {...rest}
-                editable={editable}
-                autoFocus={autoFocus}
-                store={store}
-                env={env}
-                manager={manager}
-                key="pc"
-                appLocale={appLocale}
-              />
+        <div className={cx('ae-Preview-outter')}>
+          <div
+            key={
+              /* contentsLayer 逻辑不一样需要更新一下 */ isMobile
+                ? 'mobile-body'
+                : 'pc-body'
+            }
+            className={cx(
+              'ae-Preview-body',
+              className,
+              editable ? 'is-edting' : '',
+              isMobile ? 'is-mobile' : 'is-pc hoverShowScrollBar'
+            )}
+            ref={this.contentsRef}
+          >
+            <div className="ae-Preview-inner">
+              {!store.ready ? (
+                <div className="ae-Preview-loading">
+                  <Spinner overlay size="lg" />
+                </div>
+              ) : isMobile ? (
+                <IFramePreview
+                  {...rest}
+                  key="mobile"
+                  editable={editable}
+                  store={store}
+                  env={env}
+                  manager={manager}
+                  autoFocus={autoFocus}
+                  appLocale={appLocale}
+                ></IFramePreview>
+              ) : (
+                <SmartPreview
+                  {...rest}
+                  editable={editable}
+                  autoFocus={autoFocus}
+                  store={store}
+                  env={env}
+                  manager={manager}
+                  key="pc"
+                  appLocale={appLocale}
+                />
+              )}
+            </div>
+            {this.currentDom.current && (
+              <BackTop
+                key={isMobile ? 'mobile-back-up' : 'pc-back-up'}
+                className="ae-editor-action-btn"
+                target={this.getCurrentTarget.bind(this)}
+                onClick={(e: any) => {
+                  console.log(e);
+                }}
+              >
+                <Icon icon="back-up" className="back-top-icon" />
+              </BackTop>
             )}
           </div>
-          {this.currentDom.current && (
-            <BackTop
-              key={isMobile ? 'mobile-back-up' : 'pc-back-up'}
-              className="ae-editor-action-btn"
-              target={this.getCurrentTarget.bind(this)}
-              onClick={(e: any) => {
-                console.log(e);
-              }}
-            >
-              <Icon icon="back-up" className="back-top-icon" />
-            </BackTop>
-          )}
         </div>
 
         <div
@@ -801,7 +846,7 @@ class SmartPreview extends React.Component<SmartPreviewProps> {
 
     return (
       // 弹窗挂载节点
-      <div ref={this.dialogMountRef} className="ae-Dialog-preview-mount-node">
+      <div ref={this.dialogMountRef} className="ae-PageWrapper">
         {render(
           editable ? store.filteredSchema : store.filteredSchemaForPreview,
           {
@@ -816,7 +861,10 @@ class SmartPreview extends React.Component<SmartPreviewProps> {
           },
           {
             ...env,
-            session: editable ? 'edit-mode' : 'preview-mode',
+            session: `${env.session}-${
+              editable ? 'edit' : 'preview'
+            }-smart-preview`,
+            SchemaRenderer: editable ? SchemaRenderer : undefined,
             enableAMISDebug: !editable
           }
         )}

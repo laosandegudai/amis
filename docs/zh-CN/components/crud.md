@@ -114,7 +114,7 @@ CRUD，即增删改查组件，主要用来展现数据列表，并支持各类�
 CRUD 组件对数据源接口的数据结构要求如下：
 
 - `items`或`rows`：用于返回数据源数据，格式是数组
-- `total`: 用于返回数据库中一共有多少条数据，用于生成分页
+- `total`或`count`: 用于返回数据库中一共有多少条数据，用于生成分页
 
 ```json
 {
@@ -4432,6 +4432,7 @@ itemAction 里的 onClick 还能通过 `data` 参数拿到当前行的数据，�
 | defaultParams                         | `Object`                                                                                |                                 | 设置默认 filter 默认参数，会在查询的时候一起发给后端                                                                                           |
 | pageField                             | `string`                                                                                | `"page"`                        | 设置分页页码字段名。                                                                                                                           |
 | perPageField                          | `string`                                                                                | `"perPage"`                     | 设置分页一页显示的多少条数据的字段名。注意：最好与 defaultParams 一起使用，请看下面例子。                                                      |
+| totalField                            | `string`                                                                                | `"total"`                       | 设置数据返回中用来表示数据总量的字段名                                                                                                         |
 | pageDirectionField                    | `string`                                                                                | `"pageDir"`                     | 分页方向字段名可能是 forward 或者 backward                                                                                                     |
 | perPageAvailable                      | `Array<number>`                                                                         | `[5, 10, 20, 50, 100]`          | 设置一页显示多少条数据下拉框可选条数。                                                                                                         |
 | orderField                            | `string`                                                                                |                                 | 设置用来确定位置的字段名，设置后新的顺序将被赋值到该字段中。                                                                                   |
@@ -4496,25 +4497,29 @@ itemAction 里的 onClick 还能通过 `data` 参数拿到当前行的数据，�
 
 ### columns-toggler 属性表
 
-| 属性名          | 类型                           | 默认值    | 说明                                   |
-| --------------- | ------------------------------ | --------- | -------------------------------------- |
-| label           | `string`                       |           | 按钮文字                               |
-| tooltip         | `string`                       |           | 按钮提示文字                           |
-| disabledTip     | `string`                       |           | 按钮禁用状态下的提示                   |
-| align           | `"left" \| "right"`            | `"left"`  | 点击内容是否关闭                       |
-| size            | `"xs" \| "sm" \| "md" \| "lg"` |           | 按钮大小，参考[按钮](./action)         |
-| footerBtnSize   | `"xs" \| "sm" \| "md" \| "lg"` |           | 弹窗底部按钮大小，参考[按钮](./action) |
-| level           | `string`                       | `default` | 按钮样式，参考[按钮](./action)         |
-| draggable       | `boolean`                      | `false`   | 是否可通过拖拽排序                     |
-| defaultIsOpened | `boolean`                      | `false`   | 默认是否展开                           |
-| hideExpandIcon  | `boolean`                      | `true`    | 是否隐藏展开的图标                     |
-| overlay         | `boolean`                      | `false`   | 是否显示遮罩层                         |
-| closeOnOutside  | `boolean`                      |           | 点击外部是否关闭                       |
-| closeOnClick    | `boolean`                      |           | 点击内容是否关闭                       |
-| iconOnly        | `boolean`                      | `false`   | 是否只显示图标。                       |
-| icon            | `string`                       |           | 按钮的图标                             |
-| className       | `string`                       |           | 外层 CSS 类名                          |
-| btnClassName    | `string`                       |           | 按钮的 CSS 类名                        |
+| 属性名           | 类型                           | 默认值    | 说明                                   |
+| ---------------- | ------------------------------ | --------- | -------------------------------------- |
+| label            | `string`                       |           | 按钮文字                               |
+| tooltip          | `string`                       |           | 按钮提示文字                           |
+| disabledTip      | `string`                       |           | 按钮禁用状态下的提示                   |
+| align            | `"left" \| "right"`            | `"left"`  | 点击内容是否关闭                       |
+| size             | `"xs" \| "sm" \| "md" \| "lg"` |           | 按钮大小，参考[按钮](./action)         |
+| footerBtnSize    | `"xs" \| "sm" \| "md" \| "lg"` |           | 弹窗底部按钮大小，参考[按钮](./action) |
+| level            | `string`                       | `default` | 按钮样式，参考[按钮](./action)         |
+| draggable        | `boolean`                      | `false`   | 是否可通过拖拽排序                     |
+| defaultIsOpened  | `boolean`                      | `false`   | 默认是否展开                           |
+| hideExpandIcon   | `boolean`                      | `true`    | 是否隐藏展开的图标                     |
+| overlay          | `boolean`                      | `false`   | 是否显示遮罩层                         |
+| closeOnOutside   | `boolean`                      |           | 点击外部是否关闭                       |
+| closeOnClick     | `boolean`                      |           | 点击内容是否关闭                       |
+| iconOnly         | `boolean`                      | `false`   | 是否只显示图标。                       |
+| icon             | `string`                       |           | 按钮的图标                             |
+| className        | `string`                       |           | 外层 CSS 类名                          |
+| btnClassName     | `string`                       |           | 按钮的 CSS 类名                        |
+| modalSize        | `string`                       |           | 弹窗大小，参考[弹窗](./dialog)         |
+| modalWidth       | `string`                       |           | 弹窗宽度                               |
+| modalHeight      | `string`                       |           | 弹窗高度                               |
+| modalColumnCount | `number`                       |           | 弹窗内每行显示的列数                   |
 
 ## 事件表
 

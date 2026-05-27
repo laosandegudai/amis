@@ -54,7 +54,7 @@ export class ImageControlPlugin extends BasePlugin {
   static id = 'ImageControlPlugin';
   // 关联渲染器名字
   rendererName = 'input-image';
-  $schema = '/schemas/ImageControlSchema.json';
+  $schema = '/schemas/AMISInputImageSchema.json';
 
   // 组件名称
   name = '图片上传';
@@ -267,7 +267,7 @@ export class ImageControlPlugin extends BasePlugin {
               getSchemaTpl('proxy', {
                 value: true
               }),
-              // getSchemaTpl('autoFill'),
+              getSchemaTpl('autoFill'),
 
               getSchemaTpl('multiple', {
                 patch: {
@@ -490,7 +490,7 @@ export class ImageControlPlugin extends BasePlugin {
         body: getSchemaTpl(
           'collapseGroup',
           [
-            getSchemaTpl('style:formItem', {renderer: context.info.renderer}),
+            getSchemaTpl('theme:formItem'),
             {
               title: '基本样式',
               body: [

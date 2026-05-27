@@ -6,7 +6,7 @@ import {EditorManager} from '../../manager';
 import {EditorStoreType} from '../../store/editor';
 import {Icon} from '../../icons/index';
 import {autobind, isHasPluginIcon} from '../../util';
-import {findDOMNode} from 'react-dom';
+import {findDomCompat as findDOMNode} from 'amis-core';
 import {PanelItem} from '../../plugin';
 import {WidthDraggableBtn} from '../base/WidthDraggableBtn';
 
@@ -165,7 +165,9 @@ export class RightPanels extends React.Component<
                             className="pluginIcon"
                           />
                         )}
-                        {!usePluginIcon && <i className={`fa ${panel.icon}`} />}
+                        {!usePluginIcon && (
+                          <Icon icon={panel.icon} className="fa" />
+                        )}
                       </span>
                     }
                     className={`editorPanel-tabs-pane ae-Editor-${panel.key}Pane`}

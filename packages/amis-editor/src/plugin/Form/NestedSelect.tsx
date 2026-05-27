@@ -7,6 +7,7 @@ import {
   registerEditorPlugin,
   BasePlugin,
   BaseEventContext,
+  getI18nEnabled,
   tipedLabel
 } from 'amis-editor-core';
 import type {Schema} from 'amis';
@@ -22,7 +23,7 @@ export class NestedSelectControlPlugin extends BasePlugin {
   static id = 'NestedSelectControlPlugin';
   // 关联渲染器名字
   rendererName = 'nested-select';
-  $schema = '/schemas/NestedSelectControlSchema.json';
+  $schema = '/schemas/AMISNestedSelectSchema.json';
 
   // 组件名称
   name = '级联选择器';
@@ -229,6 +230,7 @@ export class NestedSelectControlPlugin extends BasePlugin {
   ];
   panelBodyCreator = (context: BaseEventContext) => {
     const renderer: any = context.info.renderer;
+    const i18nEnabled = getI18nEnabled();
     return getSchemaTpl('tabs', [
       {
         title: '属性',
@@ -253,7 +255,7 @@ export class NestedSelectControlPlugin extends BasePlugin {
                 form: {
                   body: [
                     {
-                      type: 'input-text',
+                      type: i18nEnabled ? 'input-text-i18n' : 'input-text',
                       name: 'noResultsText',
                       label: tipedLabel('空提示', '检索无结果时的文本')
                     }

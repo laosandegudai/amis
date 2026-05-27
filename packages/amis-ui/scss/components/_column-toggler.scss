@@ -92,6 +92,10 @@
       background: var(--DropDown-menu-borderColor);
       padding: 0;
     }
+
+    > label {
+      margin: 0;
+    }
   }
 
   &-menu:not(.is-mobile) > li {
@@ -201,6 +205,12 @@
           vertical-align: super;
           color: var(--ColumnToggler-item-dragBar-color);
           cursor: move;
+        }
+      }
+
+      @for $i from 1 through 10 {
+        &--column-#{$i} > .#{$ns}ColumnToggler-menuItem {
+          width: calc((100% - var(--ColumnToggler-item-margin) * $i * 2) / $i);
         }
       }
     }

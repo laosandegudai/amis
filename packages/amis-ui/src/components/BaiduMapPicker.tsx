@@ -31,6 +31,7 @@ interface MapPickerProps {
   coordinatesType: string;
   classnames: ClassNamesFn;
   classPrefix: string;
+  placeholder?: string;
   value?: {
     address: string;
     lat: number;
@@ -68,6 +69,9 @@ interface MapPickerState {
     zoom?: number;
   };
 }
+
+// 记录百度地图SDK加载状态
+let BMapLoadingPromise: Promise<any> | null = null;
 
 export class BaiduMapPicker extends React.Component<
   MapPickerProps,
@@ -107,10 +111,17 @@ export class BaiduMapPicker extends React.Component<
   componentDidMount() {
     if ((window as any).BMap) {
       this.initMap();
+    } else if (BMapLoadingPromise) {
+      BMapLoadingPromise.then(this.initMap).then(() => {
+        BMapLoadingPromise = null;
+      });
     } else {
-      loadScript(
+      BMapLoadingPromise = loadScript(
         `//api.map.baidu.com/api?v=3.0&ak=${this.props.ak}&callback={{callback}}`
-      ).then(this.initMap);
+      );
+      BMapLoadingPromise.then(this.initMap).then(() => {
+        BMapLoadingPromise = null;
+      });
     }
   }
 
@@ -133,7 +144,8 @@ export class BaiduMapPicker extends React.Component<
       });
     } else if (
       this.state.innerValue !== prevState.innerValue &&
-      this.state.innerValue
+      this.state.innerValue &&
+      this.map
     ) {
       this.map.clearOverlays();
 
@@ -390,7 +402,7 @@ export class BaiduMapPicker extends React.Component<
   }
 
   render() {
-    const {classnames: cx, mapStyle} = this.props;
+    const {classnames: cx, mapStyle, placeholder} = this.props;
     const onlySelectCurrentLoc = this.props.onlySelectCurrentLoc ?? false;
     const {locIndex, locs, inputValue, sugs} = this.state;
     const showSug = this.props.showSug ?? true;
@@ -404,7 +416,7 @@ export class BaiduMapPicker extends React.Component<
               <input
                 onChange={this.handleChange}
                 value={inputValue}
-                placeholder="搜索地点"
+                placeholder={placeholder || '搜索地点'}
               />
             </div>
           </div>

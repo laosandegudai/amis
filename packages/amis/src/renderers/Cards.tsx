@@ -1,5 +1,5 @@
 import React from 'react';
-import {findDOMNode} from 'react-dom';
+import {findDomCompat as findDOMNode} from 'amis-core';
 import {
   Renderer,
   RendererProps,
@@ -32,50 +32,48 @@ import {filter} from 'amis-core';
 import {Icon} from 'amis-ui';
 import {
   BaseSchema,
-  SchemaClassName,
-  SchemaCollection,
+  AMISClassName,
   SchemaExpression,
   SchemaTpl,
   SchemaTokenizeableString
 } from '../Schema';
-import {CardProps, CardSchema} from './Card';
-import {Card2Props, Card2Schema} from './Card2';
-import type {IItem, IScopedContext} from 'amis-core';
+import {AMISCardSchemaBase, CardProps} from './Card';
+import {AMISCard2Schema, Card2Props} from './Card2';
+import type {
+  IItem,
+  IScopedContext,
+  AMISSchemaBase,
+  AMISSpinnerConfig,
+  AMISSchemaCollection,
+  AMISLocalSource,
+  AMISExpression
+} from 'amis-core';
 import find from 'lodash/find';
 
 /**
  * Cards 卡片集合渲染器。
- * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/card
+ * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/cards
  */
-export interface CardsSchema extends BaseSchema, SpinnerExtraProps {
-  /**
-   * 指定为 cards 类型
-   */
-  type: 'cards';
-
-  card?: Partial<CardSchema> | Card2Schema;
+export interface AMISCardsBase extends AMISSchemaBase, AMISSpinnerConfig {
+  card?: AMISCardSchemaBase | AMISCard2Schema;
 
   /**
    * 头部 CSS 类名
    */
-  headerClassName?: SchemaClassName;
+  headerClassName?: AMISClassName;
 
   /**
    * 底部 CSS 类名
    */
-  footerClassName?: SchemaClassName;
+  footerClassName?: AMISClassName;
 
   /**
    * 卡片 CSS 类名
-   *
-   * @default Grid-col--sm6 Grid-col--md4 Grid-col--lg3
    */
-  itemClassName?: SchemaClassName;
+  itemClassName?: AMISClassName;
 
   /**
    * 无数据提示
-   *
-   * @default 暂无数据
    */
   placeholder?: SchemaTpl;
 
@@ -90,11 +88,9 @@ export interface CardsSchema extends BaseSchema, SpinnerExtraProps {
   showHeader?: boolean;
 
   /**
-   * 数据源: 绑定当前环境变量
-   *
-   * @default ${items}
+   * 数据源
    */
-  source?: SchemaTokenizeableString;
+  source?: AMISLocalSource;
 
   /**
    * 标题
@@ -119,22 +115,22 @@ export interface CardsSchema extends BaseSchema, SpinnerExtraProps {
   /**
    * 顶部区域
    */
-  header?: SchemaCollection;
+  header?: AMISSchemaCollection;
 
   /**
    * 底部区域
    */
-  footer?: SchemaCollection;
+  footer?: AMISSchemaCollection;
 
   /**
-   * 配置某项是否可以点选
+   * 配置某项是否可点选
    */
-  itemCheckableOn?: SchemaExpression;
+  itemCheckableOn?: AMISExpression;
 
   /**
    * 配置某项是否可拖拽排序，前提是要开启拖拽功能
    */
-  itemDraggableOn?: SchemaExpression;
+  itemDraggableOn?: AMISExpression;
 
   /**
    * 点击卡片的时候是否勾选卡片。
@@ -151,7 +147,18 @@ export interface CardsSchema extends BaseSchema, SpinnerExtraProps {
    */
   valueField?: string;
 }
+export type BaseCardsSchema = AMISCardsBase;
 
+/**
+ * 卡片集合组件，以卡片形式展示列表数据。
+ */
+export interface AMISCardsSchema extends AMISCardsBase {
+  /**
+   * 指定为 cards 类型
+   */
+  type: 'cards';
+}
+export type CardsSchema = AMISCardsSchema;
 export interface Column {
   type: string;
   [propName: string]: any;
@@ -228,7 +235,7 @@ export default class Cards extends React.Component<GridProps, object> {
     selectable: false,
     headerClassName: '',
     footerClassName: '',
-    itemClassName: 'Grid-col--sm6 Grid-col--md4 Grid-col--lg3',
+    itemClassName: 'Grid-col--xs12 Grid-col--sm6 Grid-col--md4 Grid-col--lg3',
     hideCheckToggler: false,
     masonryLayout: false,
     affixHeader: true,
@@ -290,13 +297,14 @@ export default class Cards extends React.Component<GridProps, object> {
     let items: Array<object> = [];
     let updateItems = false;
 
-    if (
-      Array.isArray(value) &&
-      (!prevProps ||
-        getPropValue(prevProps, (props: GridProps) => props.items) !== value)
-    ) {
-      items = value;
-      updateItems = true;
+    if (Array.isArray(value)) {
+      if (
+        !prevProps ||
+        getPropValue(prevProps, (props: GridProps) => props.items) !== value
+      ) {
+        items = value;
+        updateItems = true;
+      }
     } else if (typeof source === 'string') {
       const resolved = resolveVariableAndFilter(source, props.data, '| raw');
       const prev = prevProps
@@ -374,7 +382,7 @@ export default class Cards extends React.Component<GridProps, object> {
     const {onAction} = this.props;
 
     // 需要支持特殊事件吗？
-    onAction(e, action, ctx);
+    return onAction?.(e, action, ctx);
   }
 
   handleCheck(item: IItem) {
@@ -1013,9 +1021,26 @@ export default class Cards extends React.Component<GridProps, object> {
     } = this.props;
 
     this.renderedToolbars = []; // 用来记录哪些 toolbar 已经渲染了，已经渲染了就不重复渲染了。
-    const itemFinalClassName: string = columnsCount
-      ? `Grid-col--sm${Math.round(12 / columnsCount)}`
-      : itemClassName || '';
+
+    const itemFinalClassName: string = (() => {
+      // 移动端且非砖石布局时不使用网格类名
+      if (mobileUI && !masonryLayout) {
+        return itemClassName || '';
+      }
+
+      // 砖石布局且设置了固定列数时使用计算的网格类名
+      if (masonryLayout && columnsCount) {
+        const colWidth = Math.round(12 / columnsCount);
+        return `Grid-col--xs${colWidth} Grid-col--sm${colWidth} Grid-col--md${colWidth} Grid-col--lg${colWidth}`;
+      }
+
+      if (columnsCount) {
+        return `Grid-col--sm${Math.round(12 / columnsCount)}`;
+      }
+
+      // 其他情况使用配置的类名或空字符串
+      return itemClassName || '';
+    })();
 
     const header = this.renderHeader();
     const heading = this.renderHeading();
@@ -1049,11 +1074,6 @@ export default class Cards extends React.Component<GridProps, object> {
 
     if (style?.gutterY >= 0) {
       itemStyles.marginBottom = style?.gutterY + 'px';
-    }
-    // 修正grid多列计算错误，另外移动端目前只显示一列
-    if (columnsCount && !masonryLayout && !mobileUI) {
-      itemStyles.flex = `0 0 ${100 / columnsCount}%`;
-      itemStyles.maxWidth = `${100 / columnsCount}%`;
     }
 
     return (

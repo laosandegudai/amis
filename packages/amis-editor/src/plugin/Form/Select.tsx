@@ -52,7 +52,7 @@ export class SelectControlPlugin extends BasePlugin {
 
   notRenderFormZone = true;
 
-  $schema = '/schemas/SelectControlSchema.json';
+  $schema = '/schemas/AMISSelectSchema.json';
 
   description = '支持多选，输入提示，可使用 source 获取选项';
 
@@ -162,7 +162,32 @@ export class SelectControlPlugin extends BasePlugin {
         }
       },
       ...OPTION_EDIT_EVENTS,
-      ...OPTION_EDIT_EVENTS_OLD(schema)
+      ...OPTION_EDIT_EVENTS_OLD(schema),
+      {
+        eventName: 'loadOptionsFinished',
+        eventLabel: '从远程加载options完成',
+        description: '从远程加载options完成时触发',
+        dataSchema: (manager: EditorManager) => {
+          const {value, selectedItems, items} =
+            resolveOptionEventDataSchame(manager);
+          return [
+            {
+              type: 'object',
+              properties: {
+                data: {
+                  type: 'object',
+                  title: '数据',
+                  properties: {
+                    value,
+                    selectedItems,
+                    items
+                  }
+                }
+              }
+            }
+          ];
+        }
+      }
     ];
   };
 
@@ -261,6 +286,7 @@ export class SelectControlPlugin extends BasePlugin {
                 // 当数据源是自定义静态选项时，不额外配置默认值，在选项上直接勾选即可，放开会有个bug：当去掉勾选时，默认值配置组件不清空，只是schema清空了value
                 visibleOn: 'this.selectFirst !== true && this.source != null'
               }),
+              getSchemaTpl('autoFill'),
               getSchemaTpl(
                 'loadingConfig',
                 {

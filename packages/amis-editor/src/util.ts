@@ -67,7 +67,7 @@ export const resolveOptionType = (schema: any = {}) => {
 
   const value = option?.[valueField || 'value'] ?? option;
 
-  return value !== undefined ? typeof value : 'string';
+  return value !== undefined && value !== null ? typeof value : 'string';
 };
 
 /**
@@ -392,6 +392,37 @@ export const TREE_BASE_EVENTS = (schema: any) => {
                     type: 'object',
                     title: '所点击的选项',
                     properties: itemSchema
+                  }
+                }
+              }
+            }
+          }
+        ];
+      }
+    },
+    {
+      eventName: 'staticItemClick',
+      eventLabel: '静态展示节点点击',
+      description: '静态展示时节点点击时触发',
+      dataSchema: (manager: EditorManager) => {
+        const {itemSchema} = resolveOptionEventDataSchame(manager);
+
+        return [
+          {
+            type: 'object',
+            properties: {
+              data: {
+                type: 'object',
+                title: '数据',
+                properties: {
+                  item: {
+                    type: 'object',
+                    title: '所点击的选项',
+                    properties: itemSchema
+                  },
+                  index: {
+                    type: 'number',
+                    title: '所点击的选项索引'
                   }
                 }
               }

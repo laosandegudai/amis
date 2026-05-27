@@ -19,7 +19,7 @@ export class LocationControlPlugin extends BasePlugin {
   static id = 'LocationControlPlugin';
   // 关联渲染器名字
   rendererName = 'location-picker';
-  $schema = '/schemas/LocationControlSchema.json';
+  $schema = '/schemas/AMISLocationPickerSchema.json';
 
   // 组件名称
   name = '地理位置选择';
@@ -198,11 +198,11 @@ export class LocationControlPlugin extends BasePlugin {
                 getSchemaTpl('labelRemark'),
                 getSchemaTpl('remark'),
                 getSchemaTpl('placeholder', {
-                  visibleOn: '!onlySelectCurrentLoc'
+                  visibleOn: '${!onlySelectCurrentLoc}'
                 }),
                 getSchemaTpl('placeholder', {
                   name: 'getLocationPlaceholder',
-                  visibleOn: 'onlySelectCurrentLoc'
+                  visibleOn: '${onlySelectCurrentLoc}'
                 }),
                 getSchemaTpl('description')
               ]
@@ -219,7 +219,7 @@ export class LocationControlPlugin extends BasePlugin {
         title: '外观',
         body: [
           getSchemaTpl('collapseGroup', [
-            getSchemaTpl('style:formItem', {renderer}),
+            getSchemaTpl('theme:formItem'),
             getSchemaTpl('theme:form-label'),
             getSchemaTpl('theme:classNames', {
               schema: [

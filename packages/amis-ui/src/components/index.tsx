@@ -146,6 +146,12 @@ import Shape from './Shape';
 import type {IShapeType} from './Shape';
 import MobileDevTool from './MobileDevTool';
 import DropdownContextMenus from './DropdownContextMenus';
+import {HorizontalScroll} from './HorizontalScroll';
+import type {HorizontalScrollProps} from './HorizontalScroll';
+import AutoFoldedList from './AutoFoldedList';
+
+import AlphabetIndexer from './AlphabetIndexer';
+import MixedInput from './MixedInput';
 export {
   NotFound,
   Alert as AlertComponent,
@@ -290,5 +296,10 @@ export {
   IShapeType,
   MobileDevTool,
   DropdownContextMenus,
-  Slider
+  AlphabetIndexer,
+  Slider,
+  HorizontalScroll,
+  HorizontalScrollProps,
+  AutoFoldedList,
+  MixedInput
 };

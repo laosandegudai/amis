@@ -1,6 +1,6 @@
 {
   "name": "amis-core",
-  "version": "6.12.0-alpha.0",
+  "version": "6.13.0",
   "description": "amis-core",
   "main": "lib/index.js",
   "module": "esm/index.js",
@@ -42,7 +42,7 @@
     "rollup-plugin-auto-external": "^2.0.0",
     "rollup-plugin-license": "^2.7.0",
     "ts-jest": "^29.0.2",
-    "typescript": "^4.6.4"
+    "typescript": "^5.8.3"
   },
   "scripts": {
     "build": "npm run clean-dist && cross-env NODE_ENV=production rollup -c ",
@@ -59,7 +59,7 @@
   ],
   "dependencies": {
     "@rc-component/mini-decimal": "^1.0.1",
-    "amis-formula": "^6.12.0-alpha.0",
+    "amis-formula": "^6.13.0",
     "classnames": "2.3.2",
     "cross-env": "^7.0.3",
     "file-saver": "^2.0.2",
@@ -77,13 +77,13 @@
     "react-json-view": "1.21.3",
     "react-overlays": "5.1.1",
     "tslib": "^2.3.1",
-    "uncontrollable": "7.2.1"
+    "uncontrollable": "7.2.1",
+    "react-is": ">=16.8.6"
   },
   "peerDependencies": {
     "amis-formula": "*",
     "react": ">=16.8.6",
-    "react-dom": ">=16.8.6",
-    "react-is": ">=16.8.6"
+    "react-dom": ">=16.8.6"
   },
   "jest": {
     "testEnvironment": "jsdom",
@@ -108,7 +108,9 @@
     "testRegex": "/.*\\.test\\.(ts|tsx|js)$",
     "moduleNameMapper": {
       "\\.(css|less|sass|scss)$": "<rootDir>/../../__mocks__/styleMock.js",
-      "\\.(svg)$": "<rootDir>/../../__mocks__/svgMock.js"
+      "\\.(svg)$": "<rootDir>/../../__mocks__/svgMock.js",
+      "^amis\\-core$": "<rootDir>/../../packages/amis-core/src/index.tsx",
+      "^amis\\-formula$": "<rootDir>/../../packages/amis-formula/src/index.ts"
     },
     "setupFilesAfterEnv": [
       "<rootDir>/../amis-core/__tests__/jest.setup.js"

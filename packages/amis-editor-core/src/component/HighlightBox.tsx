@@ -196,50 +196,6 @@ export default observer(function ({
     manager.startDrag(id, e);
   }, []);
 
-  // 组件选中状态支持点击激活内部的组件
-  const handleClick = React.useCallback((e: React.MouseEvent) => {
-    let left = e.clientX;
-    let top = e.clientY;
-
-    const layer: HTMLElement = store.getLayer()!;
-    const layerRect = layer.getBoundingClientRect();
-    const iframe = store.getIframe();
-
-    // 计算鼠标位置在页面中的实际位置，如果iframe存在，需要考虑iframe偏移量以及iframe的缩放比例
-    let scrollTop = 0;
-    if (iframe) {
-      scrollTop = iframe.contentWindow?.scrollY || 0;
-      left -= layerRect.left;
-      top -= layerRect.top;
-      top += scrollTop;
-      // 如果有缩放比例，重新计算位置
-      const scale = store.getScale();
-      if (scale >= 0) {
-        left = left / scale;
-        top = top / scale;
-      }
-    } else {
-      scrollTop = document.querySelector('.ae-Preview-body')!.scrollTop || 0;
-      top += scrollTop;
-    }
-
-    let elements = store.getDoc().elementsFromPoint(left, top);
-
-    let node = elements.find(
-      (ele: Element) =>
-        ele.hasAttribute('data-editor-id') &&
-        ele.getAttribute('data-editor-id') !== id
-    );
-    if (node) {
-      const nodeId = node.getAttribute('data-editor-id')!;
-      // 如果已经进入了内联模式
-      // 不要再切选中了
-      setTimeout(() => {
-        store.activeElement || store.setActiveId(nodeId);
-      }, 350);
-    }
-  }, []);
-
   const mainRef = React.createRef<HTMLDivElement>();
   const toolbars = store.sortedToolbars;
   const secondaryToolbars = store.sortedSecondaryToolbars;
@@ -265,6 +221,26 @@ export default observer(function ({
 
   // 判断是否在最右侧（考虑组件头部工具栏被遮挡的问题）
   const isRightElem = aePreviewOffsetWidth - node.x < 176; // 跳过icode代码检查
+  const isSelected =
+    (isActive && !store.activeElement) || ~store.selections.indexOf(id);
+
+  React.useLayoutEffect(() => {
+    if (!node.draggable || !isSelected || !isAlive(node)) {
+      return;
+    }
+    const dom = node.getTarget() as HTMLElement;
+    const targets = Array.isArray(dom) ? dom : dom ? [dom] : [];
+    targets.forEach(item => {
+      item.setAttribute('draggable', 'true');
+      item.addEventListener('dragstart', handleDragStart as any);
+    });
+    return () => {
+      targets.forEach(item => {
+        item.removeAttribute('draggable');
+        item.removeEventListener('dragstart', handleDragStart as any);
+      });
+    };
+  }, [node.draggable, isSelected]);
 
   /* bca-disable */
   return (
@@ -274,8 +250,7 @@ export default observer(function ({
         {
           shake: id === store.insertOrigId,
           focused: store.activeElement && isActive,
-          selected:
-            (isActive && !store.activeElement) || ~store.selections.indexOf(id),
+          selected: isSelected,
           hover: isHover,
           regionOn: node.childRegions.some(region =>
             store.isRegionHighlighted(region.id, region.region)
@@ -295,9 +270,8 @@ export default observer(function ({
       }}
       ref={mainRef}
       onMouseEnter={handleMouseEnter}
-      draggable={!!curFreeContainerId || isDraggableContainer}
+      draggable={node.draggable}
       onDragStart={handleDragStart}
-      onClick={handleClick}
     >
       {isActive && !store.activeElement && !readonly ? (
         <div

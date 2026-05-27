@@ -3,6 +3,7 @@ import {EditorStoreType} from '../store/editor';
 import React, {memo} from 'react';
 import {EditorManager} from '../manager';
 import Frame, {useFrame} from 'react-frame-component';
+import {SchemaRenderer} from './SchemaRenderer';
 import {
   autobind,
   closeContextMenus,
@@ -38,9 +39,17 @@ export default class IFramePreview extends React.Component<IFramePreviewProps> {
       .map((el: any) => {
         return el.outerHTML;
       });
-    styles.push(
-      `<style>body {height:auto !important;min-height:100%;display: flex;flex-direction: column;}</style>`
-    );
+    styles.push(`<style>
+      html, body, .ae-IFramePreview, .ae-IFramePreview > .frame-content, .ae-PageWrapper {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+      html::-webkit-scrollbar,
+      body::-webkit-scrollbar {
+        display: none;
+      }
+    </style>`);
 
     this.initialContent = `<!DOCTYPE html><html><head>${styles.join(
       ''
@@ -93,7 +102,6 @@ export default class IFramePreview extends React.Component<IFramePreviewProps> {
   @autobind
   iframeContentDidMount() {
     const body = this.iframeRef.contentWindow?.document.body;
-    body?.classList.add('is-modalOpened');
     body?.classList.add('ae-PreviewIFrameBody');
   }
 
@@ -109,7 +117,7 @@ export default class IFramePreview extends React.Component<IFramePreviewProps> {
         contentDidMount={this.iframeContentDidMount}
       >
         <InnerComponent store={store} editable={editable} manager={manager} />
-        <div ref={this.dialogMountRef} className="ae-Dialog-preview-mount-node">
+        <div ref={this.dialogMountRef} className="ae-PageWrapper">
           {render(
             editable ? store.filteredSchema : store.filteredSchemaForPreview,
             {
@@ -124,7 +132,10 @@ export default class IFramePreview extends React.Component<IFramePreviewProps> {
             },
             {
               ...env,
-              session: `${env.session}-iframe-preview`,
+              session: `${env.session}-${
+                editable ? 'edit' : 'preview'
+              }-iframe-preview`,
+              SchemaRenderer: editable ? SchemaRenderer : undefined,
               useMobileUI: true,
               isMobile: this.isMobile,
               getModalContainer: this.getModalContainer
@@ -147,7 +158,7 @@ function InnerComponent({
   manager: EditorManager;
 }) {
   // Hook returns iframe's window and document instances from Frame context
-  const {document: doc} = useFrame();
+  const {document: doc, window: win} = useFrame();
   const editableRef = React.useRef(editable);
 
   const handleMouseLeave = React.useCallback(() => {
@@ -242,9 +253,36 @@ function InnerComponent({
     e.stopPropagation();
   }, []);
 
-  const syncIframeHeight = React.useCallback(() => {
-    const iframe = manager.store.getIframe()!;
-    iframe.style.cssText += `height: ${doc!.body.offsetHeight}px`;
+  const handleDragEnter = React.useCallback((e: DragEvent) => {
+    if (!editable) {
+      return;
+    }
+    e.stopPropagation();
+    manager.dnd.dragEnter(e);
+  }, []);
+
+  const handleDragLeave = React.useCallback((e: DragEvent) => {
+    if (!editable) {
+      return;
+    }
+    e.stopPropagation();
+    manager.dnd.dragLeave(e);
+  }, []);
+
+  const handleDragOver = React.useCallback((e: DragEvent) => {
+    if (!editable) {
+      return;
+    }
+    e.stopPropagation();
+    manager.dnd.dragOver(e);
+  }, []);
+
+  const handleDrop = React.useCallback((e: DragEvent) => {
+    if (!editable) {
+      return;
+    }
+    e.stopPropagation();
+    manager.dnd.drop(e);
   }, []);
 
   React.useEffect(() => {
@@ -258,13 +296,26 @@ function InnerComponent({
     layer!.addEventListener('dblclick', handleDBClick);
     layer!.addEventListener('mouseover', handeMouseOver);
     layer!.addEventListener('submit', handleSubmit);
+    layer!.addEventListener('dragenter', handleDragEnter);
+    layer!.addEventListener('dragleave', handleDragLeave);
+    layer!.addEventListener('dragover', handleDragOver);
+    layer!.addEventListener('drop', handleDrop);
 
-    const unSensor = resizeSensor(doc!.body, () => {
-      syncIframeHeight();
-    });
-    syncIframeHeight();
+    const widgetsLayer = store.getLayer();
+    const handleScroll = () => {
+      widgetsLayer?.classList.add('is-scrolling');
+      store.calculateHighlightBox(store.highlightNodes.map(item => item.id));
+    };
+    const handleScrollEnd = () => {
+      widgetsLayer?.classList.remove('is-scrolling');
+    };
+
+    win?.addEventListener('scroll', handleScroll, true);
+    win?.addEventListener('scrollend', handleScrollEnd, true);
 
     return () => {
+      win?.removeEventListener('scroll', handleScroll, true);
+      win?.removeEventListener('scrollend', handleScrollEnd, true);
       doc!.removeEventListener('click', handleBodyClick);
       layer!.removeEventListener('mouseleave', handleMouseLeave);
       layer!.removeEventListener('mousemove', handleMouseMove);
@@ -272,8 +323,11 @@ function InnerComponent({
       layer!.removeEventListener('mouseover', handeMouseOver);
       layer!.removeEventListener('dblclick', handleDBClick);
       layer!.removeEventListener('submit', handleSubmit);
+      layer!.removeEventListener('dragenter', handleDragEnter);
+      layer!.removeEventListener('dragleave', handleDragLeave);
+      layer!.removeEventListener('dragover', handleDragOver);
+      layer!.removeEventListener('drop', handleDrop);
       store.setDoc(document);
-      unSensor();
     };
   }, [doc]);
 

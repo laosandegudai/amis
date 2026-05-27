@@ -12,6 +12,7 @@ import {
   PluginInterface,
   RegionConfig,
   RendererInfo,
+  getI18nEnabled,
   RendererInfoResolveEventContext
 } from 'amis-editor-core';
 import {defaultValue, getSchemaTpl} from 'amis-editor-core';
@@ -25,7 +26,7 @@ export class CardsPlugin extends BasePlugin {
   static scene = ['layout'];
   // 关联渲染器名字
   rendererName = 'cards';
-  $schema = '/schemas/CardsSchema.json';
+  $schema = '/schemas/AMISCardsSchema.json';
 
   // 组件名称
   name = '卡片列表';
@@ -465,6 +466,7 @@ export class CardsPlugin extends BasePlugin {
     const isCRUDBody = context.schema.type === 'crud';
     const curPosition = context?.schema?.style?.position;
     const isAbsolute = curPosition === 'fixed' || curPosition === 'absolute';
+    const i18nEnabled = getI18nEnabled();
 
     return [
       getSchemaTpl('tabs', [
@@ -475,7 +477,7 @@ export class CardsPlugin extends BasePlugin {
               title: '基本',
               body: [
                 {
-                  type: 'input-text',
+                  type: i18nEnabled ? 'input-text-i18n' : 'input-text',
                   label: '组件名称',
                   name: 'editorSetting.displayName'
                 },

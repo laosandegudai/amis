@@ -85,7 +85,11 @@ export default class TinymceEditor extends React.Component<TinymceEditorProps> {
         this.editor?.setContent((this.currentContent = props.model || ''));
     }
 
-    if (this.editor && !isEqual(this.props.config, prevProps.config)) {
+    if (
+      this.editor &&
+      (!isEqual(this.props.config, prevProps.config) ||
+        props.disabled !== prevProps.disabled)
+    ) {
       this.editor.contentWindow.removeEventListener(
         'unload',
         this.handleIframeUnload
@@ -194,7 +198,8 @@ export default class TinymceEditor extends React.Component<TinymceEditorProps> {
       ].join('\n'),
       ...rest,
       target: this.elementRef.current,
-      readOnly: this.props.disabled,
+      disabled: this.props.disabled,
+      readonly: this.props.disabled,
       promotion: false,
       setup: (editor: any) => {
         this.editor = editor;

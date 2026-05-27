@@ -5,7 +5,12 @@ import Transition, {
   EXITING,
   EXITED
 } from 'react-transition-group/Transition';
-import {Renderer, RendererProps, setThemeClassName} from 'amis-core';
+import {
+  AMISSchemaBase,
+  Renderer,
+  RendererProps,
+  setThemeClassName
+} from 'amis-core';
 import {resolveVariableAndFilter} from 'amis-core';
 import {
   autobind,
@@ -15,36 +20,34 @@ import {
   getPropValue,
   CustomStyle
 } from 'amis-core';
-import {ActionObject} from 'amis-core';
+import {ActionObject, AMISSchemaCollection} from 'amis-core';
 import {Icon} from 'amis-ui';
-import {BaseSchema, SchemaCollection, SchemaName} from '../Schema';
+import {BaseSchema, SchemaName} from '../Schema';
 import {Html} from 'amis-ui';
 import Image from '../renderers/Image';
 import {ScopedContext, IScopedContext} from 'amis-core';
 
 /**
- * Carousel 轮播图渲染器。
- * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/carousel
+ * 轮播图组件，用于图片或内容的轮播展示。支持自动播放、指示器、切换动画等。
  */
-export interface CarouselSchema extends BaseSchema {
+export interface AMISCarouselSchema extends AMISSchemaBase {
   /**
-   * 指定为轮播图类型
+   * 指定为 carousel 组件
    */
   type: 'carousel';
 
   /**
-   * 轮播图方向，默认为水平方向
+   * 轮播图方向
    */
   direction?: 'horizontal' | 'vertical';
 
   /**
-   * 是否循环播放, 默认为 true。
+   * 是否循环播放
    */
   loop?: boolean;
 
   /**
    * 是否支持鼠标事件
-   * 默认为 true。
    */
   mouseEvent?: boolean;
 
@@ -88,12 +91,12 @@ export interface CarouselSchema extends BaseSchema {
   /**
    * 动画类型
    */
-  animation?: 'fade' | 'slide';
+  animation?: 'fade' | 'slide' | 'marquee';
 
   /**
    * 配置单条呈现模板
    */
-  itemSchema?: SchemaCollection;
+  itemSchema?: AMISSchemaCollection;
 
   name?: SchemaName;
 
@@ -123,8 +126,8 @@ export interface CarouselSchema extends BaseSchema {
    * 自定义箭头图标
    */
   icons?: {
-    prev?: SchemaCollection;
-    next?: SchemaCollection;
+    prev?: AMISSchemaCollection;
+    next?: AMISSchemaCollection;
   };
 }
 
@@ -138,7 +141,7 @@ const animationStyles: {
 
 export interface CarouselProps
   extends RendererProps,
-    Omit<CarouselSchema, 'className'> {
+    Omit<AMISCarouselSchema, 'className'> {
   value?: any;
 }
 
@@ -147,6 +150,7 @@ export interface CarouselState {
   options: any[];
   nextAnimation: string;
   mouseStartLocation: number | null;
+  isPaused: boolean;
 }
 
 const defaultSchema = {
@@ -160,17 +164,23 @@ const defaultSchema = {
         {data.hasOwnProperty('image') ? (
           <Image
             src={data.image}
-            title={data.title}
-            href={data.href}
-            blank={data.blank}
-            htmlTarget={data.htmlTarget}
-            caption={data.description}
-            thumbMode={data.thumbMode ?? thumbMode ?? 'contain'}
+            title={data.hasOwnProperty('title') ? data.title : ''}
+            href={data.hasOwnProperty('href') ? data.href : ''}
+            blank={data.hasOwnProperty('blank') ? data.blank : false}
+            htmlTarget={
+              data.hasOwnProperty('htmlTarget') ? data.htmlTarget : ''
+            }
+            caption={data.hasOwnProperty('description') ? data.description : ''}
+            thumbMode={
+              data.hasOwnProperty('thumbMode')
+                ? data.thumbMode
+                : thumbMode ?? 'contain'
+            }
             imageMode="original"
             className={cx('Carousel-image')}
           />
         ) : data.hasOwnProperty('html') ? (
-          <Html html={data.html} filterHtml={props.env.filterHtml} />
+          <Html html={data.html} />
         ) : data.hasOwnProperty('item') ? (
           <span>{data.item}</span>
         ) : (
@@ -215,13 +225,21 @@ export class Carousel extends React.Component<CarouselProps, CarouselState> {
     current: 0,
     options: this.props.options || getPropValue(this.props) || [],
     nextAnimation: '',
-    mouseStartLocation: null
+    mouseStartLocation: null,
+    isPaused: false
   };
 
   loading: boolean = false;
+  marqueeRef = React.createRef<HTMLDivElement>();
+  contentRef = React.createRef<HTMLDivElement>();
+  marqueeRequestId: number;
 
   componentDidMount() {
     this.prepareAutoSlide();
+    // 跑马灯效果
+    if (this.props.animation === 'marquee') {
+      this.marquee();
+    }
   }
 
   componentDidUpdate(prevProps: CarouselProps) {
@@ -235,10 +253,51 @@ export class Carousel extends React.Component<CarouselProps, CarouselState> {
         options: nextOptions
       });
     }
+
+    if (
+      this.props.animation === 'marquee' &&
+      prevProps.animation !== 'marquee'
+    ) {
+      this.marquee();
+    }
   }
 
   componentWillUnmount() {
     this.clearAutoTimeout();
+    cancelAnimationFrame(this.marqueeRequestId);
+  }
+
+  marquee() {
+    if (!this.marqueeRef.current || !this.contentRef.current) {
+      return;
+    }
+
+    let positionNum = 0;
+    let lastTime = performance.now();
+
+    const contentDom = this.contentRef.current;
+    const animate = (time: number) => {
+      const diffTime = time - lastTime;
+      lastTime = time;
+      const wrapWidth = this.marqueeRef.current?.offsetWidth ?? 0;
+
+      if (!this.state.isPaused) {
+        // 计算每帧移动距离
+        const moveDistance = wrapWidth * (diffTime / this.props.duration!);
+        positionNum += -moveDistance;
+
+        // 检查是否需要重置位置
+        const contentWidth = contentDom.scrollWidth / 2;
+        if (Math.abs(positionNum) >= contentWidth) {
+          positionNum = 0;
+        }
+        contentDom.style.transform = `translateX(${positionNum}px)`;
+      }
+
+      this.marqueeRequestId = requestAnimationFrame(animate);
+    };
+
+    this.marqueeRequestId = requestAnimationFrame(animate);
   }
 
   doAction(
@@ -599,8 +658,8 @@ export class Carousel extends React.Component<CarouselProps, CarouselState> {
     }
 
     const [dots, arrows] = [
-      controls!.indexOf('dots') > -1,
-      controls!.indexOf('arrows') > -1
+      controls!.indexOf('dots') > -1 && animation !== 'marquee',
+      controls!.indexOf('arrows') > -1 && animation !== 'marquee'
     ];
     const animationName = nextAnimation || animation;
 
@@ -624,99 +683,77 @@ export class Carousel extends React.Component<CarouselProps, CarouselState> {
       const timeout =
         multipleCount > 1 && typeof duration === 'number' ? duration : 500;
 
-      body = (
-        <div
-          ref={this.wrapperRef}
-          className={cx('Carousel-container')}
-          onMouseEnter={this.handleMouseEnter}
-          onMouseLeave={this.handleMouseLeave}
-        >
-          {options.map((option: any, key: number) => (
-            <Transition
-              mountOnEnter
-              unmountOnExit
-              in={key === current}
-              timeout={timeout}
-              key={key}
-            >
-              {(status: string) => {
-                if (status === ENTERING) {
-                  this.wrapperRef.current &&
-                    this.wrapperRef.current.childNodes.forEach(
-                      (item: HTMLElement) => item.offsetHeight
-                    );
-                }
-                if (multipleCount > 1) {
-                  if (
-                    (status === ENTERING || status === EXITING) &&
-                    !this.loading
-                  ) {
-                    this.loading = true;
-                  } else if (
-                    (status === ENTERED || status === EXITED) &&
-                    this.loading
-                  ) {
-                    this.loading = false;
+      const transformStyles: {
+        [propName: string]: number;
+      } = {
+        [ENTERING]: 0,
+        [ENTERED]: 0,
+        [EXITING]:
+          animationName === 'slideRight'
+            ? 100 / multipleCount
+            : -100 / multipleCount,
+        [EXITED]:
+          animationName === 'slideRight'
+            ? -100 / multipleCount
+            : 100 / multipleCount
+      };
+      const itemStyle =
+        multipleCount > 1
+          ? {
+              transitionTimingFunction: 'linear',
+              transitionDuration: transitionDuration,
+              ...(animation === 'slide'
+                ? {
+                    transform: `translateX(${transformStyles[status]}%)`
                   }
-                }
+                : {})
+            }
+          : {};
+      const itemRender = (option: any) => {
+        const {itemSchema: optionItemSchema, ...restOption} = option;
+        return render(
+          `${current}/body`,
+          optionItemSchema || itemSchema
+            ? optionItemSchema || itemSchema
+            : (defaultSchema as any),
+          {
+            thumbMode: this.props.thumbMode,
+            data: createObject(
+              data,
+              isObject(option) ? restOption : {item: option, [name!]: option}
+            )
+          }
+        );
+      };
 
-                const transformStyles: {
-                  [propName: string]: number;
-                } = {
-                  [ENTERING]: 0,
-                  [ENTERED]: 0,
-                  [EXITING]:
-                    animationName === 'slideRight'
-                      ? 100 / multipleCount
-                      : -100 / multipleCount,
-                  [EXITED]:
-                    animationName === 'slideRight'
-                      ? -100 / multipleCount
-                      : 100 / multipleCount
-                };
-                const itemStyle =
-                  multipleCount > 1
-                    ? {
-                        transitionTimingFunction: 'linear',
-                        transitionDuration: transitionDuration,
-                        ...(animation === 'slide'
-                          ? {
-                              transform: `translateX(${transformStyles[status]}%)`
-                            }
-                          : {})
-                      }
-                    : {};
-                const itemRender = (option: any) => {
-                  const {itemSchema: optionItemSchema, ...restOption} = option;
-                  return render(
-                    `${current}/body`,
-                    optionItemSchema || itemSchema
-                      ? optionItemSchema || itemSchema
-                      : (defaultSchema as any),
-                    {
-                      thumbMode: this.props.thumbMode,
-                      data: createObject(
-                        data,
-                        isObject(option)
-                          ? restOption
-                          : {item: option, [name!]: option}
-                      )
-                    }
-                  );
-                };
-
-                return (
-                  <div
-                    className={cx(
-                      'Carousel-item',
-                      animationName,
-                      animationStyles[status]
-                    )}
-                    style={itemStyle}
-                  >
-                    {multipleCount === 1 ? itemRender(option) : null}
-                    {multipleCount > 1
-                      ? newOptions[key].map((option: any, index: number) => (
+      body =
+        animation === 'marquee' ? (
+          <div
+            ref={this.marqueeRef}
+            className={cx('Marquee-container')}
+            onMouseEnter={() =>
+              this.setState({
+                isPaused: true
+              })
+            }
+            onMouseLeave={() =>
+              this.setState({
+                isPaused: false
+              })
+            }
+            style={{
+              width: '100%',
+              height
+            }}
+          >
+            <div className={cx('Marquee-content')} ref={this.contentRef}>
+              {options.concat(options).map((option, key) => (
+                <div key={key} className={cx('Marquee-item')}>
+                  {multipleCount === 1 ? itemRender(option) : null}
+                  {multipleCount > 1
+                    ? newOptions
+                        .concat(newOptions)
+                        [key].map((option: any, index: number) => (
                           <div
                             key={index}
                             style={{
@@ -728,14 +765,78 @@ export class Carousel extends React.Component<CarouselProps, CarouselState> {
                             {itemRender(option)}
                           </div>
                         ))
-                      : null}
-                  </div>
-                );
-              }}
-            </Transition>
-          ))}
-        </div>
-      );
+                    : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div
+            ref={this.wrapperRef}
+            className={cx('Carousel-container')}
+            onMouseEnter={this.handleMouseEnter}
+            onMouseLeave={this.handleMouseLeave}
+          >
+            {options.map((option: any, key: number) => (
+              <Transition
+                mountOnEnter
+                unmountOnExit
+                in={key === current}
+                timeout={timeout}
+                key={key}
+              >
+                {(status: string) => {
+                  if (status === ENTERING) {
+                    this.wrapperRef.current &&
+                      this.wrapperRef.current.childNodes.forEach(
+                        (item: HTMLElement) => item.offsetHeight
+                      );
+                  }
+                  if (multipleCount > 1) {
+                    if (
+                      (status === ENTERING || status === EXITING) &&
+                      !this.loading
+                    ) {
+                      this.loading = true;
+                    } else if (
+                      (status === ENTERED || status === EXITED) &&
+                      this.loading
+                    ) {
+                      this.loading = false;
+                    }
+                  }
+
+                  return (
+                    <div
+                      className={cx(
+                        'Carousel-item',
+                        animationName,
+                        animationStyles[status]
+                      )}
+                      style={itemStyle}
+                    >
+                      {multipleCount === 1 ? itemRender(option) : null}
+                      {multipleCount > 1
+                        ? newOptions[key].map((option: any, index: number) => (
+                            <div
+                              key={index}
+                              style={{
+                                width: 100 / multipleCount + '%',
+                                height: '100%',
+                                float: 'left'
+                              }}
+                            >
+                              {itemRender(option)}
+                            </div>
+                          ))
+                        : null}
+                    </div>
+                  );
+                }}
+              </Transition>
+            ))}
+          </div>
+        );
     }
 
     return (
@@ -787,12 +888,10 @@ export class Carousel extends React.Component<CarouselProps, CarouselState> {
             )}
             onClick={this.prev}
           >
-            {icons && icons.prev ? (
-              React.isValidElement(icons.prev) ? (
-                icons.prev
-              ) : (
-                render('arrow-prev', icons.prev)
-              )
+            {icons?.prev ? (
+              <div className="ImageGallery-prevBtn">
+                <Icon icon={icons.prev} />
+              </div>
             ) : (
               <Icon
                 icon="left-arrow"
@@ -815,12 +914,10 @@ export class Carousel extends React.Component<CarouselProps, CarouselState> {
             )}
             onClick={this.next}
           >
-            {icons && icons.next ? (
-              React.isValidElement(icons.next) ? (
-                icons.next
-              ) : (
-                render('arrow-next', icons.next)
-              )
+            {icons?.next ? (
+              <div className="ImageGallery-prevBtn">
+                <Icon icon={icons.next} />
+              </div>
             ) : (
               <Icon
                 icon="right-arrow"

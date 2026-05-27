@@ -14,7 +14,12 @@ import React from 'react';
 import {DiffChange} from './util';
 import find from 'lodash/find';
 import {RAW_TYPE_MAP} from './util';
-import type {GlobalVariableItem, RendererConfig, Schema} from 'amis-core';
+import type {
+  GlobalVariableItem,
+  RendererConfig,
+  RendererProps,
+  Schema
+} from 'amis-core';
 import type {MenuDivider, MenuItem} from 'amis-ui/lib/components/ContextMenu';
 import type {BaseSchema, SchemaCollection} from 'amis';
 import type {AsyncLayerOptions} from './component/AsyncLayer';
@@ -102,7 +107,7 @@ export interface RegionConfig {
   /**
    * 返回需要添加 data-region 的 dom 节点。
    */
-  wrapperResolve?: (dom: HTMLElement) => HTMLElement;
+  wrapperResolve?: (dom: HTMLElement, props: RendererProps) => HTMLElement;
 
   /**
    * 当拖入到这个容器时，是否需要修改一下 ghost 结构？
@@ -123,7 +128,11 @@ export interface RegionConfig {
   /**
    * 可以用来判断是否允许拖入当前节点。
    */
-  accept?: (json: any) => boolean;
+  accept?: (
+    json: any,
+    node: EditorNodeType,
+    dragNode?: EditorNodeType
+  ) => boolean;
 
   /**
    * 当前区域是否隐藏
@@ -210,6 +219,11 @@ export interface InlineEditableElement {
  * 渲染器信息。
  */
 export interface RendererInfo extends RendererScaffoldInfo {
+  // 是否使用懒渲染，默认 false
+  // 当一个页面有很多组件时，开启懒渲染可以提升性能。
+  // 打算正对容器组件开启懒渲染
+  useLazyRender?: boolean;
+
   scaffolds?: Array<Partial<RendererScaffoldInfo>>;
 
   rendererName?: string;
@@ -275,7 +289,10 @@ export interface RendererInfo extends RendererScaffoldInfo {
    * 返回哪些 dom 节点，需要自动加上 data-editor-id 属性
    * 目前只有 TableCell 里面用到了，就它需要同时给某一列下所有 td 都加上那个属性。
    */
-  wrapperResolve?: (dom: HTMLElement) => HTMLElement | Array<HTMLElement>;
+  wrapperResolve?: (
+    dom: HTMLElement,
+    props: RendererProps
+  ) => HTMLElement | Array<HTMLElement>;
 
   /**
    * 默认下发哪些属性，如果要动态下发，请使用 filterProps
@@ -550,6 +567,9 @@ export interface ContextMenuEventContext extends BaseEventContext {
   region: string;
   selections: Array<BaseEventContext>;
   data: Array<ContextMenuItem>;
+  clientX?: number;
+  clientY?: number;
+  target?: HTMLElement;
 }
 
 export interface SelectionEventContext extends BaseEventContext {
@@ -803,6 +823,8 @@ export interface PluginEventListener {
       }
     >
   ) => void;
+
+  afterBuildPanelBody?: (event: PluginEvent<AfterBuildPanelBody>) => void;
 
   // 外部可以接管全局变量的增删改查
   // 全局变量列表获取
@@ -1111,7 +1133,8 @@ export abstract class BasePlugin implements PluginInterface {
       schema.$$id &&
       plugin.name &&
       plugin.rendererName &&
-      plugin.rendererName === renderer.name // renderer.name 会从 renderer.type 中取值
+      (plugin.rendererName === renderer.name ||
+        plugin.rendererName === renderer.origin?.name) // renderer.name 会从 renderer.type 中取值
     ) {
       let curPluginName = plugin.name;
       if (schema?.isFreeContainer) {
@@ -1139,7 +1162,8 @@ export abstract class BasePlugin implements PluginInterface {
         isListComponent: plugin.isListComponent,
         rendererName: plugin.rendererName,
         memberImmutable: plugin.memberImmutable,
-        getSubEditorVariable: plugin.getSubEditorVariable
+        getSubEditorVariable: plugin.getSubEditorVariable,
+        useLazyRender: plugin.useLazyRender
       };
     }
   }
@@ -1180,7 +1204,7 @@ export abstract class BasePlugin implements PluginInterface {
         ? plugin.panelBodyCreator(context)
         : plugin.panelBody!;
 
-      this.manager.trigger('after-build-panel-body', {
+      const event = this.manager.trigger('after-build-panel-body', {
         context,
         data: body,
         plugin
@@ -1205,7 +1229,8 @@ export abstract class BasePlugin implements PluginInterface {
         title: plugin.panelTitle || '设置',
         render: enableAsync
           ? makeAsyncLayer(async () => {
-              const panelBody = await (body as Promise<SchemaCollection>);
+              const panelBody = await ((event.data ||
+                body) as Promise<SchemaCollection>);
 
               return this.manager.makeSchemaFormRender({
                 ...baseProps,
@@ -1214,7 +1239,7 @@ export abstract class BasePlugin implements PluginInterface {
             }, omit(plugin.async, 'enable'))
           : this.manager.makeSchemaFormRender({
               ...baseProps,
-              body: body as SchemaCollection
+              body: (event.data || body) as SchemaCollection
             })
       });
     } else if (

@@ -29,7 +29,9 @@ import type {RendererEnv} from './env';
 import {OnEventProps, RendererEvent} from './utils/renderer-event';
 import {Placeholder} from './renderers/Placeholder';
 import {StatusScopedProps} from './StatusScoped';
-
+import type {IScopedContext} from './Scoped';
+import {getPageId} from './utils/getPageId';
+import type {AMISPageMeta, AMISSchemaCollection} from './schema';
 export interface TestFunc {
   (
     path: string,
@@ -99,9 +101,10 @@ export interface RendererProps
   };
   onBroadcast?: (type: string, rawEvent: RendererEvent<any>, ctx: any) => any;
   dispatchEvent: (
-    e: React.UIEvent<any> | React.BaseSyntheticEvent<any> | string,
+    e: string | React.MouseEvent<any>,
     data: any,
-    renderer?: React.Component<RendererProps>
+    renderer?: React.Component<RendererProps>,
+    scoped?: IScopedContext
   ) => Promise<RendererEvent<any>>;
   mobileUI?: boolean;
   [propName: string]: any;
@@ -424,7 +427,7 @@ export const defaultOptions: RenderOptions = {
   useMobileUI: true, // 是否启用移动端原生 UI
   enableAMISDebug:
     (window as any).enableAMISDebug ??
-    location.search.indexOf('amisDebug=1') !== -1 ??
+    location.search.includes('amisDebug=1') ??
     false,
   loadRenderer: loadRendererError,
   fetcher() {
@@ -554,8 +557,15 @@ export const defaultOptions: RenderOptions = {
    * 过滤 html 标签，可用来添加 xss 保护逻辑
    */
   filterHtml: (input: string) => input,
-  isMobile: isMobile
+  isMobile: isMobile,
+  getPageId: getPageId,
+  pageMetaEffect: (meta: AMISPageMeta) => {
+    // console.log(meta)
+  }
 };
+
+export const RenderOptionsContext =
+  React.createContext<RenderOptions>(defaultOptions);
 
 export const stores: {
   [propName: string]: IRendererStore;

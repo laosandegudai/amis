@@ -355,12 +355,13 @@ export class Table2Plugin extends BasePlugin {
   pluginIcon = 'table-plugin';
 
   rendererName = 'table2';
+  useLazyRender = true; // 使用懒渲染
 
   isBaseComponent = true;
 
   panelJustify = true;
 
-  $schema = '/schemas/TableSchema2.json';
+  $schema = '/schemas/AMISTableSchema2.json';
 
   description =
     '用来展示表格数据，可以配置列信息，然后关联数据便能完成展示。支持嵌套、超级表头、列固定、表头固顶、合并单元格等等。当前组件需要配置数据源，不自带数据拉取，请优先使用 「CRUD」 组件。';
@@ -994,7 +995,16 @@ export class Table2Plugin extends BasePlugin {
                   }),
                   getSchemaTpl('tablePlaceholder', {
                     hidden: isCRUDContext
-                  })
+                  }),
+
+                  {
+                    type: 'input-number',
+                    name: 'lazyRenderAfter',
+                    label: '懒渲染行数',
+                    description:
+                      '表格渲染时，超过多少行后才开始懒渲染，默认 100 行。可以提升渲染性能。',
+                    pipeIn: defaultValue(100)
+                  }
                   // TODD: 组件功能没有支持，暂时隐藏
                   // {
                   //   type: 'input-number',

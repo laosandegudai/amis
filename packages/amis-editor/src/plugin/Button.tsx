@@ -21,7 +21,7 @@ export class ButtonPlugin extends BasePlugin {
   static scene = ['layout'];
   // 关联渲染器名字
   rendererName = 'button';
-  $schema = '/schemas/ActionSchema.json';
+  $schema = '/schemas/AMISButtonSchema.json';
 
   order = -400;
 
@@ -296,6 +296,12 @@ export class ButtonPlugin extends BasePlugin {
                 name: 'disabledOnAction',
                 label: '动作完成前禁用',
                 value: false
+              }),
+              getSchemaTpl('switch', {
+                visibleOn: 'data.disabledOnAction',
+                name: 'actionLoading',
+                label: '启用loading效果',
+                value: false
               })
             ]
           },
@@ -388,12 +394,12 @@ export class ButtonPlugin extends BasePlugin {
           !!context.schema.actionType ||
           ['submit', 'reset'].includes(context.schema.type)
             ? [
+                getOldActionSchema(this.manager, context),
                 getSchemaTpl('eventControl', {
                   name: 'onEvent',
                   ...getEventControlConfig(this.manager, context),
                   rawType: 'button'
-                }),
-                getOldActionSchema(this.manager, context)
+                })
               ]
             : [
                 getSchemaTpl('eventControl', {

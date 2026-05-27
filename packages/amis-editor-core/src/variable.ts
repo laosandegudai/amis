@@ -197,7 +197,7 @@ export class VariableManager {
       }
     });
 
-    return reverseOrder ? options : reverse(options);
+    return reverseOrder ? options : (reverse(options as any) as Option[]);
   }
 
   /**
@@ -259,15 +259,24 @@ export class VariableManager {
 
     const options = [
       ...this.getVariableOptions(),
-      ...this.getPageVariablesOptions()
+      ...this.getPageVariablesOptions(),
+      ...this.getGlobalVariablesOptions()
     ];
-    const node = findTree(
-      options,
-      item => item[valueField ?? 'value'] === path
-    );
-
+    let nodePaths: Array<any> = [];
+    const node = findTree(options, (item, key, level, paths) => {
+      if (item[valueField ?? 'value'] === path) {
+        nodePaths = paths.concat(item);
+        return true;
+      }
+      return false;
+    });
     return node
-      ? node[labelField ?? 'label'] ?? node[valueField ?? 'value'] ?? ''
+      ? nodePaths
+          .map(
+            node =>
+              node[labelField ?? 'label'] ?? node[valueField ?? 'value'] ?? ''
+          )
+          .join(' / ')
       : '';
   }
 
@@ -288,7 +297,11 @@ export class VariableManager {
       if (item.type === 'array') {
         delete item.children;
       }
+      if (item.value === 'global') {
+        item.disabled = true;
+      }
     });
+
     return options;
   }
 }

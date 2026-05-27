@@ -28,16 +28,18 @@ import {isAlive} from 'mobx-state-tree';
 import {observer} from 'mobx-react';
 import hoistNonReactStatic from 'hoist-non-react-statics';
 import {withRootStore} from '../WithRootStore';
-import {FormBaseControl, FormItemConfig, FormItemWrap} from './Item';
+import {AMISFormItem, FormItemConfig, FormItemWrap} from './Item';
 import {Api, DataChangeReason} from '../types';
 import {TableStore} from '../store/table';
 import pick from 'lodash/pick';
+import {reaction} from 'mobx';
 import {
   callStrFunction,
   changedEffect,
   cloneObject,
   setVariable,
-  tokenize
+  tokenize,
+  injectObjectChain
 } from '../utils';
 
 export interface ControlOutterProps extends RendererProps {
@@ -79,7 +81,6 @@ export interface ControlOutterProps extends RendererProps {
     changePristine?: boolean,
     changeReason?: DataChangeReason
   ) => void;
-  formItemDispatchEvent: (type: string, data: any) => void;
   formItemRef?: (control: any) => void;
 }
 
@@ -191,6 +192,7 @@ export function wrapControl<
               return;
             }
 
+            let valueIsExp = isExpression(value);
             let propValue = this.props.value;
             const model = rootStore.addStore({
               id: guid(),
@@ -221,7 +223,8 @@ export function wrapControl<
               required: props.required || required,
               unique,
               value,
-              isValueSchemaExp: isExpression(value),
+              isValueSchemaExp:
+                valueIsExp && value.replace(/\s/g, '') !== `\${${name}}`,
               rules: rules,
               messages: validationErrors,
               delimiter,
@@ -262,7 +265,13 @@ export function wrapControl<
             if (
               onChange &&
               value !== undefined &&
-              model.tmpValue !== undefined
+              model.tmpValue !== undefined &&
+              // 要么是默认值起作用了
+              // 要么是表达式起作用了
+              // 只有这两种情况才会触发 onChange
+              // 比如以下 case 就不应该触发
+              // 关联到上下文数据了，同时设置了默认值，因为是上下文数据优先，这个时候就不应该触发 onChange，因为没变化
+              (value === model.tmpValue || valueIsExp)
             ) {
               // 组件默认值支持表达式需要: 避免初始化时上下文中丢失组件默认值
               if (model.extraName) {
@@ -290,6 +299,26 @@ export function wrapControl<
                 onChange(model.tmpValue, model.name, false, true);
               }
             }
+
+            this.reaction = reaction(
+              () => model.validatedAt,
+              (validatedAt: number) => {
+                this.props.dispatchEvent?.(
+                  model.valid
+                    ? 'formItemValidateSucc'
+                    : 'formItemValidateError',
+                  injectObjectChain(
+                    this.props.formStore?.data ?? this.props.data,
+                    {
+                      __errors: model.errors,
+                      __formName: model.name,
+                      __formValue: model.tmpValue,
+                      __formControl: this.control
+                    }
+                  )
+                );
+              }
+            );
           }
 
           componentDidMount() {
@@ -366,7 +395,10 @@ export function wrapControl<
                   ...changes,
 
                   // todo 优化后面两个
-                  isValueSchemaExp: isExpression(props.$schema.value),
+                  isValueSchemaExp:
+                    isExpression(props.$schema.value) &&
+                    props.$schema.value.replace(/\s/g, '') !==
+                      `\${${props.$schema.name}}`,
                   inputGroupControl: props?.inputGroupControl
                 } as any);
 
@@ -395,6 +427,8 @@ export function wrapControl<
             } else if (
               typeof props.defaultValue !== 'undefined' &&
               isExpression(props.defaultValue) &&
+              (props.defaultValue as string).replace(/\s/g, '') !==
+                `\${${props.name}}` &&
               (!isEqual(props.defaultValue, prevProps.defaultValue) ||
                 (props.data !== prevProps.data &&
                   isNeedFormula(
@@ -485,8 +519,19 @@ export function wrapControl<
 
           setInitialValue(value: any) {
             const model = this.model!;
-            const {formStore: form, data, canAccessSuperData} = this.props;
-            const isExp = isExpression(value);
+            const {
+              formStore: form,
+              data,
+              canAccessSuperData,
+              name
+            } = this.props;
+            let isExp = isExpression(value);
+
+            if (isExp && value.replace(/\s/g, '') === `\${${name}}`) {
+              console.warn('value 不要使用表达式关联自己');
+              isExp = false;
+              value = undefined;
+            }
 
             let initialValue = model.extraName
               ? [
@@ -632,7 +677,7 @@ export function wrapControl<
 
           async validate() {
             if (!this.model) return;
-            const {formStore: form, data, formItemDispatchEvent} = this.props;
+            const {formStore: form, data, dispatchEvent} = this.props;
             let result;
 
             if (
@@ -651,10 +696,6 @@ export function wrapControl<
             }
 
             const valid = !result.some(item => item === false);
-            (formItemDispatchEvent ?? this.props.dispatchEvent)?.(
-              valid ? 'formItemValidateSucc' : 'formItemValidateError',
-              form?.data ?? this.props.data // form里的一定是最新的数据
-            );
             return valid;
           }
 

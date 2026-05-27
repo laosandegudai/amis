@@ -20,12 +20,14 @@ import {
   autobind,
   isMobile,
   createObject,
-  getVariable
+  getVariable,
+  extendObject
 } from '../utils/helper';
 import {observer} from 'mobx-react';
-import {FormHorizontal, FormSchemaBase} from './Form';
+import {AMISFormBase, FormHorizontal, FormSchemaBase} from './Form';
 import {
   ActionObject,
+  BaseApi,
   BaseApiObject,
   BaseSchemaWithoutType,
   ClassName,
@@ -36,7 +38,7 @@ import {HocStoreFactory} from '../WithStore';
 import {wrapControl} from './wrapControl';
 import debounce from 'lodash/debounce';
 import {isApiOutdated, isEffectiveApi} from '../utils/api';
-import {findDOMNode} from 'react-dom';
+import {findDomCompat as findDOMNode} from '../utils/findDomCompat';
 import {
   createObjectFromChain,
   dataMapping,
@@ -53,17 +55,20 @@ import CustomStyle from '../components/CustomStyle';
 import classNames from 'classnames';
 import isPlainObject from 'lodash/isPlainObject';
 import {IScopedContext} from '../Scoped';
+import {
+  AMISApi,
+  AMISClassName,
+  AMISRemarkBase,
+  AMISSchemaBase,
+  AMISTemplate,
+  AMISVariableName
+} from '../schema';
 
 export type LabelAlign = 'right' | 'left' | 'top' | 'inherit';
 
-export interface FormBaseControl extends BaseSchemaWithoutType {
+export interface AMISFormItemBase extends AMISSchemaBase {
   /**
-   * 表单项大小
-   */
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'full';
-
-  /**
-   * 描述标题
+   * 描述标题, 当值为 false 时不展示
    */
   label?: string | false;
 
@@ -76,36 +81,40 @@ export interface FormBaseControl extends BaseSchemaWithoutType {
    * label自定义宽度，默认单位为px
    */
   labelWidth?: number | string;
+  /**
+   * label展示形式
+   */
+  labelOverflow?: 'default' | 'ellipsis';
 
   /**
    * 配置 label className
    */
-  labelClassName?: string;
+  labelClassName?: AMISClassName;
 
   /**
    * 字段名，表单提交时的 key，支持多层级，用.连接，如： a.b.c
    */
-  name?: string;
+  name?: AMISVariableName;
 
   /**
    * 额外的字段名，当为范围组件时可以用来将另外一个值打平出来
    */
-  extraName?: string;
+  extraName?: AMISVariableName;
 
   /**
    * 显示一个小图标, 鼠标放上去的时候显示提示内容
    */
-  remark?: any;
+  remark?: AMISRemarkBase;
 
   /**
    * 显示一个小图标, 鼠标放上去的时候显示提示内容, 这个小图标跟 label 在一起
    */
-  labelRemark?: any;
+  labelRemark?: AMISRemarkBase;
 
   /**
    * 输入提示，聚焦的时候显示
    */
-  hint?: string;
+  hint?: AMISTemplate;
 
   /**
    * 当修改完的时候是否提交表单。
@@ -131,17 +140,17 @@ export interface FormBaseControl extends BaseSchemaWithoutType {
   /**
    * 描述内容，支持 Html 片段。
    */
-  description?: string;
+  description?: AMISTemplate;
 
   /**
    * @deprecated 用 description 代替
    */
-  desc?: string;
+  desc?: AMISTemplate;
 
   /**
    * 配置描述上的 className
    */
-  descriptionClassName?: ClassName;
+  descriptionClassName?: AMISClassName;
 
   /**
    * 配置当前表单项展示模式
@@ -166,7 +175,11 @@ export interface FormBaseControl extends BaseSchemaWithoutType {
   /**
    * 占位符
    */
-  placeholder?: string;
+  placeholder?:
+    | string
+    | {
+        [propName: string]: string;
+      };
 
   /**
    * 是否为必填
@@ -397,11 +410,12 @@ export interface FormBaseControl extends BaseSchemaWithoutType {
   /**
    * 远端校验表单项接口
    */
-  validateApi?: string | BaseApiObject;
+  validateApi?: AMISApi;
 
   /**
    * 自动填充，当选项被选择的时候，将选项中的其他值同步设置到表单内。
    *
+   * 支持配置 api，配置 api 后将额外请求外部接口完成填充，同时支持自动填充与用户选择填充两种模式。
    */
   autoFill?:
     | {
@@ -421,7 +435,7 @@ export interface FormBaseControl extends BaseSchemaWithoutType {
         /**
          * 自动填充 api
          */
-        api?: BaseApiObject | string;
+        api?: AMISApi;
 
         /**
          * 是否展示数据格式错误提示，默认为不展示
@@ -432,7 +446,7 @@ export interface FormBaseControl extends BaseSchemaWithoutType {
         /**
          * 填充时的数据映射
          */
-        fillMappinng?: {
+        fillMapping?: {
           [propName: string]: any;
         };
 
@@ -440,6 +454,11 @@ export interface FormBaseControl extends BaseSchemaWithoutType {
          * 触发条件，默认为 change
          */
         trigger?: 'change' | 'focus' | 'blur';
+
+        /**
+         * 是否支持多选
+         */
+        multiple?: boolean;
 
         /**
          * 弹窗方式，当为参照录入时用可以配置
@@ -464,7 +483,11 @@ export interface FormBaseControl extends BaseSchemaWithoutType {
         /**
          * 参照录入时的过滤条件
          */
-        filter?: any;
+        filter?: AMISFormBase;
+
+        // picker 里面的部分属性
+        labelField?: string;
+        nameField?: string;
       };
 
   /**
@@ -475,6 +498,14 @@ export interface FormBaseControl extends BaseSchemaWithoutType {
 
   row?: number; // flex模式下指定所在的行数
 }
+
+export interface AMISFormItem extends AMISFormItemBase {
+  /**
+   * 表单项大小
+   */
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'full';
+}
+export type FormBaseControl = AMISFormItem;
 
 export interface FormItemBasicConfig extends Partial<RendererConfig> {
   type?: string;
@@ -521,6 +552,8 @@ export interface FormItemProps extends RendererProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'full';
   labelAlign?: LabelAlign;
   labelWidth?: number | string;
+  formLabelOverflow?: string;
+  labelOverflow?: 'default' | 'ellipsis';
   disabled?: boolean;
   btnDisabled: boolean;
   defaultValue: any;
@@ -671,10 +704,7 @@ export class FormItemWrap extends React.Component<FormItemProps> {
       this.toDispose.push(
         reaction(
           () => JSON.stringify(model.tmpValue),
-          () =>
-            this.mounted &&
-            this.initedApiFilled &&
-            this.syncApiAutoFill(model.tmpValue)
+          () => this.mounted && this.handleAutoFill('change')
         )
       );
 
@@ -705,6 +735,7 @@ export class FormItemWrap extends React.Component<FormItemProps> {
     const {formItem: model} = props;
 
     if (
+      model &&
       isEffectiveApi(props.autoFill?.api, props.data) &&
       isApiOutdated(
         prevProps.autoFill?.api,
@@ -713,7 +744,22 @@ export class FormItemWrap extends React.Component<FormItemProps> {
         props.data
       )
     ) {
-      this.syncApiAutoFill(model?.tmpValue, true);
+      // 判断是否是因为自身值之外的值变化引起的，如果是则强制刷新
+      let checkIfCausedByOtherVariables = false;
+      if (props.autoFill?.api !== prevProps.autoFill?.api) {
+        checkIfCausedByOtherVariables = true;
+      } else {
+        let api = props.autoFill?.api;
+        const tmData = {};
+        setVariable(tmData, model.name, model.tmpValue);
+        checkIfCausedByOtherVariables = isApiOutdated(
+          api,
+          api,
+          extendObject(prevProps.data, tmData),
+          extendObject(props.data, tmData)
+        );
+      }
+      this.syncApiAutoFill(model.tmpValue, checkIfCausedByOtherVariables);
     }
   }
 
@@ -756,7 +802,7 @@ export class FormItemWrap extends React.Component<FormItemProps> {
 
   handleAutoFill(type: string) {
     const {autoFill, formItem, data} = this.props;
-    const {trigger, mode} = autoFill;
+    const {trigger, mode} = autoFill || {};
     if (trigger === type && mode === 'popOver') {
       // 参照录入 popOver形式
       formItem?.openPopOver(
@@ -1265,7 +1311,7 @@ export class FormItemWrap extends React.Component<FormItemProps> {
         (props.labelAlign !== 'inherit' && props.labelAlign) ||
         props.formLabelAlign;
       const labelWidth = props.labelWidth || props.formLabelWidth;
-
+      const labelOverflow = props.labelOverflow || props.formLabelOverflow;
       return (
         <div
           data-role="form-item"
@@ -1307,7 +1353,14 @@ export class FormItemWrap extends React.Component<FormItemProps> {
               )}
               style={labelWidth != null ? {width: labelWidth} : undefined}
             >
-              <span>
+              <span
+                {...(labelOverflow === 'ellipsis'
+                  ? {
+                      className: cx('Form-ellipsis'),
+                      title: label
+                    }
+                  : {})}
+              >
                 {label ? render('label', label) : null}
                 {required && (label || labelRemark) ? (
                   <span className={cx(`Form-star`)}>*</span>
@@ -2363,24 +2416,7 @@ export function registerFormItem(config: FormItemConfig): RendererConfig {
     ...config,
     weight: typeof config.weight !== 'undefined' ? config.weight : -100, // 优先级高点
     component: Control as any,
-    isFormItem: true,
-    onGlobalVarChanged: function (instance, schema, data): any {
-      if (config.onGlobalVarChanged?.apply(this, arguments) === false) {
-        return false;
-      }
-
-      if (isGlobalVarExpression(schema.source)) {
-        (instance.props as any).reloadOptions?.();
-      }
-
-      // 目前表单项的全局变量更新要靠这个方式
-      if (isGlobalVarExpression(schema.value)) {
-        (instance.props as any).onChange(
-          resolveVariableAndFilter(schema.value, data, '| raw')
-        );
-        return false;
-      }
-    }
+    isFormItem: true
   });
 }
 

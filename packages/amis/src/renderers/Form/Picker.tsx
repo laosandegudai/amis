@@ -29,16 +29,23 @@ import {
 import {Html, Icon, OverflowTpl, TooltipWrapper} from 'amis-ui';
 import {FormOptionsSchema, SchemaTpl} from '../../Schema';
 import intersectionWith from 'lodash/intersectionWith';
-import type {TooltipWrapperSchema} from '../TooltipWrapper';
-import type {Option} from 'amis-core';
+import type {AMISTooltipWrapperSchema} from '../TooltipWrapper';
+import type {AMISFormItemWithOptions, Option} from 'amis-core';
 import {supportStatic} from './StaticHoc';
 import {reaction} from 'mobx';
+import {AutoFoldedList} from 'amis-ui';
 
 /**
  * Picker
  * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/form/picker
  */
-export interface PickerControlSchema extends FormOptionsSchema {
+/**
+ * Picker 选择器组件，用于表单中弹窗选择数据，可通过弹窗（Dialog/Drawer）或内嵌模式展示配置的选择内容，支持自定义标签显示与选项描述。
+ */
+export interface AMISPickerSchema extends AMISFormItemWithOptions {
+  /**
+   * 指定为 picker 组件
+   */
   type: 'picker';
 
   /**
@@ -47,38 +54,37 @@ export interface PickerControlSchema extends FormOptionsSchema {
   labelTpl?: SchemaTpl;
 
   /**
-   * 建议用 labelTpl
    * 选中一个字段名用来作为值的描述文字
    */
   labelField?: string;
 
   /**
-   * 选一个可以用来作为值的字段。
+   * 选一个可以用来作为值的字段
    */
   valueField?: string;
 
   /**
-   * 弹窗选择框详情。
+   * 弹窗选择框详情
    */
   pickerSchema?: any; // Omit<CRUDSchema, 'type'>;
 
   /**
-   * 弹窗模式，dialog 或者 drawer
+   * 弹窗模式
    */
   modalMode?: 'dialog' | 'drawer';
 
   /**
-   * 弹窗的尺寸，可选值为 'sm'、'md'、'lg'、'xl'
+   * 弹窗的尺寸
    */
   modalSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
   /**
-   * 弹窗的标题，默认为情选择
+   * 弹窗的标题
    */
   modalTitle?: string;
 
   /**
-   * 内嵌模式，也就是说不弹框了。
+   * 内嵌模式
    */
   embed?: boolean;
 
@@ -87,24 +93,24 @@ export interface PickerControlSchema extends FormOptionsSchema {
    */
   overflowConfig: {
     /**
-     * 标签的最大展示数量，超出数量后以收纳浮层的方式展示，仅在多选模式开启后生效
+     * 标签的最大展示数量
      */
     maxTagCount?: number;
 
     /**
-     * 开启最大标签展示数量后，收纳标签生效的位置，未开启内嵌模式默认为选择器, 开启后默认为选择器 + 模态框，可选值为'select'(选择器)、'crud'(增删改查)
+     * 收纳标签生效的位置
      */
     displayPosition?: ('select' | 'crud')[];
 
     /**
      * 开启最大标签展示数量后，选择器内收纳标签的Popover配置
      */
-    overflowTagPopover?: TooltipWrapperSchema;
+    overflowTagPopover?: AMISTooltipWrapperSchema;
 
     /**
      * 开启最大标签展示数量后，CRUD顶部内收纳标签的Popover配置
      */
-    overflowTagPopoverInCRUD?: TooltipWrapperSchema;
+    overflowTagPopoverInCRUD?: AMISTooltipWrapperSchema;
   };
 
   /**
@@ -304,12 +310,12 @@ export default class PickerControl extends React.PureComponent<
     this.crud = ref;
   }
 
-  reload() {
+  reload(subpath?: string, query?: any) {
     if (this.crud) {
-      this.crud.search();
+      this.crud.reload(subpath, query);
     } else {
       const reload = this.props.reloadOptions;
-      reload && reload();
+      reload && reload(subpath, query);
     }
   }
 
@@ -605,7 +611,7 @@ export default class PickerControl extends React.PureComponent<
             }}
           >
             {labelTpl ? (
-              <Html html={filter(labelTpl, item)} filterHtml={env.filterHtml} />
+              <Html html={filter(labelTpl, item)} />
             ) : (
               `${
                 getVariable(item, labelField || 'label') ||
@@ -631,83 +637,31 @@ export default class PickerControl extends React.PureComponent<
       css
     } = this.props;
     const {maxTagCount, overflowTagPopover} = this.getOverflowConfig();
-    const totalCount = selectedOptions.length;
     let tags = selectedOptions;
     const enableOverflow =
-      multiple !== false &&
-      isIntegerInRange(maxTagCount, {
-        start: 0,
-        end: totalCount,
-        left: 'inclusive',
-        right: 'exclusive'
-      });
+      multiple !== false && typeof maxTagCount === 'number' && maxTagCount > 0;
 
-    /** 多选且开启限制标签数量 */
-    if (enableOverflow) {
-      tags = [
-        ...selectedOptions.slice(0, maxTagCount),
-        {label: `+ ${totalCount - maxTagCount} ...`, value: '__overflow_tag__'}
-      ];
-    }
+    const tooltipProps: any = {
+      tooltipClassName: cx(
+        'Picker-overflow',
+        overflowTagPopover?.tooltipClassName
+      ),
+      title: __('已选项'),
+      ...omit(overflowTagPopover, ['children', 'content', 'tooltipClassName'])
+    };
 
     return (
-      <>
-        {tags.map((item, index) => {
-          if (enableOverflow && index === maxTagCount) {
-            return (
-              <TooltipWrapper
-                key={index}
-                container={popOverContainer}
-                tooltip={{
-                  tooltipClassName: cx(
-                    'Picker-overflow',
-                    overflowTagPopover?.tooltipClassName
-                  ),
-                  title: __('已选项'),
-                  ...omit(overflowTagPopover, [
-                    'children',
-                    'content',
-                    'tooltipClassName'
-                  ]),
-                  children: () => {
-                    return (
-                      <div className={cx(`${ns}Picker-overflow-wrapper`)}>
-                        {selectedOptions
-                          .slice(maxTagCount, totalCount)
-                          .map((overflowItem, rawIndex) => {
-                            const key = rawIndex + maxTagCount;
-
-                            return this.renderTag(overflowItem, key);
-                          })}
-                      </div>
-                    );
-                  }
-                }}
-              >
-                <div
-                  key={index}
-                  className={cx(`${ns}Picker-value`, {
-                    'is-disabled': disabled
-                  })}
-                >
-                  <span
-                    className={`${ns}Picker-valueLabel ${setThemeClassName({
-                      ...this.props,
-                      name: 'pickFontClassName',
-                      id,
-                      themeCss: themeCss || css
-                    })}`}
-                  >
-                    {item.label}
-                  </span>
-                </div>
-              </TooltipWrapper>
-            );
-          }
-
+      <AutoFoldedList
+        enabled={!!enableOverflow}
+        tooltipClassName={cx('Picker-overflow-wrapper')}
+        items={tags}
+        popOverContainer={popOverContainer}
+        tooltipOptions={tooltipProps}
+        maxVisibleCount={maxTagCount}
+        renderItem={(item, index, folded) => {
           return this.renderTag(item, index);
-        })}
-      </>
+        }}
+      ></AutoFoldedList>
     );
   }
 

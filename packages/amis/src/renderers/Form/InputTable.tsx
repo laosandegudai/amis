@@ -30,19 +30,24 @@ import {
   eachTree,
   everyTree,
   findTreeIndex,
-  applyFilters
+  applyFilters,
+  evalExpression,
+  injectObjectChain,
+  AMISSchemaCollection,
+  AMISFunction
 } from 'amis-core';
 import {Button, Icon} from 'amis-ui';
 import omit from 'lodash/omit';
 import findIndex from 'lodash/findIndex';
-import {TableSchema} from '../Table';
-import {SchemaApi, SchemaCollection, SchemaClassName} from '../../Schema';
+import {BaseTableSchema, TableSchema} from '../Table';
+import {SchemaApi, AMISClassName} from '../../Schema';
 import find from 'lodash/find';
 import debounce from 'lodash/debounce';
 import moment from 'moment';
 import {sortArray, str2function} from 'amis-core';
 
 import type {SchemaTokenizeableString} from '../../Schema';
+import isPlainObject from 'lodash/isPlainObject';
 
 // 占位符定义为常量
 const PLACE_HOLDER = '__isPlaceholder';
@@ -51,25 +56,26 @@ export type TableDataItem = {
   [x: string | number]: any;
 };
 
-export interface TableControlSchema
-  extends FormBaseControl,
-    Omit<TableSchema, 'type'> {
+/**
+ * InputTable 组件用于在表单中以表格形式收集和管理结构化数据，支持增删改查、拖拽排序、批量操作等功能。
+ */
+export interface AMISInputTableSchema extends FormBaseControl, BaseTableSchema {
   type: 'input-table';
 
   /**
    * 可新增
    */
-  addable?: boolean;
+  addable?: boolean | string;
 
   /**
-   * 是否可以新增子项
+   * 是否可新增子项
    */
-  childrenAddable?: boolean;
+  childrenAddable?: boolean | string;
 
   /**
    * 可复制新增
    */
-  copyable?: boolean;
+  copyable?: boolean | string;
 
   /**
    * 复制按钮文字
@@ -87,13 +93,12 @@ export interface TableControlSchema
   copyAddBtn?: boolean;
 
   /**
-   * 复制的时候用来配置复制映射的数据。默认值是 {&:$$}，相当与复制整个行数据
-   * 通常有时候需要用来标记是复制过来的，也可能需要删掉一下主键字段。
+   * 复制数据映射
    */
   copyData?: Record<string, any>;
 
   /**
-   * 是否可以拖拽排序
+   * 是否可拖拽排序
    */
   draggable?: boolean;
 
@@ -125,7 +130,7 @@ export interface TableControlSchema
   /**
    * 可否删除
    */
-  removable?: boolean;
+  removable?: boolean | string;
 
   /**
    * 删除的 API
@@ -135,7 +140,7 @@ export interface TableControlSchema
   /**
    * 可否编辑
    */
-  editable?: boolean;
+  editable?: boolean | string;
 
   /**
    * 更新按钮名称
@@ -183,7 +188,7 @@ export interface TableControlSchema
   updateApi?: SchemaApi;
 
   /**
-   * 初始值，新增的时候
+   * 初始值，新增的时候，支持数据映射
    */
   scaffold?: any;
 
@@ -203,7 +208,7 @@ export interface TableControlSchema
   needConfirm?: boolean;
 
   /**
-   * 是否可以访问父级数据，正常 combo 已经关联到数组成员，是不能访问父级数据的。
+   * 是否可访问父级数据，正常 combo 已经关联到数组成员，是不能访问父级数据的。
    */
   canAccessSuperData?: boolean;
 
@@ -240,7 +245,7 @@ export interface TableControlSchema
   /**
    * 底部新增按钮配置
    */
-  footerAddBtn?: SchemaCollection;
+  footerAddBtn?: AMISSchemaCollection;
 
   /**
    * 是否开启 static 状态切换
@@ -250,7 +255,7 @@ export interface TableControlSchema
   /**
    * 底部工具栏CSS样式类
    */
-  toolbarClassName?: SchemaClassName;
+  toolbarClassName?: AMISClassName;
 
   /**
    * 自定义搜索匹配函数，当存在列的 searchable 为 true 时，会基于该函数计算的匹配结果进行过滤，主要用于处理列字段类型较为复杂或者字段值格式和后端返回不一致的场景
@@ -265,13 +270,19 @@ export interface TableControlSchema
    *  * `options.matchSorter` 系统默认的排序方法
    * @since 6.10.0
    */
-  matchFunc?: string | any;
+  matchFunc?: AMISFunction<
+    (
+      items: Array<any>,
+      itemsRaw: Array<any>,
+      options: {query: string; columns: Array<any>; matchSorter: Function}
+    ) => Array<any>
+  >;
 }
 
 export interface TableProps
   extends FormControlProps,
     Omit<
-      TableControlSchema,
+      AMISInputTableSchema,
       'type' | 'className' | 'descriptionClassName' | 'inputClassName'
     > {}
 
@@ -823,10 +834,11 @@ export default class FormTable<
   async addItem(
     index?: string,
     isDispatch: boolean = true,
+    parent?: Record<string, any>,
     callback?: () => void
   ) {
     index = index || `${this.state.items.length - 1}`;
-    const {needConfirm, scaffold, columns, data, perPage} = this.props;
+    let {needConfirm, scaffold, columns, data, perPage} = this.props;
     let items = this.state.items.concat();
     let value: TableDataItem = {
       [PLACE_HOLDER]: true
@@ -869,11 +881,6 @@ export default class FormTable<
       });
     }
 
-    value = {
-      ...value,
-      ...scaffold
-    };
-
     if (needConfirm === false) {
       Reflect.deleteProperty(value, PLACE_HOLDER);
     }
@@ -881,6 +888,19 @@ export default class FormTable<
     const indexes = index.split('.').map(item => parseInt(item, 10));
     const next = indexes.concat();
     next[next.length - 1] += 1;
+
+    value = {
+      ...value,
+      ...(isPlainObject(scaffold)
+        ? dataMapping(
+            // 支持数据映射
+            scaffold,
+            injectObjectChain(data, {
+              parent
+            })
+          )
+        : null)
+    };
 
     let originHost = items;
     items = spliceTree(items, next, 0, value);
@@ -901,7 +921,7 @@ export default class FormTable<
         : {
             editIndex: next.join('.'),
             isCreateMode: true,
-            columns: this.buildColumns(this.props, true, `${index}`)
+            columns: this.buildColumns(this.props, true, next.join('.'))
           }) as any)
     };
 
@@ -926,7 +946,7 @@ export default class FormTable<
       if (needConfirm === false) {
         this.emitValue();
       }
-
+      this.table?.updateTableInfo?.();
       callback?.();
     });
 
@@ -940,7 +960,7 @@ export default class FormTable<
   }
 
   async subAddItem(index?: string, isDispatch: boolean = true, item?: any) {
-    return this.addItem(index + '.-1', isDispatch, () => {
+    return this.addItem(index + '.-1', isDispatch, item.locals, () => {
       item?.setExpanded(true);
     });
   }
@@ -1182,7 +1202,8 @@ export default class FormTable<
         !(deleteApi as ApiObject)?.silent &&
           env.notify(
             'error',
-            (deleteApi as ApiObject)?.messages?.failed ?? __('deleteFailed')
+            (deleteApi as ApiObject)?.messages?.failed ??
+              (result.msg || __('deleteFailed'))
           );
         this.dispatchEvent('deleteFail', {
           index: indexes[indexes.length - 1],
@@ -1283,6 +1304,15 @@ export default class FormTable<
 
     rowProps.quickEditEnabled =
       this.state.editIndex === this.convertToRawPath(item.path);
+
+    /**
+     * 非编辑态使用静态展示
+     * 编辑态仅当前编辑行使用静态展示
+     */
+    if (this.props.enableStaticTransform && this.props.needConfirm !== false) {
+      rowProps.static = !rowProps.quickEditEnabled;
+    }
+
     return rowProps;
   }
 
@@ -1291,7 +1321,7 @@ export default class FormTable<
     isCreateMode = false,
     editRowIndex?: string
   ): Array<any> {
-    const {env, enableStaticTransform, mobileUI, testIdBuilder} = this.props;
+    const {env, mobileUI, testIdBuilder} = this.props;
     let columns: Array<any> = Array.isArray(props.columns)
       ? props.columns.concat()
       : [];
@@ -1307,14 +1337,18 @@ export default class FormTable<
         children: ({
           key,
           rowIndexPath,
-          inputTableCanAddItem
+          inputTableCanAddItem,
+          row
         }: {
           key: any;
           rowIndexPath: string;
           inputTableCanAddItem: boolean;
           inputTableCanRemoveItem: boolean;
+          row: any;
         }) =>
           (this.state.editIndex && needConfirm !== false) ||
+          (typeof props.addable === 'string' &&
+            !evalExpression(props.addable, row.locals)) ||
           !inputTableCanAddItem ? null : (
             <Button
               classPrefix={ns}
@@ -1327,6 +1361,7 @@ export default class FormTable<
               onClick={this.addItem.bind(
                 this,
                 this.convertToRawPath(rowIndexPath),
+                undefined,
                 undefined,
                 undefined
               )}
@@ -1358,7 +1393,9 @@ export default class FormTable<
           rowIndexPath: string;
           row: any;
         }) =>
-          this.state.editIndex && needConfirm !== false ? null : (
+          (this.state.editIndex && needConfirm !== false) ||
+          (typeof props.childrenAddable === 'string' &&
+            !evalExpression(props.childrenAddable, row.locals)) ? null : (
             <Button
               classPrefix={ns}
               size="sm"
@@ -1394,8 +1431,18 @@ export default class FormTable<
 
     if (!isStatic && props.copyable && props.showCopyBtn !== false) {
       btns.push({
-        children: ({key, rowIndexPath}: {key: any; rowIndexPath: string}) =>
-          this.state.editIndex && needConfirm !== false ? null : (
+        children: ({
+          key,
+          rowIndexPath,
+          row
+        }: {
+          key: any;
+          rowIndexPath: string;
+          row: any;
+        }) =>
+          (this.state.editIndex && needConfirm !== false) ||
+          (typeof props.copyable === 'string' &&
+            !evalExpression(props.copyable, row.locals)) ? null : (
             <Button
               classPrefix={ns}
               size="sm"
@@ -1483,14 +1530,7 @@ export default class FormTable<
                   mode: 'inline',
                   disabled
                 }
-              }),
-          /**
-           * 非编辑态使用静态展示
-           * 编辑态仅当前编辑行使用静态展示
-           */
-          ...(enableStaticTransform && props.needConfirm !== false
-            ? {staticOn: `${!isCreateMode} || data.index !== '${editRowIndex}'`}
-            : {})
+              })
         };
       });
 
@@ -1500,13 +1540,17 @@ export default class FormTable<
           children: ({
             key,
             rowIndexPath,
-            data
+            data,
+            row
           }: {
             key: any;
             rowIndexPath: string;
             data: any;
+            row: any;
           }) =>
             this.state.editIndex ||
+            (typeof props.editable === 'string' &&
+              !evalExpression(props.editable, row.locals)) ||
             (data && data.hasOwnProperty(PLACE_HOLDER)) ? null : (
               <Button
                 classPrefix={ns}
@@ -1638,16 +1682,20 @@ export default class FormTable<
           key,
           rowIndexPath,
           data,
-          inputTableCanRemoveItem
+          inputTableCanRemoveItem,
+          row
         }: {
           key: any;
           rowIndexPath: string;
           data: any;
           inputTableCanRemoveItem: boolean;
+          row: any;
         }) =>
           ((this.state.editIndex ||
             (data && data.hasOwnProperty(PLACE_HOLDER))) &&
             needConfirm !== false) ||
+          (typeof props.removable === 'string' &&
+            !evalExpression(props.removable, row.locals)) ||
           !inputTableCanRemoveItem ? null : (
             <Button
               classPrefix={ns}
@@ -1681,9 +1729,10 @@ export default class FormTable<
     }
 
     if (btns.length) {
-      let operation = columns.find(item => item.type === 'operation');
+      let idx = columns.findIndex(item => item.type === 'operation');
+      let operation = columns[idx];
 
-      if (!operation) {
+      if (idx === -1) {
         operation = {
           type: 'operation',
           buttons: [],
@@ -1694,6 +1743,11 @@ export default class FormTable<
           innerClassName: 'm-n'
         };
         columns.push(operation);
+      } else {
+        operation = {
+          ...operation
+        };
+        columns.splice(idx, 1, operation);
       }
 
       operation.buttons = Array.isArray(operation.buttons)
@@ -1883,7 +1937,9 @@ export default class FormTable<
   @autobind
   handlePristineChange(data: Record<string, any>, rowIndex: string) {
     const {needConfirm} = this.props;
-    const indexes = rowIndex.split('.').map(item => parseInt(item, 10));
+    const indexes = this.convertToRawPath(rowIndex)
+      .split('.')
+      .map(item => parseInt(item, 10));
 
     this.setState(
       prevState => {
@@ -2026,7 +2082,7 @@ export default class FormTable<
             quickEditFormRef: this.subFormRef,
             quickEditFormItemRef: this.subFormItemRef,
             columnsTogglable: columnsTogglable,
-            combineNum: combineNum,
+            combineNum: this.state.editIndex ? 0 : combineNum,
             combineFromIndex: combineFromIndex,
             expandConfig,
             canAccessSuperData,
@@ -2097,7 +2153,6 @@ export class TableControlRenderer extends FormTable {
     index?: number | string,
     condition?: any
   ) {
-    const len = this.state.items.length;
     if (index !== undefined) {
       let items = [...this.state.items];
       const indexs = String(index).split(',');
@@ -2105,7 +2160,12 @@ export class TableControlRenderer extends FormTable {
         const indexes = i.split('.').map(item => parseInt(item, 10));
 
         const originItems = items;
-        items = spliceTree(items, indexes, 1, value);
+        items = spliceTree(
+          items,
+          indexes,
+          1,
+          replace ? value : {...getTree(items, indexes), ...value}
+        );
         this.reUseRowId(items, originItems, indexes);
       });
       this.setState({items, ...this.transformState(items)}, () => {
@@ -2124,7 +2184,14 @@ export class TableControlRenderer extends FormTable {
 
           if (isUpdate) {
             const originItems = items;
-            items = spliceTree(items, [...indexes, index], 1, value);
+            items = spliceTree(
+              items,
+              [...indexes, index],
+              1,
+              replace
+                ? value
+                : {...getTree(items, [...indexes, index]), ...value}
+            );
             this.reUseRowId(items, originItems, [...indexes, index]);
           }
         });
@@ -2248,12 +2315,25 @@ export class TableControlRenderer extends FormTable {
       const deletedItems: any = [];
 
       if (args?.index !== undefined) {
-        const indexs = String(args.index).split(',');
-        indexs.forEach(i => {
-          const indexes = i.split('.').map(item => parseInt(item, 10));
-          deletedItems.push(getTree(items, indexes));
-          items = spliceTree(items, indexes, 1);
-        });
+        String(args.index)
+          .split(',')
+          .map(i => i.split('.').map(item => parseInt(item, 10)))
+          // 从右向左遍历，这样才不会出现索引失效
+          .sort((a, b) => {
+            const len = Math.max(a.length, b.length);
+            for (let i = 0; i < len; i++) {
+              const aVal = a[i] || 0;
+              const bVal = b[i] || 0;
+              if (aVal !== bVal) {
+                return bVal - aVal;
+              }
+            }
+            return 0;
+          })
+          .forEach(indexes => {
+            deletedItems.push(getTree(items, indexes));
+            items = spliceTree(items, indexes, 1);
+          });
       } else if (args?.condition !== undefined) {
         const promises: Array<() => Promise<any>> = [];
         everyTree(items, (item, index, level, paths, indexes) => {

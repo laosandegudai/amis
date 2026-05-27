@@ -15,7 +15,7 @@ import {
   PluginEvent
 } from 'amis-editor-core';
 import {defaultValue, getSchemaTpl} from 'amis-editor-core';
-import {getVariable} from 'amis-core';
+import {getVariable, RendererProps} from 'amis-core';
 
 export class TableCellPlugin extends BasePlugin {
   static id = 'TableCellPlugin';
@@ -473,12 +473,10 @@ export class TableCellPlugin extends BasePlugin {
               label: '内部 CSS 类名'
             }),
 
-            {
+            getSchemaTpl('theme:width2', {
               name: 'width',
-              type: 'input-number',
-              label: '列宽',
-              description: '固定列的宽度，不推荐设置。'
-            }
+              label: '列宽'
+            })
           ]
         }
       ])
@@ -497,19 +495,26 @@ export class TableCellPlugin extends BasePlugin {
     if (renderer.name === 'table-cell') {
       return {
         name: schema.label ? `<${schema.label}>列` : '匿名列',
-        $schema: '/schemas/TableColumn.json',
+        $schema: '/schemas/AMISTableColumn.json',
         multifactor: true,
-        wrapperResolve: (dom: HTMLTableCellElement) => {
-          const siblings = [].slice.call(dom.parentElement!.children);
-          const index = siblings.indexOf(dom) + 1;
+        wrapperResolve: (dom: HTMLTableCellElement, props: RendererProps) => {
+          const index = props.colIndex;
+          const td = dom.closest('td,th');
           const table = dom.closest('table')!;
 
-          return [].slice.call(
-            table.querySelectorAll(
-              `th:nth-child(${index}):not([data-editor-id="${schema.id}"]),
-              td:nth-child(${index}):not([data-editor-id="${schema.id}"])`
+          return [].slice
+            .call(
+              table.querySelectorAll(
+                `th[data-index="${index}"]:not([data-editor-id="${schema.id}"]),
+              td[data-index="${index}"]:not([data-editor-id="${schema.id}"])`
+              )
             )
-          );
+            .filter(
+              (el: HTMLElement) =>
+                !el.hasAttribute('colspan') ||
+                parseInt(el.getAttribute('colspan') || '1', 10) === 1
+            )
+            .concat(td);
         }
         // filterProps: this.filterProps
       };

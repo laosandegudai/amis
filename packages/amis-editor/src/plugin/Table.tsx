@@ -1,6 +1,6 @@
 import React from 'react';
 import {Button, resolveVariable} from 'amis';
-import type {DataScope, SchemaObject} from 'amis';
+import type {AMISSchema, DataScope, SchemaObject} from 'amis';
 import {
   getI18nEnabled,
   RendererPluginAction,
@@ -43,7 +43,8 @@ export class TablePlugin extends BasePlugin {
   static id = 'TablePlugin';
   // 关联渲染器名字
   rendererName = 'table';
-  $schema = '/schemas/TableSchema.json';
+  useLazyRender = true; // 使用懒渲染
+  $schema = '/schemas/AMISTableSchema.json';
 
   // 组件名称
   name = '原子表格';
@@ -54,7 +55,7 @@ export class TablePlugin extends BasePlugin {
   docLink = '/amis/zh-CN/components/table';
   icon = 'fa fa-table';
   pluginIcon = 'table-plugin';
-  scaffold: SchemaObject = {
+  scaffold: AMISSchema = {
     type: 'table',
     columns: [
       {
@@ -617,6 +618,15 @@ export class TablePlugin extends BasePlugin {
                     }
                   ]
                 }
+              },
+
+              {
+                type: 'input-number',
+                name: 'lazyRenderAfter',
+                label: '懒渲染行数',
+                description:
+                  '表格渲染时，超过多少行后才开始懒渲染，默认 100 行。可以提升渲染性能。',
+                pipeIn: defaultValue(100)
               }
 
               // {
@@ -734,12 +744,7 @@ export class TablePlugin extends BasePlugin {
                 ]
               },
 
-              {
-                name: 'placeholder',
-                pipeIn: defaultValue('暂无数据'),
-                type: 'input-text',
-                label: '无数据提示'
-              },
+              getSchemaTpl('tablePlaceholder'),
               {
                 name: 'rowClassNameExpr',
                 type: 'input-text',

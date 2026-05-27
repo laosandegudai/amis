@@ -16,7 +16,7 @@ export class DiffEditorControlPlugin extends BasePlugin {
   static id = 'DiffEditorControlPlugin';
   // 关联渲染器名字
   rendererName = 'diff-editor';
-  $schema = '/schemas/DiffEditorControlSchema.json';
+  $schema = '/schemas/AMISDiffEditorSchema.json';
 
   // 组件名称
   name = 'Diff编辑器';
@@ -207,44 +207,7 @@ export class DiffEditorControlPlugin extends BasePlugin {
       {
         title: '外观',
         body: getSchemaTpl('collapseGroup', [
-          getSchemaTpl('style:formItem', {
-            renderer: context.info.renderer,
-            schema: [
-              {
-                name: 'size',
-                type: 'select',
-                pipeIn: defaultValue(''),
-                pipeOut: undefinedPipeOut,
-                label: '控件尺寸',
-                options: [
-                  {
-                    label: '默认',
-                    value: ''
-                  },
-
-                  {
-                    label: '中',
-                    value: 'md'
-                  },
-
-                  {
-                    label: '大',
-                    value: 'lg'
-                  },
-
-                  {
-                    label: '特大',
-                    value: 'xl'
-                  },
-
-                  {
-                    label: '超大',
-                    value: 'xxl'
-                  }
-                ]
-              }
-            ]
-          }),
+          getSchemaTpl('theme:formItem'),
           getSchemaTpl('style:classNames', {
             unsupportStatic: true
           })

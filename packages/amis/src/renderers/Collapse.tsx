@@ -8,24 +8,16 @@ import {
   autobind,
   resolveEventData,
   isPureVariable,
-  resolveVariableAndFilter,
+  AMISSchemaCollection,
   setThemeClassName,
-  CustomStyle
+  CustomStyle,
+  AMISSchemaBase
 } from 'amis-core';
 import {Collapse as BasicCollapse, Icon} from 'amis-ui';
-import {BaseSchema, SchemaCollection, SchemaTpl, SchemaObject} from '../Schema';
+import {BaseSchema, SchemaTpl, SchemaObject} from '../Schema';
 import classNames from 'classnames';
 
-/**
- * Collapse 折叠渲染器，格式说明。
- * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/collapse
- */
-export interface CollapseSchema extends BaseSchema {
-  /**
-   * 指定为折叠器类型
-   */
-  type: 'collapse';
-
+export interface AMISCollapseSchemaBase extends AMISSchemaBase {
   /**
    * 标识
    */
@@ -39,12 +31,7 @@ export interface CollapseSchema extends BaseSchema {
   /**
    * 标题
    */
-  header?: string | SchemaCollection;
-
-  /**
-   * 内容区域
-   */
-  body: SchemaCollection;
+  header?: string | AMISSchemaCollection;
 
   /**
    * 配置 Body 容器 className
@@ -97,18 +84,37 @@ export interface CollapseSchema extends BaseSchema {
   mountOnEnter?: boolean;
 
   /**
-   * 卡片隐藏就销毁内容。
+   * 卡片隐藏就销毁内容
    */
   unmountOnExit?: boolean;
   /**
    * 标题内容分割线
    */
   divideLine?: boolean;
+
+  /**
+   * 内容区域
+   */
+  body: AMISSchemaCollection;
+}
+
+/**
+ * Collapse 折叠渲染器，格式说明。
+ * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/collapse
+ */
+/**
+ * 折叠面板组件，用于展开/收起内容区域。支持默认展开与禁用。
+ */
+export interface AMISCollapseSchema extends AMISCollapseSchemaBase {
+  /**
+   * 指定为折叠器类型
+   */
+  type: 'collapse';
 }
 
 export interface CollapseProps
   extends RendererProps,
-    Omit<CollapseSchema, 'type' | 'className'> {
+    Omit<AMISCollapseSchema, 'type' | 'className'> {
   wrapperComponent?: any;
   headingComponent?: any;
 
@@ -168,7 +174,7 @@ export default class Collapse extends React.Component<CollapseProps, {}> {
     if (['expand', 'collapse'].includes(action.actionType!)) {
       const targetState = action.actionType === 'collapse';
       /**
-       * 说明：changeCollapsedState 会执行 onCollapse 方法（间接执行handleCollapseChange），
+       * 说明：changeCollapsedState 会执行 onCollapse 方法（间接执行handleCollapseChange）
        * 所以这里不需要再重复调用。
        */
       // this.handleCollapseChange(targetState);

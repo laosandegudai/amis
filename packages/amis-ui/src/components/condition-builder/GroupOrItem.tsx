@@ -7,14 +7,14 @@ import ConditionGroup from './Group';
 import ConditionItem from './Item';
 import FormulaPicker, {FormulaPickerProps} from '../formula/Picker';
 import Button from '../Button';
-import type {ConditionGroupValue, ConditionValue} from 'amis-core';
+import type {AMISConditionGroupValue, AMISConditionValue} from 'amis-core';
 import TooltipWrapper from '../TooltipWrapper';
 import type {TestIdBuilder} from 'amis-core';
 
 export interface CBGroupOrItemProps extends ThemeProps {
   builderMode?: 'simple' | 'full';
   config: ConditionBuilderConfig;
-  value?: ConditionGroupValue;
+  value?: AMISConditionGroupValue;
   fields: ConditionBuilderFields;
   funcs?: ConditionBuilderFuncs;
   index: number;
@@ -22,7 +22,7 @@ export interface CBGroupOrItemProps extends ThemeProps {
   draggable?: boolean;
   disabled?: boolean;
   searchable?: boolean;
-  onChange: (value: ConditionGroupValue, index: number) => void;
+  onChange: (value: AMISConditionGroupValue, index: number) => void;
   removeable?: boolean;
   onDragStart?: (e: React.MouseEvent) => void;
   onRemove?: (index: number) => void;
@@ -33,8 +33,14 @@ export interface CBGroupOrItemProps extends ThemeProps {
   selectMode?: 'list' | 'tree' | 'chained';
   isCollapsed?: boolean;
   depth: number;
-  isAddBtnVisibleOn?: (param: {depth: number; breadth: number}) => boolean;
-  isAddGroupBtnVisibleOn?: (param: {depth: number; breadth: number}) => boolean;
+  isAddBtnVisibleOn?: (param: {
+    depth: number;
+    breadth: number;
+  }) => boolean | undefined;
+  isAddGroupBtnVisibleOn?: (param: {
+    depth: number;
+    breadth: number;
+  }) => boolean | undefined;
   showIf?: boolean;
   formulaForIf?: FormulaPickerProps;
   testIdBuilder?: TestIdBuilder;
@@ -74,7 +80,7 @@ export class CBGroupOrItem extends React.Component<CBGroupOrItemProps> {
 
   @autobind
   handleIfChange(condition: string) {
-    const value: ConditionGroupValue = {
+    const value: AMISConditionGroupValue = {
       ...(this.props.value as any),
       if: condition
     };
@@ -92,7 +98,6 @@ export class CBGroupOrItem extends React.Component<CBGroupOrItemProps> {
       funcs,
       draggable,
       data,
-      disabled,
       searchable,
       onDragStart,
       formula,
@@ -108,6 +113,8 @@ export class CBGroupOrItem extends React.Component<CBGroupOrItemProps> {
       testIdBuilder,
       mobileUI
     } = this.props;
+
+    const disabled = value?.disabled ?? this.props.disabled;
 
     return (
       <div
@@ -145,7 +152,7 @@ export class CBGroupOrItem extends React.Component<CBGroupOrItemProps> {
                 config={config}
                 fields={fields}
                 formula={formula}
-                value={value as ConditionGroupValue}
+                value={value as AMISConditionGroupValue}
                 onChange={this.handleItemChange}
                 fieldClassName={fieldClassName}
                 funcs={funcs}
@@ -177,7 +184,7 @@ export class CBGroupOrItem extends React.Component<CBGroupOrItemProps> {
                 searchable={searchable}
                 config={config}
                 fields={fields}
-                value={value as ConditionValue}
+                value={value as AMISConditionValue}
                 onChange={this.handleItemChange}
                 fieldClassName={fieldClassName}
                 funcs={funcs}

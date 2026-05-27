@@ -13,7 +13,7 @@ import {EditorManager} from '../manager';
 import flatten from 'lodash/flatten';
 import {render as reactRender, unmountComponentAtNode} from 'react-dom';
 import {autobind, JSONGetById, JSONUpdate, appTranslate} from '../util';
-import {ErrorBoundary} from 'amis-core';
+import {ErrorBoundary, LazyComponent} from 'amis-core';
 import {CommonConfigWrapper} from './CommonConfigWrapper';
 import type {Schema} from 'amis';
 import type {DataScope} from 'amis-core';
@@ -207,13 +207,25 @@ export function makeWrapper(
               );
             }}
           >
-            <Wrapper
-              {...rest}
-              render={this.renderChild}
-              $$editor={info}
-              $$node={this.editorNode}
-              ref={this.wrapperRef}
-            />
+            {info.useLazyRender ? (
+              <LazyComponent placeholder={<span />}>
+                <Wrapper
+                  {...rest}
+                  render={this.renderChild}
+                  $$editor={info}
+                  $$node={this.editorNode}
+                  ref={this.wrapperRef}
+                />
+              </LazyComponent>
+            ) : (
+              <Wrapper
+                {...rest}
+                render={this.renderChild}
+                $$editor={info}
+                $$node={this.editorNode}
+                ref={this.wrapperRef}
+              />
+            )}
           </ErrorBoundary>
         </EditorNodeContext.Provider>
       );
@@ -632,56 +644,13 @@ export function mapReactElement(
   return mapped;
 }
 
-const thumbHost = document.createElement('div');
 export function renderThumbToGhost(
   ghost: HTMLElement,
   region: EditorNodeType,
   schema: any,
   manager: EditorManager
 ) {
+  // 换成简单的线条即可， 目前也只有form 的 flex 模式拖拽会用到
   // bca-disable-next-line
-  ghost.innerHTML = '';
-  let path = '';
-  const host = region.host!;
-  const component = host.getComponent()!;
-  const isForm = component?.renderControl && region.region === 'body';
-
-  try {
-    reactRender(
-      render(
-        {
-          children: ({render}: any) => {
-            return isForm
-              ? render('', {
-                  type: 'form',
-                  wrapWithPanel: false,
-                  mode: component.props.mode,
-                  body: [schema]
-                })
-              : render(region.region, schema);
-          }
-        } as any,
-        {},
-        {
-          ...manager.env,
-          theme: component?.props.theme || manager.env.theme,
-          session: 'ghost-thumb'
-        },
-        path
-      ),
-      thumbHost
-    );
-  } catch (e) {}
-
-  /* bca-disable */
-  const html =
-    thumbHost.innerHTML ||
-    '<div class="wrapper-sm b-a b-light m-b-sm">拖入占位</div>';
-  // bca-disable-line
-  ghost.innerHTML = html;
-  /* bca-enable */
-
-  unmountComponentAtNode(thumbHost);
-  // bca-disable-next-line
-  thumbHost.innerHTML = '';
+  ghost.innerHTML = '<div class="ae-DragGhost-line"></div>';
 }

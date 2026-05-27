@@ -67,12 +67,12 @@ export class TableRow<
     moved: boolean;
     depth: number;
     expandable: boolean;
-    appeard?: boolean;
     loading?: boolean;
     error?: string;
     checkdisable: boolean;
     trRef?: React.Ref<any>;
     isNested?: boolean;
+    checkable?: boolean;
   }
 > {
   @autobind
@@ -205,10 +205,10 @@ export class TableRow<
       moved,
       depth,
       expandable,
-      appeard,
       checkdisable,
       trRef,
       isNested,
+      checkable,
       testIdBuilder,
       rowPath,
       ...rest
@@ -263,28 +263,22 @@ export class TableRow<
                           </th>
                         ) : null}
 
-                        {appeard ? (
-                          renderCell(
-                            `${regionPrefix}${itemIndex}/${column.index}`,
-                            column,
-                            item,
-                            {
-                              ...rest,
-                              width: null,
-                              rowIndex: itemIndex,
-                              rowIndexPath: item.path,
-                              colIndex: column.index,
-                              rowPath,
-                              key: column.id,
-                              onAction: this.handleAction,
-                              onQuickChange: this.handleQuickChange,
-                              onChange: this.handleChange
-                            }
-                          )
-                        ) : (
-                          <td key={column.id}>
-                            <div className={cx('Table-emptyBlock')}>&nbsp;</div>
-                          </td>
+                        {renderCell(
+                          `${regionPrefix}${itemIndex}/${column.index}`,
+                          column,
+                          item,
+                          {
+                            ...rest,
+                            width: null,
+                            rowIndex: itemIndex,
+                            rowIndexPath: item.path,
+                            colIndex: column.index,
+                            rowPath,
+                            key: column.id,
+                            onAction: this.handleAction,
+                            onQuickChange: this.handleQuickChange,
+                            onChange: this.handleChange
+                          }
                         )}
                       </tr>
                     ))}
@@ -331,23 +325,17 @@ export class TableRow<
         {...testIdBuilder?.(rowPath)?.getTestId()}
       >
         {columns.map(column =>
-          appeard ? (
-            renderCell(`${itemIndex}/${column.index}`, column, item, {
-              ...rest,
-              rowIndex: itemIndex,
-              colIndex: column.index,
-              rowIndexPath: item.path,
-              rowPath,
-              key: column.id,
-              onAction: this.handleAction,
-              onQuickChange: this.handleQuickChange,
-              onChange: this.handleChange
-            })
-          ) : column.name && item.rowSpans[column.name] === 0 ? null : (
-            <td key={column.id}>
-              <div className={cx('Table-emptyBlock')}>&nbsp;</div>
-            </td>
-          )
+          renderCell(`${itemIndex}/${column.index}`, column, item, {
+            ...rest,
+            rowIndex: itemIndex,
+            colIndex: column.index,
+            rowIndexPath: item.path,
+            rowPath,
+            key: column.id,
+            onAction: this.handleAction,
+            onQuickChange: this.handleQuickChange,
+            onChange: this.handleChange
+          })
         )}
       </tr>
     );
@@ -364,16 +352,9 @@ export default observer((props: TableRowProps) => {
     store.canAccessSuperData ||
     columns.some(item => item.pristine.canAccessSuperData);
 
-  const {ref, inView} = useInView({
-    threshold: 0,
-    onChange: item.markAppeared,
-    skip: !item.lazyRender
-  });
-
   return (
     <TableRow
       {...props}
-      trRef={ref}
       expanded={item.expanded}
       parentExpanded={parent?.expanded}
       id={item.id}
@@ -391,8 +372,8 @@ export default observer((props: TableRowProps) => {
       // data 在 TableRow 里面没有使用，这里写上是为了当列数据变化的时候 TableRow 重新渲染，
       // 不是 item.locals 的原因是 item.locals 会变化多次，比如父级上下文变化也会进来，但是 item.data 只会变化一次。
       data={canAccessSuperData ? item.locals : item.data}
-      appeard={item.lazyRender ? item.appeared || inView : true}
       isNested={store.isNested}
+      checkable={item.checkable}
     />
   );
 });

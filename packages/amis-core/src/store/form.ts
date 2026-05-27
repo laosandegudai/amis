@@ -68,18 +68,21 @@ export const FormStore = ServiceStore.named('FormStore')
     }
 
     return {
-      get loading() {
-        return self.saving || self.fetching;
-      },
-
       get items() {
         return getItems();
+      }
+    };
+  })
+  .views(self => {
+    return {
+      get loading() {
+        return self.saving || self.fetching;
       },
 
       /** 获取InputGroup的子元素 */
       get inputGroupItems() {
         const formItems: Record<string, IFormItemStore[]> = {};
-        const children: Array<any> = this.items.concat();
+        const children: Array<any> = self.items.concat();
 
         while (children.length) {
           const current = children.shift();
@@ -103,7 +106,7 @@ export const FormStore = ServiceStore.named('FormStore')
           [propName: string]: Array<string>;
         } = {};
 
-        getItems().forEach(item => {
+        self.items.forEach(item => {
           if (!item.valid) {
             errors[item.name] = Array.isArray(errors[item.name])
               ? errors[item.name].concat(item.errors)
@@ -126,26 +129,26 @@ export const FormStore = ServiceStore.named('FormStore')
       },
 
       getItemById(id: string) {
-        return getItems().find(item => item.itemId === id);
+        return self.items.find(item => item.itemId === id);
       },
 
       getItemByName(name: string) {
-        return getItems().find(item => item.name === name);
+        return self.items.find(item => item.name === name);
       },
 
       getItemsByName(name: string) {
-        return getItems().filter(item => item.name === name);
+        return self.items.filter(item => item.name === name);
       },
 
       get valid() {
         return (
-          getItems().every(item => item.valid) &&
+          self.items.every(item => item.valid) &&
           (!self.restError || !self.restError.length)
         );
       },
 
       get validating() {
-        return getItems().some(item => item.validating);
+        return self.items.some(item => item.validating);
       },
 
       get isPristine() {
@@ -549,7 +552,7 @@ export const FormStore = ServiceStore.named('FormStore')
       );
     };
 
-    // 10s 内不要重复弹同一个错误
+    // 5s 内不要重复弹同一个错误
     const toastValidateError = throttle(
       (msg, validateError?: ValidateError) => {
         const env = getEnv(self);
@@ -557,7 +560,7 @@ export const FormStore = ServiceStore.named('FormStore')
           validateError
         });
       },
-      10000,
+      5000,
       {
         trailing: false,
         leading: true
@@ -762,7 +765,8 @@ export const FormStore = ServiceStore.named('FormStore')
 
     function reset(cb?: (data: any) => void, resetData: boolean = true) {
       if (resetData) {
-        self.data = self.pristine;
+        // 父级的数据可能已经被修改，__super不应该被修改
+        self.data = createObject(self.data.__super, self.pristine);
       }
 
       // 值可能变了，重新验证一次。

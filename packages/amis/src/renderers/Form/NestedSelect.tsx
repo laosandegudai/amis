@@ -34,7 +34,7 @@ import {
   setThemeClassName,
   CustomStyle
 } from 'amis-core';
-import {findDOMNode} from 'react-dom';
+import {findDomCompat as findDOMNode} from 'amis-core';
 import xor from 'lodash/xor';
 import union from 'lodash/union';
 import compact from 'lodash/compact';
@@ -43,15 +43,22 @@ import {supportStatic} from './StaticHoc';
 import {matchSorter} from 'match-sorter';
 
 import type {TooltipObject} from 'amis-ui/lib/components/TooltipWrapper';
+import {AMISFormItemWithOptions} from 'amis-core';
 
 /**
  * Nested Select
  * 文档：https://aisuda.bce.baidu.com/amis/zh-CN/components/form/nested-select
  */
-export interface NestedSelectControlSchema extends FormOptionsSchema {
+/**
+ * NestedSelect 组件用于多层级数据的选择，支持级联、父子节点独立选择、只选叶子节点等多种配置，适用于复杂层级结构的表单场景。
+ */
+export interface AMISNestedSelectSchema extends AMISFormItemWithOptions {
+  /**
+   * 指定为 nested-select 组件
+   */
   type: 'nested-select';
   /**
-   * 边框模式，全边框，还是半边框，或者没边框。
+   * 边框模式
    */
   borderMode?: 'full' | 'half' | 'none';
 
@@ -61,12 +68,12 @@ export interface NestedSelectControlSchema extends FormOptionsSchema {
   menuClassName?: string;
 
   /**
-   * 父子之间是否完全独立。
+   * 父子之间是否完全独立
    */
   cascade?: boolean;
 
   /**
-   * 选父级的时候是否把子节点的值也包含在内。
+   * 选父级的时候是否把子节点的值也包含在内
    */
   withChildren?: boolean;
 
@@ -86,7 +93,7 @@ export interface NestedSelectControlSchema extends FormOptionsSchema {
   hideNodePathLabel?: boolean;
 
   /**
-   * 标签的最大展示数量，超出数量后以收纳浮层的方式展示，仅在多选模式开启后生效
+   * 标签的最大展示数量
    */
   maxTagCount?: number;
 
@@ -307,7 +314,8 @@ export default class NestedSelectControl extends React.Component<
     }
 
     const isPrevented = await this.dispatchEvent('change', {
-      value
+      value,
+      selectedItems: option
     });
     isPrevented || onChange(value);
     isPrevented || this.handleResultClear();
@@ -432,7 +440,8 @@ export default class NestedSelectControl extends React.Component<
       ? value.map(item => item[valueField as string])
       : value;
     const isPrevented = await this.dispatchEvent('change', {
-      value: newValue
+      value: newValue,
+      selectedItems: option
     });
     isPrevented || onChange(newValue);
     isPrevented || this.handleResultClear();
@@ -462,9 +471,9 @@ export default class NestedSelectControl extends React.Component<
     });
   }
 
-  reload() {
+  reload(subpath?: string, query?: any) {
     const reload = this.props.reloadOptions;
-    reload && reload();
+    reload && reload(subpath, query);
   }
 
   @autobind
